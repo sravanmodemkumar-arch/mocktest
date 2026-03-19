@@ -1,17 +1,72 @@
 {% extends "auth/base_auth.html" %}
 
-{% block title %}Login — {{ tenant_name }}{% endblock %}
+{% block title %}Sign In — {{ tenant_name }}{% endblock %}
+
+{% block brand_message %}
+  {% if portal_group == 6 %}
+    <div class="space-y-3">
+      <h1 class="text-4xl font-bold leading-tight">
+        Your preparation.<br/>Your pace. Your rank.
+      </h1>
+      <p class="text-base opacity-80 leading-relaxed">
+        Pick up exactly where you left off. Your personalised study plan,
+        progress, and upcoming practice sessions are ready.
+      </p>
+    </div>
+    <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/20">
+      <div><div class="text-2xl font-bold">4.8M+</div><div class="text-xs opacity-70 mt-0.5">Active Aspirants</div></div>
+      <div><div class="text-2xl font-bold">120+</div><div class="text-xs opacity-70 mt-0.5">Exams Covered</div></div>
+      <div><div class="text-2xl font-bold">91%</div><div class="text-xs opacity-70 mt-0.5">Selection Rate</div></div>
+    </div>
+  {% elif portal_group == 1 or portal_group == 2 %}
+    <div class="space-y-3">
+      <h1 class="text-4xl font-bold leading-tight">
+        Your institution.<br/>Fully in control.
+      </h1>
+      <p class="text-base opacity-80 leading-relaxed">
+        Manage every branch, every role, and every operation
+        from one secure dashboard — built for institution leaders.
+      </p>
+    </div>
+    <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/20">
+      <div><div class="text-2xl font-bold">12K+</div><div class="text-xs opacity-70 mt-0.5">Institutions</div></div>
+      <div><div class="text-2xl font-bold">3.2M+</div><div class="text-xs opacity-70 mt-0.5">Students</div></div>
+      <div><div class="text-2xl font-bold">99.6%</div><div class="text-xs opacity-70 mt-0.5">Uptime</div></div>
+    </div>
+  {% else %}
+    <div class="space-y-3">
+      <h1 class="text-4xl font-bold leading-tight">
+        Good to have<br/>you back.
+      </h1>
+      <p class="text-base opacity-80 leading-relaxed">
+        Your team, your students, and your institution are
+        waiting. Everything is exactly where you left it.
+      </p>
+    </div>
+    <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/20">
+      <div><div class="text-2xl font-bold">12K+</div><div class="text-xs opacity-70 mt-0.5">Institutions</div></div>
+      <div><div class="text-2xl font-bold">3.2M+</div><div class="text-xs opacity-70 mt-0.5">Students</div></div>
+      <div><div class="text-2xl font-bold">48L+</div><div class="text-xs opacity-70 mt-0.5">Daily Logins</div></div>
+    </div>
+  {% endif %}
+{% endblock %}
 
 {% block auth_content %}
-<div class="space-y-8">
+<div class="space-y-7">
 
-  <!-- Header -->
   <div>
-    <h2 class="text-3xl font-bold text-gray-900">Welcome back</h2>
-    <p class="mt-2 text-gray-500">Sign in to {{ institution_name|default:"EduForge" }}</p>
+    <h2 class="text-3xl font-bold text-gray-900">Sign in</h2>
+    <p class="mt-2 text-gray-500 text-sm">
+      {% if portal_group == 6 %}
+        Continue your preparation journey
+      {% elif portal_group == 1 or portal_group == 2 %}
+        Access your admin dashboard
+      {% else %}
+        Sign in to {{ institution_name|default:"your institution" }}
+      {% endif %}
+    </p>
   </div>
 
-  <!-- Password Login Form -->
   <form id="login-form"
         hx-post="/login/password/"
         hx-target="#form-response"
@@ -20,7 +75,6 @@
         class="space-y-5">
     {% csrf_token %}
 
-    <!-- Mobile / Email / Username -->
     <div class="space-y-1">
       <label for="login_id" class="block text-sm font-medium text-gray-700">
         Mobile, Email or Username
@@ -31,16 +85,19 @@
              placeholder="Mobile number, email or username"
              required
              autocomplete="username"
-             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 text-base
-                    focus:outline-none focus:ring-2"
+             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 text-sm
+                    focus:outline-none focus:ring-2 transition"
              style="--tw-ring-color: {{ primary_color }};" />
     </div>
 
-    <!-- Password -->
     <div class="space-y-1">
       <div class="flex justify-between items-center">
         <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-        <a href="/forgot-password/" class="text-xs text-gray-500 hover:text-gray-700">Forgot password?</a>
+        <a href="/forgot-password/"
+           class="text-xs font-medium hover:underline"
+           style="color: {{ primary_color }};">
+          Forgot password?
+        </a>
       </div>
       <div class="relative">
         <input type="password"
@@ -49,8 +106,8 @@
                placeholder="Enter your password"
                required
                autocomplete="current-password"
-               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg text-gray-900 text-base
-                      focus:outline-none focus:ring-2"
+               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg text-gray-900 text-sm
+                      focus:outline-none focus:ring-2 transition"
                style="--tw-ring-color: {{ primary_color }};" />
         <button type="button" onclick="togglePwd()" tabindex="-1"
                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -65,18 +122,16 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7
                      a9.956 9.956 0 012.223-3.592M6.228 6.228A9.956 9.956 0 0112 5
-                     c4.477 0 8.268 2.943 9.542 7a9.956 9.956 0 01-4.512 5.525
-                     M3 3l18 18"/>
+                     c4.477 0 8.268 2.943 9.542 7a9.956 9.956 0 01-4.512 5.525M3 3l18 18"/>
           </svg>
         </button>
       </div>
     </div>
 
-    <!-- Submit -->
     <button type="submit"
             id="login-btn"
             class="w-full py-3 px-6 rounded-lg font-semibold text-base text-white
-                   flex items-center justify-center gap-2 transition opacity-100"
+                   flex items-center justify-center gap-2 transition hover:opacity-90 active:scale-[0.99]"
             style="background-color: {{ primary_color }};">
       <span class="htmx-indicator">
         <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -87,25 +142,26 @@
       <span>Sign In</span>
     </button>
 
-    <!-- Form response area (HTMX swaps error/success here) -->
     <div id="form-response"></div>
   </form>
 
-  <!-- Self-registration (exam domain only — students register themselves) -->
   {% if portal_group == 6 %}
-  <p class="text-center text-sm text-gray-500">
-    New here?
-    <a href="/register/" class="font-medium hover:underline" style="color: {{ primary_color }};">
-      Create account
-    </a>
-  </p>
+  <div class="text-center">
+    <p class="text-sm text-gray-500">
+      New to {{ institution_name|default:"EduForge" }}?
+      <a href="/register/" class="font-semibold hover:underline" style="color: {{ primary_color }};">
+        Create a free account
+      </a>
+    </p>
+  </div>
   {% endif %}
 
-  <div class="text-center text-xs text-gray-400">
-    <p>By signing in you agree to our
-      <a href="#" class="underline hover:text-gray-600">Terms of Service</a> and
-      <a href="#" class="underline hover:text-gray-600">Privacy Policy</a>
-    </p>
+  <div class="text-center text-xs text-gray-400 leading-relaxed">
+    By signing in you agree to our
+    <a href="/terms/" class="underline hover:text-gray-600">Terms of Service</a>
+    and
+    <a href="/privacy/" class="underline hover:text-gray-600">Privacy Policy</a>.
+    <br/>Your data is protected under the DPDP Act, 2023.
   </div>
 
 </div>
@@ -113,17 +169,9 @@
 <script>
   function togglePwd() {
     const inp = document.getElementById('password');
-    const open = document.getElementById('eye-open');
-    const off = document.getElementById('eye-off');
-    if (inp.type === 'password') {
-      inp.type = 'text';
-      open.classList.add('hidden');
-      off.classList.remove('hidden');
-    } else {
-      inp.type = 'password';
-      off.classList.add('hidden');
-      open.classList.remove('hidden');
-    }
+    document.getElementById('eye-open').classList.toggle('hidden');
+    document.getElementById('eye-off').classList.toggle('hidden');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
   }
 </script>
 {% endblock %}

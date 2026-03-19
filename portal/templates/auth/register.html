@@ -3,131 +3,239 @@
 {% block title %}Create Account — {{ tenant_name }}{% endblock %}
 
 {% block brand_message %}
-<h1 class="text-4xl font-bold leading-tight">
-  Join millions of<br/>aspirants on EduForge
-</h1>
-<p class="text-lg opacity-80">Free mock tests · AI study plan · All India Rank</p>
+<div class="space-y-3">
+  <h1 class="text-4xl font-bold leading-tight">
+    Begin your journey<br/>to selection.
+  </h1>
+  <p class="text-base opacity-80 leading-relaxed">
+    Join aspirants across India who are reaching their goals with
+    adaptive practice, expert content, and performance-driven insights.
+  </p>
+</div>
+<div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/20">
+  <div>
+    <div class="text-2xl font-bold">Free</div>
+    <div class="text-xs opacity-70 mt-0.5">To get started</div>
+  </div>
+  <div>
+    <div class="text-2xl font-bold">120+</div>
+    <div class="text-xs opacity-70 mt-0.5">Exams Covered</div>
+  </div>
+  <div>
+    <div class="text-2xl font-bold">91%</div>
+    <div class="text-xs opacity-70 mt-0.5">Selection Rate</div>
+  </div>
+</div>
+<div class="flex flex-wrap gap-3 pt-2">
+  <span class="flex items-center gap-1.5 text-xs opacity-75">
+    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+    </svg>
+    Personalised AI study schedule
+  </span>
+  <span class="flex items-center gap-1.5 text-xs opacity-75">
+    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+    </svg>
+    All India ranking after every session
+  </span>
+  <span class="flex items-center gap-1.5 text-xs opacity-75">
+    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+    </svg>
+    Weak-topic analysis and targeted revision
+  </span>
+</div>
 {% endblock %}
 
 {% block auth_content %}
 <div class="space-y-6">
 
   <div>
-    <h2 class="text-2xl font-bold text-gray-900">Create account</h2>
+    <h2 class="text-2xl font-bold text-gray-900">Create your account</h2>
     <p class="mt-1 text-sm text-gray-500">
-      Already have an account?
-      <a href="/login/" class="text-brand font-medium hover:underline">Login</a>
+      Already registered?
+      <a href="/login/" class="font-semibold hover:underline" style="color: {{ primary_color }};">
+        Sign in
+      </a>
     </p>
   </div>
 
   <form id="register-form"
-        hx-post="/register/"
+        hx-post="/register/submit/"
         hx-target="#register-response"
         hx-swap="innerHTML"
         hx-indicator="#register-btn"
         class="space-y-4">
     {% csrf_token %}
 
-    <!-- Full name -->
     <div class="space-y-1">
       <label class="text-sm font-medium text-gray-700">Full Name</label>
-      <input type="text" name="full_name" placeholder="Ravi Kumar" required
-             class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
-                    focus:ring-2 focus:border-brand text-sm"
+      <input type="text" name="full_name"
+             placeholder="As on your Aadhaar / ID proof"
+             required autocomplete="name"
+             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900
+                    focus:outline-none focus:ring-2 transition"
              style="--tw-ring-color: {{ primary_color }};" />
     </div>
 
-    <!-- Mobile -->
     <div class="space-y-1">
       <label class="text-sm font-medium text-gray-700">Mobile Number</label>
-      <div class="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:border-brand"
+      <div class="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-2"
            style="--tw-ring-color: {{ primary_color }};">
         <div class="flex items-center px-4 bg-gray-50 border-r border-gray-300 text-gray-600 text-sm font-medium select-none">
           🇮🇳 +91
         </div>
-        <input type="tel" name="mobile" placeholder="98765 43210" required maxlength="10"
-               class="flex-1 px-4 py-3 outline-none text-sm"
+        <input type="tel" name="mobile"
+               placeholder="10-digit mobile number"
+               required maxlength="10"
+               autocomplete="tel"
+               class="flex-1 px-4 py-3 text-sm text-gray-900 outline-none bg-white placeholder-gray-400"
                oninput="this.value=this.value.replace(/\D/g,'')" />
       </div>
     </div>
 
-    <!-- Date of birth (age gate) -->
     <div class="space-y-1">
       <label class="text-sm font-medium text-gray-700">
-        Date of Birth
-        {% if portal_group == 6 %}
-        <span class="text-xs text-gray-400 font-normal">(must be 18+)</span>
-        {% endif %}
+        Email Address
+        <span class="text-xs text-gray-400 font-normal ml-1">(for password recovery)</span>
       </label>
-      <input type="date" name="dob" required
-             max="{% now 'Y-m-d' %}"
-             class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
-                    focus:ring-2 focus:border-brand text-sm bg-white"
+      <input type="email" name="email"
+             placeholder="you@example.com"
+             required autocomplete="email"
+             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900
+                    focus:outline-none focus:ring-2 transition"
              style="--tw-ring-color: {{ primary_color }};" />
     </div>
 
-    <!-- State -->
     <div class="space-y-1">
-      <label class="text-sm font-medium text-gray-700">State</label>
+      <label class="text-sm font-medium text-gray-700">
+        Date of Birth
+        <span class="text-xs text-gray-400 font-normal ml-1">(must be 18 or above)</span>
+      </label>
+      <input type="date" name="dob" required
+             max="{% now 'Y-m-d' %}"
+             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900
+                    focus:outline-none focus:ring-2 bg-white transition"
+             style="--tw-ring-color: {{ primary_color }};" />
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-gray-700">State of Residence</label>
       <select name="state" required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
-                     focus:ring-2 focus:border-brand text-sm bg-white"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900
+                     focus:outline-none focus:ring-2 bg-white transition"
               style="--tw-ring-color: {{ primary_color }};">
-        <option value="">Select state</option>
-        <option>Andhra Pradesh</option><option>Telangana</option>
-        <option>Maharashtra</option><option>Karnataka</option>
-        <option>Tamil Nadu</option><option>Gujarat</option>
-        <option>Rajasthan</option><option>Uttar Pradesh</option>
-        <option>Bihar</option><option>West Bengal</option>
-        <option>Madhya Pradesh</option><option>Other</option>
+        <option value="">Select your state</option>
+        <option>Andhra Pradesh</option>
+        <option>Arunachal Pradesh</option>
+        <option>Assam</option>
+        <option>Bihar</option>
+        <option>Chhattisgarh</option>
+        <option>Delhi</option>
+        <option>Goa</option>
+        <option>Gujarat</option>
+        <option>Haryana</option>
+        <option>Himachal Pradesh</option>
+        <option>Jharkhand</option>
+        <option>Karnataka</option>
+        <option>Kerala</option>
+        <option>Madhya Pradesh</option>
+        <option>Maharashtra</option>
+        <option>Manipur</option>
+        <option>Meghalaya</option>
+        <option>Mizoram</option>
+        <option>Nagaland</option>
+        <option>Odisha</option>
+        <option>Punjab</option>
+        <option>Rajasthan</option>
+        <option>Sikkim</option>
+        <option>Tamil Nadu</option>
+        <option>Telangana</option>
+        <option>Tripura</option>
+        <option>Uttar Pradesh</option>
+        <option>Uttarakhand</option>
+        <option>West Bengal</option>
+        <option>Other / Union Territory</option>
       </select>
     </div>
 
-    <!-- Exam selection (exam domain only) -->
     {% if portal_group == 6 %}
     <div class="space-y-1">
-      <label class="text-sm font-medium text-gray-700">Target Exam</label>
+      <label class="text-sm font-medium text-gray-700">Primary Target Exam</label>
       <select name="target_exam" required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
-                     focus:ring-2 focus:border-brand text-sm bg-white"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900
+                     focus:outline-none focus:ring-2 bg-white transition"
               style="--tw-ring-color: {{ primary_color }};">
-        <option value="">Select exam</option>
-        <option>SSC CGL</option><option>SSC CHSL</option>
-        <option>RRB NTPC</option><option>RRB Group D</option>
-        <option>UPSC CSE</option><option>IBPS PO</option>
-        <option>SBI PO / Clerk</option><option>State PSC</option>
+        <option value="">Choose your exam</option>
+        <optgroup label="SSC">
+          <option value="SSC CGL">SSC CGL — Combined Graduate Level</option>
+          <option value="SSC CHSL">SSC CHSL — Combined Higher Secondary Level</option>
+          <option value="SSC MTS">SSC MTS — Multi Tasking Staff</option>
+          <option value="SSC CPO">SSC CPO — Central Police Organisations</option>
+          <option value="SSC GD">SSC GD — Constable General Duty</option>
+        </optgroup>
+        <optgroup label="Railway">
+          <option value="RRB NTPC">RRB NTPC</option>
+          <option value="RRB Group D">RRB Group D</option>
+          <option value="RRB ALP">RRB ALP — Assistant Loco Pilot</option>
+        </optgroup>
+        <optgroup label="Banking">
+          <option value="IBPS PO">IBPS PO</option>
+          <option value="IBPS Clerk">IBPS Clerk</option>
+          <option value="SBI PO">SBI PO</option>
+          <option value="SBI Clerk">SBI Clerk</option>
+          <option value="RBI Grade B">RBI Grade B</option>
+        </optgroup>
+        <optgroup label="Civil Services">
+          <option value="UPSC CSE">UPSC CSE — IAS / IPS / IFS</option>
+          <option value="State PSC">State PSC</option>
+        </optgroup>
+        <optgroup label="State & Others">
+          <option value="AP Police">AP Police</option>
+          <option value="TS Police">TS Police</option>
+          <option value="Other">Other</option>
+        </optgroup>
       </select>
     </div>
     {% endif %}
 
-    <!-- Consent checkboxes -->
-    <div class="space-y-2 pt-1">
-      <label class="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
-        <input type="checkbox" name="terms" required class="mt-0.5 accent-brand w-4 h-4 flex-shrink-0" />
-        <span>
-          I agree to the
-          <a href="#" class="text-brand underline">Terms of Service</a> and
-          <a href="#" class="text-brand underline">Privacy Policy</a>
+    <!-- Consent -->
+    <div class="space-y-2.5 pt-1">
+      <label class="flex items-start gap-2.5 cursor-pointer">
+        <input type="checkbox" name="terms" required
+               class="mt-0.5 w-4 h-4 rounded flex-shrink-0"
+               style="accent-color: {{ primary_color }};" />
+        <span class="text-xs text-gray-600 leading-relaxed">
+          I have read and agree to the
+          <a href="/terms/" class="font-medium underline hover:text-gray-800">Terms of Service</a>
+          and
+          <a href="/privacy/" class="font-medium underline hover:text-gray-800">Privacy Policy</a>.
         </span>
       </label>
-      <label class="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
-        <input type="checkbox" name="dpdp" required class="mt-0.5 accent-brand w-4 h-4 flex-shrink-0" />
-        <span>
-          I consent to data processing as per the
-          <a href="#" class="text-brand underline">DPDP Act 2023</a>
+      <label class="flex items-start gap-2.5 cursor-pointer">
+        <input type="checkbox" name="dpdp" required
+               class="mt-0.5 w-4 h-4 rounded flex-shrink-0"
+               style="accent-color: {{ primary_color }};" />
+        <span class="text-xs text-gray-600 leading-relaxed">
+          I consent to the collection and processing of my personal data
+          as described in the Privacy Policy and in accordance with
+          the <span class="font-medium">Digital Personal Data Protection Act, 2023</span>.
         </span>
       </label>
     </div>
 
     <button id="register-btn" type="submit"
-            class="btn-brand w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2">
+            class="w-full py-3 rounded-lg font-semibold text-base text-white
+                   flex items-center justify-center gap-2 transition hover:opacity-90 active:scale-[0.99]"
+            style="background-color: {{ primary_color }};">
       <span class="htmx-indicator">
         <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
       </span>
-      <span>Create Account & Send OTP</span>
+      <span>Create Account</span>
     </button>
 
     <div id="register-response"></div>

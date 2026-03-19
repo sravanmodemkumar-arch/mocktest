@@ -12,6 +12,79 @@
 {% endblock %}
 
 {% block content %}
+
+<!-- Contextual insight strip — role and portal-group aware -->
+{% if portal_group == 6 %}
+  {% if greeting_time == 'morning' %}
+  <div class="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-100 text-sm text-indigo-800">
+    <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.998.184-1.983.484-2.916A7.003 7.003 0 005 10a7 7 0 007 7 7.003 7.003 0 006.516-4.084A13.12 13.12 0 0112 14z"/>
+    </svg>
+    <span>
+      <strong>Morning habit:</strong>
+      Aspirants who practice in the morning score 18% higher on average than evening-only learners.
+      Your session is ready.
+    </span>
+  </div>
+  {% elif greeting_time == 'afternoon' %}
+  <div class="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-100 text-sm text-amber-800">
+    <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+    </svg>
+    <span>
+      <strong>Quick tip:</strong>
+      After lunch is a great time for revision. Pick a weak topic and do a focused 20-minute session.
+    </span>
+  </div>
+  {% else %}
+  <div class="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-50 border border-purple-100 text-sm text-purple-800">
+    <svg class="w-5 h-5 text-purple-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+    </svg>
+    <span>
+      <strong>Evening revision:</strong>
+      Reviewing the day's errors before sleep strengthens long-term retention significantly.
+    </span>
+  </div>
+  {% endif %}
+
+{% elif portal_group in '345' or portal_group == 3 or portal_group == 4 or portal_group == 5 %}
+  {% if user.role == 'principal' or user.role == 'director' %}
+  <div class="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 text-sm text-blue-800">
+    <svg class="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+    </svg>
+    <span>
+      Institutions that review daily attendance before 10 AM resolve issues <strong>3x faster</strong>.
+      Your attendance summary is ready below.
+    </span>
+  </div>
+  {% elif user.role == 'teacher' or user.role == 'faculty' %}
+  <div class="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-100 text-sm text-green-700">
+    <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+    </svg>
+    <span>
+      Your first class today is in
+      <strong>{{ next_class_in|default:"a few minutes" }}</strong>.
+      Attendance marking is one tap away from your timetable below.
+    </span>
+  </div>
+  {% elif user.role == 'parent' %}
+  <div class="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-50 border border-rose-100 text-sm text-rose-800">
+    <svg class="w-5 h-5 text-rose-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
+    </svg>
+    <span>
+      Staying informed is the biggest advantage you can give your child.
+      Today's updates from {{ institution_name }} are below.
+    </span>
+  </div>
+  {% endif %}
+{% endif %}
+
 <!-- Home page content loaded dynamically via HTMX based on portal_group + role -->
 <div id="home-content"
      hx-get="/home/data/"
@@ -21,23 +94,19 @@
 
   <!-- Loading skeleton -->
   <div id="home-loader" class="space-y-6 animate-pulse">
-    <!-- Greeting skeleton -->
     <div class="space-y-2">
-      <div class="h-7 bg-gray-200 rounded w-64"></div>
-      <div class="h-4 bg-gray-100 rounded w-48"></div>
+      <div class="h-7 bg-gray-200 rounded-lg w-72"></div>
+      <div class="h-4 bg-gray-100 rounded w-52"></div>
     </div>
-    <!-- Alert skeleton -->
-    <div class="h-14 bg-gray-100 rounded-xl"></div>
-    <!-- KPI bar skeleton -->
+    <div class="h-16 bg-gray-100 rounded-xl"></div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {% for i in "1234" %}
       <div class="h-24 bg-gray-100 rounded-xl"></div>
       {% endfor %}
     </div>
-    <!-- Cards skeleton -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="h-48 bg-gray-100 rounded-xl"></div>
-      <div class="h-48 bg-gray-100 rounded-xl"></div>
+      <div class="h-52 bg-gray-100 rounded-xl"></div>
+      <div class="h-52 bg-gray-100 rounded-xl"></div>
     </div>
   </div>
 

@@ -4,13 +4,22 @@
 <div class="flex items-start justify-between mb-6">
   <div>
     <h1 class="text-2xl font-bold text-gray-900">
-      Good {{ greeting_time }}, {{ user.name|default:"there" }}! 👋
+      {% if user.role == 'principal' or user.role == 'admin' %}
+        {% if greeting_time == 'morning' %}Your school, your day ahead.
+        {% elif greeting_time == 'afternoon' %}Afternoon check-in, {{ user.name|default:"Principal" }}.
+        {% else %}Evening review, {{ user.name|default:"Principal" }}.{% endif %}
+      {% elif user.role == 'teacher' %}
+        {% if greeting_time == 'morning' %}Good morning, {{ user.name|default:"Teacher" }}. Classes await.
+        {% else %}Good {{ greeting_time }}, {{ user.name|default:"Teacher" }}.{% endif %}
+      {% elif user.role == 'parent' %}
+        Good {{ greeting_time }}. Here's how your child is doing.
+      {% else %}
+        Good {{ greeting_time }}, {{ user.name|default:"there" }}.
+      {% endif %}
     </h1>
-    <p class="text-sm text-gray-500 mt-0.5">
-      {{ today_date }} · {{ institution_name }}
-    </p>
+    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
   </div>
-  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
+  <span class="hidden sm:block text-xs px-3 py-1 rounded-full font-medium text-white"
         style="background-color: {{ primary_color }};">
     {{ user.role_display }}
   </span>
