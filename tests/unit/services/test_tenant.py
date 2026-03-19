@@ -2,13 +2,16 @@
 Unit tests — Tenant service: first-party domain resolution,
 static asset loading, cache header generation.
 """
+
 import pytest
 import sys
 import os
 import json
 import tempfile
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "services"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "services")
+)
 
 pytestmark = pytest.mark.unit
 
@@ -34,6 +37,7 @@ class TestFirstPartyDomains:
     )
     def test_first_party_domain_resolves(self, domain, expected_group, expected_slug):
         from tenant.main import FIRST_PARTY_DOMAINS
+
         assert domain in FIRST_PARTY_DOMAINS
         cfg = FIRST_PARTY_DOMAINS[domain]
         assert cfg["group"] == expected_group
@@ -41,12 +45,14 @@ class TestFirstPartyDomains:
 
     def test_all_first_party_domains_have_name(self):
         from tenant.main import FIRST_PARTY_DOMAINS
+
         for domain, cfg in FIRST_PARTY_DOMAINS.items():
             assert "name" in cfg, f"{domain} missing 'name'"
             assert len(cfg["name"]) > 0
 
     def test_all_first_party_domains_have_slug(self):
         from tenant.main import FIRST_PARTY_DOMAINS
+
         for domain, cfg in FIRST_PARTY_DOMAINS.items():
             assert "slug" in cfg
             # slug must be lowercase, no spaces
@@ -57,11 +63,13 @@ class TestFirstPartyDomains:
 class TestStaticAssets:
     def test_static_assets_returns_dict(self):
         from tenant.main import static_assets
+
         result = static_assets("default")
         assert isinstance(result, dict)
 
     def test_static_assets_has_required_keys(self):
         from tenant.main import static_assets
+
         result = static_assets("default")
         required = ["primary", "logo", "logo_dark", "favicon", "og_image"]
         for key in required:
@@ -69,12 +77,14 @@ class TestStaticAssets:
 
     def test_static_assets_logo_is_cdn_url(self):
         from tenant.main import static_assets
+
         result = static_assets("some-school")
         assert "some-school" in result["logo"]
 
     def test_static_assets_fallback_to_default(self):
         """Non-existent tenant slug uses default brand.json."""
         from tenant.main import static_assets
+
         result = static_assets("nonexistent-tenant-xyz")
         assert result["primary"]  # has some color
         assert result["logo"]
@@ -153,7 +163,9 @@ class TestTenantCacheHeaders:
         from tenant.main import app
         from httpx import AsyncClient, ASGITransport
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             resp = await client.get(
                 "/api/v1/tenant/config",
                 params={"domain": "ssc.eduforge.in"},
@@ -169,7 +181,9 @@ class TestTenantCacheHeaders:
         from tenant.main import app
         from httpx import AsyncClient, ASGITransport
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             resp = await client.get(
                 "/api/v1/tenant/config",
                 params={"domain": "unknown-domain-xyz.com"},

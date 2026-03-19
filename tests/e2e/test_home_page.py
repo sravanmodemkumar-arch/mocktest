@@ -2,6 +2,7 @@
 E2E tests — Home page (post-login).
 Requires a running portal and a seeded test user.
 """
+
 import pytest
 from playwright.sync_api import Page, expect
 from .conftest import login
@@ -50,7 +51,9 @@ class TestHomePageShell:
     def test_home_insight_strip_visible(self, page: Page, base_url: str):
         login(page, base_url)
         # Insight strip — one of the contextual banners should be visible
-        strips = page.locator(".bg-indigo-50, .bg-amber-50, .bg-purple-50, .bg-blue-50, .bg-green-50, .bg-rose-50")
+        strips = page.locator(
+            ".bg-indigo-50, .bg-amber-50, .bg-purple-50, .bg-blue-50, .bg-green-50, .bg-rose-50"
+        )
         # At least one insight strip may be visible depending on portal group
         # Just ensure the home content loaded
         expect(page.locator("#home-content")).to_be_visible()

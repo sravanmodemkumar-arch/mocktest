@@ -2,6 +2,7 @@
 Regression tests — Tenant isolation.
 Ensures one tenant cannot see another's data, branding bleeds, or credentials.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -13,8 +14,10 @@ class TestTenantBrandingIsolation:
         return MagicMock(
             status_code=200,
             json=lambda: {
-                "slug": slug, "portal_group": group,
-                "name": slug.title(), "branding": {"primary": primary},
+                "slug": slug,
+                "portal_group": group,
+                "name": slug.title(),
+                "branding": {"primary": primary},
             },
         )
 
@@ -48,7 +51,9 @@ class TestTenantBrandingIsolation:
         # school-b is NOT in the session (hasn't been visited)
         assert "tenant:school-b.example.com" not in session
 
-    def test_portal_group_determines_template_not_shared(self, client, make_access_token):
+    def test_portal_group_determines_template_not_shared(
+        self, client, make_access_token
+    ):
         """Group 3 (school) home must render school partial, not exam domain partial."""
         token = make_access_token(user_id=1, role="principal")
         client.cookies["ef_token"] = token
@@ -62,14 +67,20 @@ class TestTenantBrandingIsolation:
             with patch("apps.core.middleware.httpx.get") as mock_tenant:
                 mock_tenant.return_value = MagicMock(
                     status_code=200,
-                    json=lambda: {"slug": "test-school", "portal_group": 3,
-                                  "name": "Test School", "branding": {}},
+                    json=lambda: {
+                        "slug": "test-school",
+                        "portal_group": 3,
+                        "name": "Test School",
+                        "branding": {},
+                    },
                 )
                 resp = client.get("/home/data/")
 
         assert resp.status_code == 200
         # School template should NOT contain exam-domain specific content
-        assert b"upgrade_banner" not in resp.content.lower() or True  # partial check only
+        assert (
+            b"upgrade_banner" not in resp.content.lower() or True
+        )  # partial check only
 
 
 class TestTenantDataLeakPrevention:
@@ -90,8 +101,11 @@ class TestTenantDataLeakPrevention:
 
         # Identity service returns user from a different institution
         user_data = {
-            "id": 99, "role": "student", "institution_id": 999,
-            "is_active": True, "mobile": "+919000000000",
+            "id": 99,
+            "role": "student",
+            "institution_id": 999,
+            "is_active": True,
+            "mobile": "+919000000000",
         }
 
         with patch("apps.core.middleware.httpx.get") as mock_get:
@@ -105,6 +119,7 @@ class TestTenantDataLeakPrevention:
     def test_blocked_user_cannot_access_protected_routes(self, client):
         """A 403 from identity service must redirect to login, not show home."""
         import httpx
+
         client.cookies["ef_token"] = "blocked.user.token"
 
         with patch("apps.core.middleware.httpx.get") as mock:

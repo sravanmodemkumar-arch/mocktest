@@ -2,11 +2,14 @@
 Unit tests — 7-level criticality flag system.
 Tests cache TTL computation and header generation for all levels.
 """
+
 import pytest
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "services"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "services")
+)
 
 from shared.client import (
     Criticality,
@@ -27,7 +30,15 @@ pytestmark = pytest.mark.unit
 class TestCriticalityLevels:
     def test_all_levels_defined(self):
         """All 7 criticality levels must exist."""
-        for level in ["critical", "realtime", "high", "medium", "low", "offpeak", "static"]:
+        for level in [
+            "critical",
+            "realtime",
+            "high",
+            "medium",
+            "low",
+            "offpeak",
+            "static",
+        ]:
             assert level in CRITICALITY_TTL
 
     def test_ttl_ordering(self):
@@ -45,7 +56,9 @@ class TestCriticalityLevels:
     def test_all_sections_have_criticality(self):
         """Every section in SECTION_CRITICALITY must map to a valid level."""
         for section, level in SECTION_CRITICALITY.items():
-            assert level in CRITICALITY_TTL, f"Section '{section}' has unknown level '{level}'"
+            assert (
+                level in CRITICALITY_TTL
+            ), f"Section '{section}' has unknown level '{level}'"
 
 
 class TestSectionCriticality:
@@ -124,7 +137,9 @@ class TestCacheHeaders:
         assert "no-cache" in headers["Cache-Control"]
 
     def test_realtime_has_poll_interval(self):
-        headers = make_cache_headers(15, Criticality.REALTIME, ClientType.MOBILE_ANDROID)
+        headers = make_cache_headers(
+            15, Criticality.REALTIME, ClientType.MOBILE_ANDROID
+        )
         assert headers.get("X-Poll-Interval") == "15"
 
     def test_medium_web_uses_s_maxage(self):
@@ -139,7 +154,9 @@ class TestCacheHeaders:
         assert "s-maxage" not in headers["Cache-Control"]
 
     def test_offpeak_mobile_has_refresh_window(self):
-        headers = make_cache_headers(1800, Criticality.OFFPEAK, ClientType.MOBILE_ANDROID)
+        headers = make_cache_headers(
+            1800, Criticality.OFFPEAK, ClientType.MOBILE_ANDROID
+        )
         assert "X-Refresh-Window" in headers
         assert "00:00" in headers["X-Refresh-Window"]
         assert "06:00" in headers["X-Refresh-Window"]
@@ -176,24 +193,28 @@ class TestCacheHeaders:
 class TestClientDetection:
     def test_detect_mobile_ios_header(self):
         from unittest.mock import MagicMock
+
         req = MagicMock()
         req.headers = {"X-Client-Type": "mobile_ios"}
         assert detect_client(req) == ClientType.MOBILE_IOS
 
     def test_detect_mobile_android_header(self):
         from unittest.mock import MagicMock
+
         req = MagicMock()
         req.headers = {"X-Client-Type": "mobile_android"}
         assert detect_client(req) == ClientType.MOBILE_ANDROID
 
     def test_detect_web_no_header(self):
         from unittest.mock import MagicMock
+
         req = MagicMock()
         req.headers = {}
         assert detect_client(req) == ClientType.WEB
 
     def test_detect_flutter_user_agent(self):
         from unittest.mock import MagicMock
+
         req = MagicMock()
         req.headers = {"User-Agent": "EduForgeAndroid/2.1 (android 14)"}
         assert detect_client(req) == ClientType.MOBILE_ANDROID

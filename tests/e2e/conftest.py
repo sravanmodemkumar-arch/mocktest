@@ -1,4 +1,5 @@
 """E2E test configuration — Playwright browser fixtures."""
+
 import pytest
 from playwright.sync_api import Page, BrowserContext
 
@@ -15,7 +16,9 @@ def auth_page(page: Page, base_url: str) -> Page:
     return page
 
 
-def login(page: Page, base_url: str, login_id: str = "9876543210", password: str = "Test@1234"):
+def login(
+    page: Page, base_url: str, login_id: str = "9876543210", password: str = "Test@1234"
+):
     """Helper: fill login form and submit."""
     page.goto(f"{base_url}/login/")
     page.fill("#login_id", login_id)

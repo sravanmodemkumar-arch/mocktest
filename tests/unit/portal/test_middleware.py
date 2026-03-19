@@ -2,6 +2,7 @@
 Unit tests — Django TenantMiddleware and AuthMiddleware.
 Uses respx to mock httpx calls — no real network.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
@@ -12,6 +13,7 @@ class TestTenantMiddleware:
     def test_tenant_attached_to_request(self, rf, mock_tenant_service):
         """TenantMiddleware must attach tenant dict to request."""
         import django
+
         django.setup()
         from apps.core.middleware import TenantMiddleware
         from django.test import RequestFactory
@@ -47,7 +49,12 @@ class TestTenantMiddleware:
 
         factory = RequestFactory()
         request = factory.get("/home/", SERVER_NAME="ssc.eduforge.in")
-        cached = {"slug": "ssc-domain", "portal_group": 6, "name": "SSC", "branding": {}}
+        cached = {
+            "slug": "ssc-domain",
+            "portal_group": 6,
+            "name": "SSC",
+            "branding": {},
+        }
         request.session = {"tenant:ssc.eduforge.in": cached}
 
         with patch("apps.core.middleware.httpx.get") as mock_get:
@@ -121,7 +128,12 @@ class TestAuthMiddleware:
         request = factory.get("/home/")
         request.COOKIES = {"ef_token": token}
 
-        user_data = {"id": 5, "mobile": "+919876543210", "role": "teacher", "is_active": True}
+        user_data = {
+            "id": 5,
+            "mobile": "+919876543210",
+            "role": "teacher",
+            "is_active": True,
+        }
 
         with patch("apps.core.middleware.httpx.get") as mock_get:
             mock_resp = MagicMock()
@@ -143,12 +155,19 @@ class TestAuthMiddleware:
 
         factory = RequestFactory()
         request = factory.get("/home/")
-        request.COOKIES = {"ef_token": "expired.token.here", "ef_refresh": "valid.refresh.token"}
+        request.COOKIES = {
+            "ef_token": "expired.token.here",
+            "ef_refresh": "valid.refresh.token",
+        }
 
-        new_tokens = {"access_token": "new.access.token", "refresh_token": "new.refresh.token"}
+        new_tokens = {
+            "access_token": "new.access.token",
+            "refresh_token": "new.refresh.token",
+        }
 
-        with patch("apps.core.middleware.httpx.get") as mock_get, \
-             patch("apps.core.middleware.httpx.post") as mock_post:
+        with patch("apps.core.middleware.httpx.get") as mock_get, patch(
+            "apps.core.middleware.httpx.post"
+        ) as mock_post:
 
             mock_get.return_value = MagicMock(status_code=401)
             mock_post.return_value = MagicMock(status_code=200, json=lambda: new_tokens)
