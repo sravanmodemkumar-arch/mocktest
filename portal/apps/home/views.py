@@ -1,4 +1,4 @@
-"""Home views — shell page + HTMX data loader."""
+"""Home views — landing, shell page + HTMX data loader."""
 
 import httpx
 from datetime import datetime
@@ -22,6 +22,17 @@ GROUP_TEMPLATES = {
     9: "home/partials/group9_b2b_partner.html",
     10: "home/partials/group10_student.html",
 }
+
+
+def landing_view(request):
+    """Root landing page — portal-group-specific overview, no login required."""
+    tenant = getattr(request, "tenant", {})
+    ctx = {
+        "portal_group": tenant.get("portal_group", 1),
+        "tenant_name": tenant.get("name", "EduForge"),
+        "primary_color": tenant.get("branding", {}).get("primary", "#1A237E"),
+    }
+    return render(request, "landing.html", ctx)
 
 
 def home_shell(request):
