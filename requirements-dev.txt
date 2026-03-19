@@ -1,6 +1,49 @@
--r requirements.txt
+# ============================================================
+# Development & Test Dependencies
+# Install with: pip install -r requirements-dev.txt
+#
+# Production dependencies live per-service:
+#   portal/requirements.txt          — Django portal
+#   services/auth/requirements.txt   — Auth Lambda
+#   services/home/requirements.txt   — Home Lambda
+#   services/tenant/requirements.txt — Tenant Lambda
+# ============================================================
 
-# Dev & testing tools
-pytest==8.1.1
+# Test runner
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-django==4.9.0
+pytest-cov==6.0.0
+pytest-xdist==3.6.1
+pytest-timeout==2.3.1
+pytest-rerunfailures==14.0
+
+# HTTP / API testing
+httpx==0.27.2
+respx==0.21.1
+
+# Browser / E2E
+playwright==1.49.0
+pytest-playwright==0.6.2
+
+# Django test helpers
+django-test-plus==2.2.4
+model-bakery==1.20.0
+
+# Fixtures / data
+faker==33.1.0
+factory-boy==3.3.1
+
+# Performance
+locust==2.32.4
+
+# Security scanning
+bandit==1.8.0
+safety==3.2.11
+
+# Assertions
+dirty-equals==0.8.0
+
+# Code quality
 black==24.3.0
 flake8==7.0.0

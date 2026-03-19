@@ -1,6 +1,8 @@
 version: "3.9"
 
 services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     environment:
@@ -11,17 +13,71 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/init_schemas.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  identity:
-    build: ./identity
+  # ── Auth Service (FastAPI) ─────────────────────────────────────────────────
+  auth:
+    build: ./services/auth
     ports:
-      - "8001:8001"
+      - "8001:8000"
     env_file: .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
-      - ./identity:/app
+      - ./services/auth:/app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/eduforge
+
+  # ── Home Service (FastAPI) ─────────────────────────────────────────────────
+  home:
+    build: ./services/home
+    ports:
+      - "8002:8000"
+    env_file: .env
+    depends_on:
+      - auth
+    volumes:
+      - ./services/home:/app
+    environment:
+      IDENTITY_SERVICE_URL: http://auth:8000
+
+  # ── Tenant Service (FastAPI) ───────────────────────────────────────────────
+  tenant:
+    build: ./services/tenant
+    ports:
+      - "8003:8000"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./services/tenant:/app
+      - ./static:/app/static:ro
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/eduforge
+
+  # ── Django Portal ──────────────────────────────────────────────────────────
+  portal:
+    build: ./portal
+    ports:
+      - "8000:8000"
+    env_file: portal/.env.example
+    depends_on:
+      - auth
+      - home
+      - tenant
+    volumes:
+      - ./portal:/app
+    environment:
+      IDENTITY_SERVICE_URL: http://auth:8000
+      HOME_SERVICE_URL: http://home:8000
+      TENANT_SERVICE_URL: http://tenant:8000
+      DEBUG: "true"
 
 volumes:
   pgdata:
