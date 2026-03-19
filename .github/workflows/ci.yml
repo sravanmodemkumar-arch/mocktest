@@ -45,13 +45,13 @@ jobs:
       - name: Unit tests
         run: pytest tests/unit/ -v --tb=short --timeout=30
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/portal
           DJANGO_SETTINGS_MODULE: portal.settings
 
       - name: Integration tests
         run: pytest tests/integration/ -v --tb=short --timeout=60
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/portal
           DJANGO_SETTINGS_MODULE: portal.settings
 
       - name: Coverage report
@@ -61,7 +61,7 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=70
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/portal
           DJANGO_SETTINGS_MODULE: portal.settings
 
   # ── Security scan ──────────────────────────────────────────────────────────
@@ -107,5 +107,5 @@ jobs:
       - name: Run regression suite
         run: pytest tests/regression/ -v --tb=short
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/portal
           DJANGO_SETTINGS_MODULE: portal.settings
