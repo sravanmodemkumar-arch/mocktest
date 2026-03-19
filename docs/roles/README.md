@@ -8,7 +8,7 @@ All role definitions are organized by group. Each group has its own dedicated do
 | [group2-institution-group-roles.md](group2-institution-group-roles.md) | Institution Groups (chains/trusts) | 69 | ✅ Done |
 | [group3-school-roles.md](group3-school-roles.md) | School Level | 125 | ✅ Done |
 | [group4-college-roles.md](group4-college-roles.md) | College Level (Intermediate) | 147 | ✅ Done |
-| group5-coaching-roles.md | Coaching Centres | TBD | 🔜 Upcoming |
+| [group5-coaching-roles.md](group5-coaching-roles.md) | Coaching Centres | 136 | ✅ Done |
 | group6-exam-domain-roles.md | Online Exam Domains (SSC, RRB etc.) | TBD | 🔜 Upcoming |
 
 ---
