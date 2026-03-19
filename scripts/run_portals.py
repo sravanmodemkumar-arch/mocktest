@@ -18,6 +18,7 @@ Portal groups and ports:
 The dev API server must already be running on port 8001:
     python scripts/dev_server.py
 """
+
 import os
 import sys
 import subprocess
@@ -98,12 +99,20 @@ def main():
             for i, proc in enumerate(processes):
                 if proc.poll() is not None:
                     group, port, label = GROUPS[i]
-                    print(f"  [WARNING] Group {group} ({label}) on port {port} exited — restarting...")
+                    print(
+                        f"  [WARNING] Group {group} ({label}) on port {port} exited — restarting..."
+                    )
                     env = os.environ.copy()
                     env["DJANGO_SETTINGS_MODULE"] = "portal.settings"
                     env["DEV_PORTAL_GROUP"] = str(group)
                     processes[i] = subprocess.Popen(
-                        [PYTHON, "manage.py", "runserver", f"127.0.0.1:{port}", "--noreload"],
+                        [
+                            PYTHON,
+                            "manage.py",
+                            "runserver",
+                            f"127.0.0.1:{port}",
+                            "--noreload",
+                        ],
                         cwd=PORTAL_DIR,
                         env=env,
                         stdout=subprocess.DEVNULL,

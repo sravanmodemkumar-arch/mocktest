@@ -2,6 +2,7 @@
 Security tests — Tenant isolation and data protection.
 Verifies cross-tenant data leakage cannot occur.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -9,7 +10,9 @@ pytestmark = [pytest.mark.security, pytest.mark.django_db]
 
 
 class TestCrossTenantIsolation:
-    def test_tenant_A_token_cannot_access_tenant_B_data(self, client, make_access_token):
+    def test_tenant_A_token_cannot_access_tenant_B_data(
+        self, client, make_access_token
+    ):
         """JWT issued for institution 1 must not grant access to institution 2's home data."""
         token = make_access_token(user_id=1, role="student")
         client.cookies["ef_token"] = token
@@ -39,9 +42,13 @@ class TestCrossTenantIsolation:
 
         def capture_call(*args, **kwargs):
             captured_headers.update(kwargs.get("headers", {}))
-            return MagicMock(status_code=200, json=lambda: {
-                "portal_group": 3, "data": {"kpis": [], "sections": [], "alerts": []}
-            })
+            return MagicMock(
+                status_code=200,
+                json=lambda: {
+                    "portal_group": 3,
+                    "data": {"kpis": [], "sections": [], "alerts": []},
+                },
+            )
 
         with patch("apps.core.middleware.httpx.get") as mock_mw:
             mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
@@ -53,6 +60,7 @@ class TestCrossTenantIsolation:
     def test_no_tenant_data_in_error_responses(self, client):
         """Error pages must not leak tenant configuration details."""
         import httpx
+
         with patch(
             "apps.core.middleware.httpx.get",
             side_effect=httpx.TimeoutException("timeout"),
@@ -86,12 +94,16 @@ class TestSessionSecurity:
 
         tokens = {"access_token": "access.tok", "refresh_token": "refresh.tok"}
         user_data = {
-            "id": 1, "role": "student", "requires_2fa": False,
-            "profile_complete": True, "has_multiple_roles": False,
+            "id": 1,
+            "role": "student",
+            "requires_2fa": False,
+            "profile_complete": True,
+            "has_multiple_roles": False,
         }
 
-        with patch("apps.auth_views.views.httpx.post") as mp, \
-             patch("apps.auth_views.views.httpx.get") as mg:
+        with patch("apps.auth_views.views.httpx.post") as mp, patch(
+            "apps.auth_views.views.httpx.get"
+        ) as mg:
             mp.return_value = MagicMock(status_code=200, json=lambda: tokens)
             mg.return_value = MagicMock(status_code=200, json=lambda: user_data)
             client.post(
@@ -108,12 +120,15 @@ class TestSessionSecurity:
 class TestPublicRouteAccess:
     """These routes must always be accessible without authentication."""
 
-    @pytest.mark.parametrize("path", [
-        "/login/",
-        "/forgot-password/",
-        "/account-blocked/",
-        "/register/",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/login/",
+            "/forgot-password/",
+            "/account-blocked/",
+            "/register/",
+        ],
+    )
     def test_public_route_accessible_without_auth(self, client, path):
         with patch("apps.core.middleware.httpx.get") as mock:
             mock.return_value = MagicMock(
@@ -128,13 +143,16 @@ class TestPublicRouteAccess:
             resp = client.get(path)
         assert resp.status_code in (200, 302)  # 302 is ok for register on non-group-6
 
-    @pytest.mark.parametrize("path", [
-        "/home/",
-        "/home/data/",
-        "/home/nav/",
-        "/select-role/",
-        "/setup-profile/",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/home/",
+            "/home/data/",
+            "/home/nav/",
+            "/select-role/",
+            "/setup-profile/",
+        ],
+    )
     def test_protected_route_requires_auth(self, client, path):
         resp = client.get(path)
         assert resp.status_code == 302

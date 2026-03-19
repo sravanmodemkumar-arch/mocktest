@@ -2,6 +2,7 @@
 Integration tests — Django portal views.
 Uses pytest-django's client fixture. Mocks httpx calls to backend services.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -65,7 +66,9 @@ class TestLoginView:
 class TestOTPSendView:
     def test_valid_mobile_sends_otp(self, client):
         with patch("apps.auth_views.views.httpx.post") as mock_post:
-            mock_post.return_value = MagicMock(status_code=200, json=lambda: {"message": "OTP sent"})
+            mock_post.return_value = MagicMock(
+                status_code=200, json=lambda: {"message": "OTP sent"}
+            )
             resp = client.post(
                 "/otp/send/",
                 data={"mobile": "9876543210"},
@@ -94,7 +97,10 @@ class TestOTPSendView:
 
     def test_identity_service_down_returns_error(self, client):
         import httpx
-        with patch("apps.auth_views.views.httpx.post", side_effect=httpx.ConnectError("down")):
+
+        with patch(
+            "apps.auth_views.views.httpx.post", side_effect=httpx.ConnectError("down")
+        ):
             resp = client.post(
                 "/otp/send/",
                 data={"mobile": "9876543210"},
@@ -131,12 +137,22 @@ class TestOTPVerifyView:
         session["otp_mobile"] = "9876543210"
         session.save()
 
-        tokens = {"access_token": "test.access.token", "refresh_token": "test.refresh.token"}
-        user_data = {"id": 1, "mobile": "+919876543210", "role": "student",
-                     "requires_2fa": False, "profile_complete": True, "has_multiple_roles": False}
+        tokens = {
+            "access_token": "test.access.token",
+            "refresh_token": "test.refresh.token",
+        }
+        user_data = {
+            "id": 1,
+            "mobile": "+919876543210",
+            "role": "student",
+            "requires_2fa": False,
+            "profile_complete": True,
+            "has_multiple_roles": False,
+        }
 
-        with patch("apps.auth_views.views.httpx.post") as mock_post, \
-             patch("apps.auth_views.views.httpx.get") as mock_get:
+        with patch("apps.auth_views.views.httpx.post") as mock_post, patch(
+            "apps.auth_views.views.httpx.get"
+        ) as mock_get:
             mock_post.return_value = MagicMock(status_code=200, json=lambda: tokens)
             mock_get.return_value = MagicMock(status_code=200, json=lambda: user_data)
 
@@ -169,11 +185,17 @@ class TestOTPVerifyView:
         session.save()
 
         tokens = {"access_token": "tok", "refresh_token": "ref"}
-        user_data = {"id": 2, "role": "principal", "requires_2fa": True,
-                     "profile_complete": True, "has_multiple_roles": False}
+        user_data = {
+            "id": 2,
+            "role": "principal",
+            "requires_2fa": True,
+            "profile_complete": True,
+            "has_multiple_roles": False,
+        }
 
-        with patch("apps.auth_views.views.httpx.post") as mock_post, \
-             patch("apps.auth_views.views.httpx.get") as mock_get:
+        with patch("apps.auth_views.views.httpx.post") as mock_post, patch(
+            "apps.auth_views.views.httpx.get"
+        ) as mock_get:
             mock_post.return_value = MagicMock(status_code=200, json=lambda: tokens)
             mock_get.return_value = MagicMock(status_code=200, json=lambda: user_data)
 
@@ -208,12 +230,15 @@ class TestHomeView:
                 "kpis": [],
                 "sections": [{"id": "test_series", "criticality": "medium"}],
                 "alerts": [],
-            }
+            },
         }
-        with patch("apps.core.middleware.httpx.get") as mock_mw, \
-             patch("apps.home.views.httpx.get") as mock_home:
+        with patch("apps.core.middleware.httpx.get") as mock_mw, patch(
+            "apps.home.views.httpx.get"
+        ) as mock_home:
             mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
-            mock_home.return_value = MagicMock(status_code=200, json=lambda: home_response)
+            mock_home.return_value = MagicMock(
+                status_code=200, json=lambda: home_response
+            )
             resp = authed_portal_client.get("/home/data/")
 
         assert resp.status_code == 200
@@ -234,13 +259,16 @@ class TestHomeView:
                 },
                 "kpis": [],
                 "alerts": [],
-            }
+            },
         }
 
-        with patch("apps.core.middleware.httpx.get") as mock_mw, \
-             patch("apps.home.views.httpx.get") as mock_home:
+        with patch("apps.core.middleware.httpx.get") as mock_mw, patch(
+            "apps.home.views.httpx.get"
+        ) as mock_home:
             mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
-            mock_home.return_value = MagicMock(status_code=200, json=lambda: home_response)
+            mock_home.return_value = MagicMock(
+                status_code=200, json=lambda: home_response
+            )
             resp = client.get("/home/data/")
 
         assert resp.status_code == 200

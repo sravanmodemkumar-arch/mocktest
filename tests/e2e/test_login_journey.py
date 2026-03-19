@@ -3,6 +3,7 @@ E2E tests — Login journey.
 Playwright browser tests against a running Django portal (localhost:8000).
 Run: pytest tests/e2e/ --headed (or headless by default)
 """
+
 import pytest
 from playwright.sync_api import Page, expect
 

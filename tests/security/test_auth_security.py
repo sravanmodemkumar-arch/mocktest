@@ -3,6 +3,7 @@ Security tests — Authentication security.
 Tests for common auth vulnerabilities: brute force, token misuse,
 injection, session fixation, cookie security.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -40,13 +41,20 @@ class TestBruteForceProtection:
 class TestCookieSecurity:
     def test_auth_cookie_is_httponly(self, client):
         """ef_token must be HttpOnly — inaccessible to JavaScript."""
-        tokens = {"access_token": "test.access.token", "refresh_token": "test.refresh.token"}
-        user_data = {
-            "id": 1, "role": "student", "requires_2fa": False,
-            "profile_complete": True, "has_multiple_roles": False,
+        tokens = {
+            "access_token": "test.access.token",
+            "refresh_token": "test.refresh.token",
         }
-        with patch("apps.auth_views.views.httpx.post") as mock_post, \
-             patch("apps.auth_views.views.httpx.get") as mock_get:
+        user_data = {
+            "id": 1,
+            "role": "student",
+            "requires_2fa": False,
+            "profile_complete": True,
+            "has_multiple_roles": False,
+        }
+        with patch("apps.auth_views.views.httpx.post") as mock_post, patch(
+            "apps.auth_views.views.httpx.get"
+        ) as mock_get:
             mock_post.return_value = MagicMock(status_code=200, json=lambda: tokens)
             mock_get.return_value = MagicMock(status_code=200, json=lambda: user_data)
             resp = client.post(
@@ -63,11 +71,15 @@ class TestCookieSecurity:
         """ef_token must have SameSite=Lax to mitigate CSRF."""
         tokens = {"access_token": "tok", "refresh_token": "ref"}
         user_data = {
-            "id": 1, "role": "student", "requires_2fa": False,
-            "profile_complete": True, "has_multiple_roles": False,
+            "id": 1,
+            "role": "student",
+            "requires_2fa": False,
+            "profile_complete": True,
+            "has_multiple_roles": False,
         }
-        with patch("apps.auth_views.views.httpx.post") as mock_post, \
-             patch("apps.auth_views.views.httpx.get") as mock_get:
+        with patch("apps.auth_views.views.httpx.post") as mock_post, patch(
+            "apps.auth_views.views.httpx.get"
+        ) as mock_get:
             mock_post.return_value = MagicMock(status_code=200, json=lambda: tokens)
             mock_get.return_value = MagicMock(status_code=200, json=lambda: user_data)
             resp = client.post(
@@ -92,6 +104,7 @@ class TestCSRFProtection:
     def test_login_post_requires_csrf_token(self, client):
         """POST without CSRF token should be rejected."""
         from django.test import Client
+
         raw_client = Client(enforce_csrf_checks=True)
         resp = raw_client.post(
             "/login/password/",
@@ -101,6 +114,7 @@ class TestCSRFProtection:
 
     def test_forgot_password_post_requires_csrf(self, client):
         from django.test import Client
+
         raw_client = Client(enforce_csrf_checks=True)
         resp = raw_client.post(
             "/forgot-password/request/",
@@ -161,6 +175,7 @@ class TestTokenSecurity:
     def test_refresh_token_cannot_access_protected_route(self, client):
         """A refresh token used as an access token must be rejected."""
         from app.services.jwt import create_refresh_token  # type: ignore
+
         try:
             refresh = create_refresh_token(1)
             client.cookies["ef_token"] = refresh

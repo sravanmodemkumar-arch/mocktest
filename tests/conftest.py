@@ -7,6 +7,7 @@ Fixture scopes used:
   module   → created once per test file    (test app clients)
   function → created per test (default)    (clean state per test)
 """
+
 import asyncio
 import os
 import sys
@@ -26,7 +27,10 @@ sys.path.insert(0, os.path.join(ROOT, "services"))
 
 # ── Test environment ──────────────────────────────────────────────────────────
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "portal.settings")
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/eduforge_test")
+os.environ.setdefault(
+    "DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/eduforge_test",
+)
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-not-for-production")
 os.environ.setdefault("DEBUG", "True")
 
@@ -37,6 +41,7 @@ fake = Faker("en_IN")
 def _postgres_available() -> bool:
     """Check PostgreSQL is reachable AND credentials are valid."""
     import socket
+
     try:
         with socket.create_connection(("localhost", 5432), timeout=1):
             pass  # port open
@@ -45,9 +50,11 @@ def _postgres_available() -> bool:
     # Port open — verify credentials work
     try:
         import subprocess
+
         result = subprocess.run(
             ["pg_isready", "-U", "postgres", "-h", "localhost", "-p", "5432"],
-            capture_output=True, timeout=2,
+            capture_output=True,
+            timeout=2,
         )
         if result.returncode != 0:
             return False
@@ -56,9 +63,11 @@ def _postgres_available() -> bool:
         if "postgres:postgres" in env_check:
             # default test creds — attempt a quick connect
             import asyncio as _asyncio
+
             async def _check():
                 try:
                     import asyncpg
+
                     conn = await asyncpg.connect(
                         "postgresql://postgres:postgres@localhost:5432/postgres",
                         timeout=2,
@@ -67,6 +76,7 @@ def _postgres_available() -> bool:
                     return True
                 except Exception:
                     return False
+
             return _asyncio.run(_check())
         return True
     except Exception:
@@ -77,7 +87,9 @@ _POSTGRES_UP = _postgres_available()
 
 
 def pytest_collection_modifyitems(config, items):
-    skip_no_db = pytest.mark.skip(reason="PostgreSQL not available locally (start DB to run)")
+    skip_no_db = pytest.mark.skip(
+        reason="PostgreSQL not available locally (start DB to run)"
+    )
     for item in items:
         if "requires_db" in item.keywords and not _POSTGRES_UP:
             item.add_marker(skip_no_db)
@@ -97,6 +109,7 @@ def event_loop():
 async def identity_client() -> AsyncGenerator[AsyncClient, None]:
     """Async HTTP client for the identity FastAPI service."""
     from app.main import app  # identity/app/main.py
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -108,6 +121,7 @@ async def identity_client() -> AsyncGenerator[AsyncClient, None]:
 async def home_client() -> AsyncGenerator[AsyncClient, None]:
     """Async HTTP client for the home FastAPI service."""
     from home.main import app as home_app  # services/home/main.py
+
     async with AsyncClient(
         transport=ASGITransport(app=home_app),
         base_url="http://test",
@@ -119,6 +133,7 @@ async def home_client() -> AsyncGenerator[AsyncClient, None]:
 async def tenant_client() -> AsyncGenerator[AsyncClient, None]:
     """Async HTTP client for the tenant FastAPI service."""
     from tenant.main import app as tenant_app  # services/tenant/main.py
+
     async with AsyncClient(
         transport=ASGITransport(app=tenant_app),
         base_url="http://test",
@@ -133,9 +148,7 @@ async def db_engine():
     from sqlalchemy.ext.asyncio import create_async_engine
     from app.database import Base
 
-    engine = create_async_engine(
-        os.environ["DATABASE_URL"], echo=False
-    )
+    engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
@@ -205,9 +218,12 @@ def test_tenant():
 @pytest.fixture
 def make_access_token():
     """Factory: create a real JWT access token for a given user_id + role."""
+
     def _make(user_id: int = 1, role: str = "student", institution_id: int = None):
         from app.services.jwt import create_access_token
+
         return create_access_token(user_id, role, institution_id)
+
     return _make
 
 
@@ -276,14 +292,18 @@ def htmx_headers() -> dict:
 def mock_identity_service(respx_mock):
     """Pre-configured respx mock for identity service calls."""
     import httpx
+
     respx_mock.get("http://localhost:8001/api/v1/auth/me").mock(
-        return_value=httpx.Response(200, json={
-            "id": 1,
-            "mobile": "+919876543210",
-            "role": "student",
-            "institution_id": None,
-            "is_active": True,
-        })
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": 1,
+                "mobile": "+919876543210",
+                "role": "student",
+                "institution_id": None,
+                "is_active": True,
+            },
+        )
     )
     return respx_mock
 
@@ -292,15 +312,19 @@ def mock_identity_service(respx_mock):
 def mock_tenant_service(respx_mock):
     """Pre-configured respx mock for tenant service calls."""
     import httpx
+
     respx_mock.get("http://localhost:8003/api/v1/tenant/config").mock(
-        return_value=httpx.Response(200, json={
-            "slug": "test-school",
-            "portal_group": 3,
-            "name": "Test School",
-            "branding": {"primary": "#1565C0"},
-            "features": {},
-            "auth_methods": ["whatsapp_otp"],
-            "domain_type": "custom",
-        })
+        return_value=httpx.Response(
+            200,
+            json={
+                "slug": "test-school",
+                "portal_group": 3,
+                "name": "Test School",
+                "branding": {"primary": "#1565C0"},
+                "features": {},
+                "auth_methods": ["whatsapp_otp"],
+                "domain_type": "custom",
+            },
+        )
     )
     return respx_mock

@@ -3,6 +3,7 @@ Regression tests — Cache-Control headers.
 Verifies CDN and mobile cache headers are correct for all criticality levels.
 Must never regress — incorrect cache headers cause stale data in production.
 """
+
 import pytest
 import sys, os
 
@@ -76,44 +77,55 @@ class TestCriticalitySystemRegression:
 
     def test_critical_ttl_is_zero(self):
         from shared.client import CRITICALITY_TTL, Criticality
+
         assert CRITICALITY_TTL[Criticality.CRITICAL] == 0
 
     def test_realtime_ttl_is_15(self):
         from shared.client import CRITICALITY_TTL, Criticality
+
         assert CRITICALITY_TTL[Criticality.REALTIME] == 15
 
     def test_high_ttl_is_30(self):
         from shared.client import CRITICALITY_TTL, Criticality
+
         assert CRITICALITY_TTL[Criticality.HIGH] == 30
 
     def test_medium_ttl_is_120(self):
         from shared.client import CRITICALITY_TTL, Criticality
+
         assert CRITICALITY_TTL[Criticality.MEDIUM] == 120
 
     def test_low_ttl_is_300(self):
         from shared.client import CRITICALITY_TTL, Criticality
+
         assert CRITICALITY_TTL[Criticality.LOW] == 300
 
     def test_offpeak_ttl_is_1800(self):
         from shared.client import CRITICALITY_TTL, Criticality
+
         assert CRITICALITY_TTL[Criticality.OFFPEAK] == 1800
 
     def test_static_ttl_is_86400(self):
         from shared.client import CRITICALITY_TTL, Criticality
+
         assert CRITICALITY_TTL[Criticality.STATIC] == 86400
 
     def test_live_tests_is_critical(self):
         from shared.client import SECTION_CRITICALITY, Criticality
+
         assert SECTION_CRITICALITY["live_tests"] == Criticality.CRITICAL
 
     def test_fee_status_is_critical(self):
         from shared.client import SECTION_CRITICALITY, Criticality
+
         assert SECTION_CRITICALITY["fee_status"] == Criticality.CRITICAL
 
     def test_leaderboard_is_offpeak(self):
         from shared.client import SECTION_CRITICALITY, Criticality
+
         assert SECTION_CRITICALITY["leaderboard"] == Criticality.OFFPEAK
 
     def test_upgrade_banner_is_static(self):
         from shared.client import SECTION_CRITICALITY, Criticality
+
         assert SECTION_CRITICALITY["upgrade_banner"] == Criticality.STATIC

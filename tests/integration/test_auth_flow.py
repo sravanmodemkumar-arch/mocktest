@@ -6,6 +6,7 @@ Calls real FastAPI app via ASGI (no real network, real DB logic with mocks).
 Requires a PostgreSQL instance. Skipped automatically when DB is unavailable.
 Run with: pytest tests/integration/test_auth_flow.py --db-available
 """
+
 import pytest
 from unittest.mock import patch, AsyncMock
 
@@ -50,8 +51,9 @@ class TestOTPSendEndpoint:
     @pytest.mark.asyncio
     async def test_send_otp_rate_limit(self, identity_client):
         """6th OTP request in 30min must return 429."""
-        with patch("app.services.otp.save_otp", new_callable=AsyncMock), \
-             patch("app.services.otp.count_recent_otps", return_value=5):
+        with patch("app.services.otp.save_otp", new_callable=AsyncMock), patch(
+            "app.services.otp.count_recent_otps", return_value=5
+        ):
             resp = await identity_client.post(
                 "/api/v1/auth/otp/send",
                 json={"mobile": "+919876543210"},
@@ -62,9 +64,11 @@ class TestOTPSendEndpoint:
 class TestOTPVerifyEndpoint:
     @pytest.mark.asyncio
     async def test_verify_valid_otp_returns_tokens(self, identity_client):
-        with patch("app.services.otp.validate_otp", new_callable=AsyncMock, return_value=True), \
-             patch("app.api.v1.auth.select", return_value=AsyncMock()), \
-             patch("app.api.v1.auth.db") as mock_db:
+        with patch(
+            "app.services.otp.validate_otp", new_callable=AsyncMock, return_value=True
+        ), patch("app.api.v1.auth.select", return_value=AsyncMock()), patch(
+            "app.api.v1.auth.db"
+        ) as mock_db:
 
             mock_db.__aenter__ = AsyncMock(return_value=mock_db)
             mock_db.__aexit__ = AsyncMock(return_value=False)
@@ -81,7 +85,9 @@ class TestOTPVerifyEndpoint:
 
     @pytest.mark.asyncio
     async def test_verify_wrong_otp_returns_401(self, identity_client):
-        with patch("app.services.otp.validate_otp", new_callable=AsyncMock, return_value=False):
+        with patch(
+            "app.services.otp.validate_otp", new_callable=AsyncMock, return_value=False
+        ):
             resp = await identity_client.post(
                 "/api/v1/auth/otp/verify",
                 json={"mobile": "+919876543210", "otp": "000000"},
@@ -98,7 +104,9 @@ class TestOTPVerifyEndpoint:
 
     @pytest.mark.asyncio
     async def test_verify_otp_tokens_are_valid_jwt(self, identity_client):
-        with patch("app.services.otp.validate_otp", new_callable=AsyncMock, return_value=True):
+        with patch(
+            "app.services.otp.validate_otp", new_callable=AsyncMock, return_value=True
+        ):
             resp = await identity_client.post(
                 "/api/v1/auth/otp/verify",
                 json={"mobile": "+919876543210", "otp": "123456"},
@@ -107,6 +115,7 @@ class TestOTPVerifyEndpoint:
         if resp.status_code == 200:
             data = resp.json()
             from app.services.jwt import decode_token
+
             access_data = decode_token(data["access_token"])
             assert access_data is not None
             assert access_data["type"] == "access"
@@ -140,6 +149,7 @@ class TestAuthMeEndpoint:
     @pytest.mark.asyncio
     async def test_me_refresh_token_rejected(self, identity_client):
         from app.services.jwt import create_refresh_token
+
         refresh = create_refresh_token(1)
         resp = await identity_client.get(
             "/api/v1/auth/me",
@@ -153,6 +163,7 @@ class TestTokenRefreshEndpoint:
     @pytest.mark.asyncio
     async def test_refresh_returns_new_access_token(self, identity_client):
         from app.services.jwt import create_refresh_token
+
         refresh = create_refresh_token(1)
 
         resp = await identity_client.post(
@@ -164,7 +175,9 @@ class TestTokenRefreshEndpoint:
         assert "access_token" in data
 
     @pytest.mark.asyncio
-    async def test_refresh_with_access_token_fails(self, identity_client, student_token):
+    async def test_refresh_with_access_token_fails(
+        self, identity_client, student_token
+    ):
         resp = await identity_client.post(
             "/api/v1/auth/token/refresh",
             json={"refresh_token": student_token},  # wrong type

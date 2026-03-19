@@ -8,6 +8,7 @@ Scenarios:
   - AuthenticatedTeacher: marks attendance, loads timetable
   - PlatformAdminUser: loads admin dashboard with high KPI count
 """
+
 from locust import HttpUser, task, between, tag
 import random
 import json
@@ -16,6 +17,7 @@ import json
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
 
 def get_csrf(client, path="/login/"):
     """Fetch CSRF token from a GET request."""
@@ -30,12 +32,14 @@ def get_csrf(client, path="/login/"):
 # Anonymous user — simulates CDN cache misses on auth pages
 # ---------------------------------------------------------------------------
 
+
 class AnonymousUser(HttpUser):
     """
     Represents unauthenticated traffic hitting auth pages.
     These should be served fast — ideally from CDN edge.
     Target: p95 < 200ms, error rate < 0.1%
     """
+
     wait_time = between(1, 3)
     weight = 60  # 60% of traffic is anonymous
 
@@ -49,7 +53,9 @@ class AnonymousUser(HttpUser):
         ) as resp:
             if resp.status_code != 200:
                 resp.failure(f"Login page returned {resp.status_code}")
-            elif b"Sign in" not in resp.content and b"login" not in resp.content.lower():
+            elif (
+                b"Sign in" not in resp.content and b"login" not in resp.content.lower()
+            ):
                 resp.failure("Login page missing expected content")
 
     @task(2)
@@ -73,11 +79,13 @@ class AnonymousUser(HttpUser):
 # Authenticated student — most common active user type
 # ---------------------------------------------------------------------------
 
+
 class AuthenticatedStudent(HttpUser):
     """
     Simulates a logged-in student on an exam domain portal.
     Target: home data p95 < 500ms, error rate < 0.5%
     """
+
     wait_time = between(2, 8)
     weight = 30  # 30% of traffic
 
@@ -123,11 +131,13 @@ class AuthenticatedStudent(HttpUser):
 # Authenticated teacher — medium frequency, attendance-heavy
 # ---------------------------------------------------------------------------
 
+
 class AuthenticatedTeacher(HttpUser):
     """
     Simulates a teacher managing attendance and marks.
     Target: home p95 < 600ms
     """
+
     wait_time = between(3, 10)
     weight = 8
 
@@ -149,11 +159,13 @@ class AuthenticatedTeacher(HttpUser):
 # Platform admin — low volume, high data complexity
 # ---------------------------------------------------------------------------
 
+
 class PlatformAdminUser(HttpUser):
     """
     Simulates platform admin monitoring institution health.
     Low traffic, complex data — target p95 < 1000ms.
     """
+
     wait_time = between(5, 20)
     weight = 2
 
