@@ -10,7 +10,13 @@ from django.urls import reverse
 
 pytestmark = [pytest.mark.integration, pytest.mark.django_db]
 
-_ME_OK = {"id": 1, "role": "student", "is_active": True}
+_ME_OK = {
+    "id": 1,
+    "role": "student",
+    "is_active": True,
+    "mobile": "+919876543210",
+    "email": "test@example.com",
+}
 _ME_MOCK = MagicMock(status_code=200, json=lambda: _ME_OK)
 
 
@@ -312,21 +318,26 @@ class TestSelectRole:
         assert resp.status_code == 200
 
     def test_select_role_service_down(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        import httpx
+        import httpx as _httpx
 
-        with patch(
-            "apps.auth_views.views.httpx.get",
-            side_effect=httpx.ConnectError("down"),
-        ):
+        call_count = {"n": 0}
+
+        def _selective_get(url, **kw):
+            call_count["n"] += 1
+            if "/auth/me" in url:
+                return _ME_MOCK
+            raise _httpx.ConnectError("down")
+
+        client.cookies["ef_token"] = student_token
+        with patch("httpx.get", side_effect=_selective_get):
             resp = client.get("/select-role/")
         assert resp.status_code == 200
 
-    def test_select_role_confirm_redirects(self, client):
-        resp = client.get(
-            "/select-role/confirm/",
-            data={"role_id": "1", "institution_id": "10"},
-        )
+    def test_select_role_confirm_redirects(self, client, student_token):
+        with _authed(client, student_token):
+            resp = client.get(
+                "/select-role/confirm/?role_id=1&institution_id=10",
+            )
         assert resp.status_code == 302
         assert "/home/" in resp["Location"]
 
