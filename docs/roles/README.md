@@ -9,7 +9,7 @@ All role definitions are organized by group. Each group has its own dedicated do
 | [group3-school-roles.md](group3-school-roles.md) | School Level | 125 | ✅ Done |
 | [group4-college-roles.md](group4-college-roles.md) | College Level (Intermediate) | 147 | ✅ Done |
 | [group5-coaching-roles.md](group5-coaching-roles.md) | Coaching Centres | 136 | ✅ Done |
-| group6-exam-domain-roles.md | Online Exam Domains (SSC, RRB etc.) | TBD | 🔜 Upcoming |
+| [group6-exam-domain-roles.md](group6-exam-domain-roles.md) | Online Exam Domains (SSC, RRB etc.) | 103 | ✅ Done |
 
 ---
 
