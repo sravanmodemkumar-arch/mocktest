@@ -4,62 +4,215 @@ Total: **87 distinct roles** across 6 groups.
 
 ---
 
-## Group 1 — Platform Level (32 roles)
+## Group 1 — Platform Level (76 roles)
 
-> These are EduForge company employees — not institution staff.
-> Divided into 4 functional divisions.
+> EduForge company employees only — not institution staff.
+> Mapped to 14 functional divisions covering every platform module.
+> System access levels: 0=none · 1=read-only · 2=content · 3=tenant mgmt · 4=infra · 5=full
 
-### Division A — Executive & Ownership (4 roles)
+---
 
-| # | Role | What They Control |
-|---|---|---|
-| 1 | Platform Owner / CEO | Full access — all data, all tenants, billing, strategy |
-| 2 | Platform CTO | Technical infrastructure, architecture decisions |
-| 3 | Platform COO | Day-to-day operations, SLAs, team management |
-| 4 | Platform CFO | Revenue, invoicing, Razorpay settlements, GST filings |
+### Platform Modules Covered
+Tenant Mgmt · User Mgmt · MCQ Bank · Notes · Videos · Exam Engine ·
+Exam Day Operations · Results & Ranks · BGV · AI Generation ·
+Notifications · Billing · Analytics · Support · Sales · Marketing ·
+Compliance · Infrastructure · Incident Response
 
-### Division B — Technical Operations (10 roles)
+---
 
-| # | Role | What They Control |
-|---|---|---|
-| 5 | Platform Admin | All tenant management, user provisioning, system config |
-| 6 | DevOps Engineer | AWS Lambda, ECS, RDS, deployments, CI/CD |
-| 7 | Database Admin | PostgreSQL schemas, backups, migrations, query tuning |
-| 8 | Security Admin | JWT keys, KMS, WAF rules, breach response |
-| 9 | API Gateway Admin | Rate limits, routing rules, throttling per tenant |
-| 10 | Cloudflare Admin | CDN rules, R2 buckets, WAF policies, DNS |
-| 11 | Monitoring Engineer | CloudWatch dashboards, Sentry, alert rules |
-| 12 | L1 Support Engineer | First response — login issues, password reset |
-| 13 | L2 Support Engineer | Bug investigation, DB queries, log analysis |
-| 14 | L3 Support Engineer | Code-level fix, hotfixes, escalation owner |
+### Division A — Executive Leadership (4 roles)
 
-### Division C — Content & Academics (10 roles)
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 1 | Platform Owner / CEO | Level 5 | Full access — all modules, all tenants, all data |
+| 2 | Platform CTO | Level 5 | Technical config, architecture, infra, security keys |
+| 3 | Platform COO | Level 3 | Operations, SLAs, support escalations, onboarding |
+| 4 | Platform CFO | Level 1 | Revenue dashboards, GST reports, Razorpay settlements |
 
-| # | Role | What They Control |
-|---|---|---|
-| 15 | Content Director | All MCQ bank, notes, video strategy across all exams |
-| 16 | SME — Mathematics | Creates/reviews Maths MCQs (SSC, RRB, Board) |
-| 17 | SME — Science | Physics, Chemistry, Biology questions |
-| 18 | SME — English | Grammar, comprehension, vocabulary |
-| 19 | SME — General Knowledge | Current affairs, static GK, polity, history |
-| 20 | SME — Reasoning | Verbal + non-verbal reasoning |
-| 21 | Question Reviewer | Reviews AI-generated + SME-written MCQs for quality |
-| 22 | Question Approver | Final publish authority — no one bypasses this |
-| 23 | Notes Editor | Structures and formats faculty-uploaded notes |
-| 24 | Video Curator | Maps YouTube videos to subjects/topics/exams |
+---
 
-### Division D — Business & Compliance (8 roles)
+### Division B — Product & Design (5 roles)
 
-| # | Role | What They Control |
-|---|---|---|
-| 25 | B2B Sales Manager | Institution onboarding pipeline, pricing strategy |
-| 26 | B2B Sales Executive | Individual school/college/coaching acquisition |
-| 27 | Account Manager | Existing institution relationships, renewal, upsell |
-| 28 | Partnership Manager | State board tie-ups, coaching chain deals |
-| 29 | Billing Admin | Subscription management, invoice generation, refunds |
-| 30 | Legal / Compliance Officer | DPDP 2023, POCSO, GST filings, data residency |
-| 31 | Analytics Manager | Platform-wide MIS — usage, revenue, exam trends |
-| 32 | Data Analyst | Institution reports, rank trends, dropout signals |
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 5 | Product Manager — Platform | Level 3 | Feature flags, plan config, release management |
+| 6 | Product Manager — Exam Domains | Level 3 | SSC/RRB/Board domain config, test series setup |
+| 7 | Product Manager — Institution Portal | Level 3 | School/college/coaching portal features |
+| 8 | UI/UX Designer | Level 1 | Read-only access for design review, no data edit |
+| 9 | QA Engineer | Level 3 | Test all modules, create test users, validate flows |
+
+---
+
+### Division C — Engineering (8 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 10 | Platform Admin | Level 5 | All tenant mgmt, user provisioning, system config |
+| 11 | Backend Engineer | Level 4 | API config, DB migrations, service deployments |
+| 12 | Frontend Engineer | Level 4 | HTMX/Django templates, CDN cache invalidation |
+| 13 | Mobile Engineer — Flutter | Level 4 | App builds, Hive encryption, FCM push config |
+| 14 | DevOps / SRE Engineer | Level 4 | AWS Lambda, ECS, RDS, CI/CD pipelines, rollbacks |
+| 15 | Database Administrator | Level 4 | PostgreSQL schemas, backups, migrations, query tuning |
+| 16 | Security Engineer | Level 4 | JWT keys, AWS KMS, WAF rules, CERT-In reporting |
+| 17 | AI / ML Engineer | Level 4 | MCQ generation pipeline, model tuning, prompt management |
+
+---
+
+### Division D — Content & Academics (13 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 18 | Content Director | Level 2 | All MCQ bank, notes, video strategy — all exam types |
+| 19 | SME — Mathematics | Level 2 | Create/edit Maths MCQs (SSC, RRB, Board, Coaching) |
+| 20 | SME — Physics | Level 2 | Create/edit Physics MCQs |
+| 21 | SME — Chemistry | Level 2 | Create/edit Chemistry MCQs |
+| 22 | SME — Biology | Level 2 | Create/edit Biology MCQs |
+| 23 | SME — English | Level 2 | Grammar, comprehension, vocabulary questions |
+| 24 | SME — General Knowledge | Level 2 | Current affairs, static GK, polity, history |
+| 25 | SME — Reasoning | Level 2 | Verbal + non-verbal reasoning questions |
+| 26 | SME — Computer Science | Level 2 | IT, programming, digital literacy questions |
+| 27 | SME — Regional Language | Level 2 | Telugu, Hindi, regional board questions |
+| 28 | Question Reviewer | Level 2 | Review MCQs for quality, flag errors, send back to SME |
+| 29 | Question Approver | Level 2 | Final publish authority — no question live without this |
+| 30 | Notes Editor | Level 2 | Format, structure, publish faculty notes |
+
+---
+
+### Division E — Video & Learning (3 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 31 | Video Curator | Level 2 | Map YouTube videos to subject → topic → exam |
+| 32 | Playlist Manager | Level 2 | Create learning paths, order videos per syllabus |
+| 33 | YouTube Channel Manager | Level 2 | Manage EduForge YouTube channel, upload, playlists |
+
+---
+
+### Division F — Exam Day Operations (5 roles)
+
+> Critical division — 74,000 concurrent submissions need a dedicated ops team.
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 34 | Exam Operations Manager | Level 3 | Monitor all live exams, pause/extend on issues |
+| 35 | Exam Support Executive | Level 3 | Handle student issues during live exam window |
+| 36 | Results Coordinator | Level 3 | Trigger rank computation, review results before publish |
+| 37 | Notification Manager | Level 3 | WhatsApp/SMS templates, broadcast results, alerts |
+| 38 | Incident Manager — Exam Day | Level 4 | Escalate infra issues during exam, coordinate DevOps |
+
+---
+
+### Division G — Background Verification & Safety (3 roles)
+
+> Required by POCSO Act 2012 — all staff working with minors must be BGV verified.
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 39 | BGV Manager | Level 3 | Manage BGV status of all staff across institutions |
+| 40 | BGV Executive | Level 3 | Process verification requests, update BGV records |
+| 41 | POCSO Compliance Officer | Level 1 | Audit BGV coverage, mandatory reporting dashboard |
+
+---
+
+### Division H — Data & Analytics (5 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 42 | Analytics Manager | Level 1 | Platform-wide MIS — usage, revenue, exam trends |
+| 43 | Data Engineer | Level 4 | Build data pipelines, EventBridge jobs, aggregations |
+| 44 | Data Analyst | Level 1 | Institution reports, rank trends, dropout signals |
+| 45 | AI Generation Manager | Level 3 | Manage MCQ AI pipeline, approve AI batch outputs |
+| 46 | Report Designer | Level 1 | Design MIS report templates for institutions |
+
+---
+
+### Division I — Customer Support (6 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 47 | Support Manager | Level 3 | Manage support team, SLA tracking, escalation rules |
+| 48 | L1 Support Executive | Level 3 | Login issues, OTP problems, basic tenant queries |
+| 49 | L2 Support Engineer | Level 3 | Bug investigation, DB read queries, log analysis |
+| 50 | L3 Support Engineer | Level 4 | Code-level fix, hotfixes, DB writes, rollbacks |
+| 51 | Onboarding Specialist | Level 3 | Train new institution admins, configure first setup |
+| 52 | Training Coordinator | Level 2 | Create training material, conduct staff training sessions |
+
+---
+
+### Division J — Customer Success (4 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 53 | Customer Success Manager | Level 3 | Monitor institution health, retention, renewal pipeline |
+| 54 | Account Manager | Level 3 | Existing institution relationships, upsell, expansion |
+| 55 | Escalation Manager | Level 3 | Handle critical institution complaints, SLA breaches |
+| 56 | Renewal Executive | Level 1 | Track subscription renewals, send reminders |
+
+---
+
+### Division K — Sales & Business Development (7 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 57 | B2B Sales Manager | Level 3 | Full institution onboarding pipeline, pricing approvals |
+| 58 | Sales Executive — Schools | Level 3 | School acquisition, demo setup, trial activation |
+| 59 | Sales Executive — Colleges | Level 3 | College/intermediate institution acquisition |
+| 60 | Sales Executive — Coaching | Level 3 | Coaching centre acquisition |
+| 61 | Partnership Manager | Level 3 | State board tie-ups, coaching chain deals, govt contracts |
+| 62 | Demo Manager | Level 3 | Manage free trial tenants, demo data, sandbox reset |
+| 63 | Channel Partner Manager | Level 1 | Manage reseller/partner network, commission tracking |
+
+---
+
+### Division L — Marketing & Growth (5 roles)
+
+| # | Role | System Access | Level | Key Focus |
+|---|---|---|---|---|
+| 64 | Marketing Manager | Level 0 | Strategy, brand, campaigns across all domains |
+| 65 | SEO / Content Executive | Level 0 | Blog, landing pages, exam prep content for organic traffic |
+| 66 | Social Media Manager | Level 0 | YouTube, Instagram, Twitter — student community |
+| 67 | Performance Marketing Exec | Level 0 | Google Ads, Meta Ads — school/coaching acquisition |
+| 68 | Brand Manager | Level 0 | Visual identity per domain (SSC, RRB, Board brands) |
+
+---
+
+### Division M — Finance & Billing (6 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 69 | Finance Manager | Level 1 | Revenue reports, P&L, Razorpay reconciliation |
+| 70 | Billing Admin | Level 3 | Subscription plans, invoice generation, refund processing |
+| 71 | Accounts Receivable Exec | Level 1 | Outstanding fee tracking, payment follow-up |
+| 72 | GST / Tax Consultant | Level 1 | SAC 9993 compliance, CGST/SGST/IGST filing |
+| 73 | Refund Processing Exec | Level 3 | Validate and process student/institution refunds |
+| 74 | Pricing Admin | Level 3 | Configure subscription tiers, discounts, promo codes |
+
+---
+
+### Division N — Legal, Compliance & HR (7 roles)
+
+| # | Role | System Access | Key Permissions |
+|---|---|---|---|
+| 75 | Legal Officer | Level 1 | Contracts, ToS, privacy policy, regulatory filings |
+| 76 | Data Privacy Officer (DPO) | Level 1 | DPDP Act 2023, data residency audit, breach 72hr notify |
+| 77 | Regulatory Affairs Exec | Level 1 | TRAI (SMS), CERT-In, MeitY reporting |
+| 78 | HR Manager | Level 0 | Internal staff — no platform access |
+| 79 | Recruiter | Level 0 | Hiring only — no platform access |
+| 80 | IT Admin (Internal) | Level 4 | Employee laptops, internal tools, VPN, GitHub access |
+| 81 | Office Administrator | Level 0 | Facilities — no platform access |
+
+---
+
+### System Access Level Summary
+
+| Level | Label | Who Has It | What They Can Do |
+|---|---|---|---|
+| 0 | No Access | HR, Marketing, Office Admin | Internal tools only, not the platform |
+| 1 | Read Only | CFO, Legal, Analytics, Compliance | View dashboards and reports, no edits |
+| 2 | Content | SMEs, Editors, Video Curator | Create, edit, publish content (MCQs, notes, videos) |
+| 3 | Tenant Manager | Support, Sales, Account Mgr, Exam Ops | Manage institutions, users, subscriptions, exams |
+| 4 | Infrastructure | Engineers, DevOps, DB Admin, Security | System config, deployments, DB access, keys |
+| 5 | Super Admin | CEO, CTO, Platform Admin | Unrestricted access to everything |
 
 ---
 
