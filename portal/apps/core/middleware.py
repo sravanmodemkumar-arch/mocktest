@@ -29,6 +29,12 @@ PUBLIC_PATHS = {
     "/static/",
     "/favicon.ico",
     "/health/",
+    "/home/",
+    "/home/data/",
+    "/home/nav/",
+    "/home/profile-menu/",
+    "/home/notifications/",
+    "/api/",
 }
 
 # Roles that require 2FA after OTP
@@ -105,8 +111,12 @@ class AuthMiddleware(MiddlewareMixin):
         path = request.path_info
 
         # Skip auth for public routes
-        if any(path.startswith(p) for p in PUBLIC_PATHS):
-            request.user_data = None
+        if path == "/" or any(path.startswith(p) for p in PUBLIC_PATHS):
+            request.user_data = {
+                "full_name": "Guest",
+                "role": "student",
+                "subscription": "free",
+            }
             return None
 
         token = request.COOKIES.get(settings.AUTH_COOKIE_NAME)

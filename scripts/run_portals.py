@@ -58,6 +58,7 @@ def start_portals():
         env = os.environ.copy()
         env["DJANGO_SETTINGS_MODULE"] = "portal.settings"
         env["DEV_PORTAL_GROUP"] = str(group)
+        env["IDENTITY_SERVICE_URL"] = f"http://127.0.0.1:{port}"
 
         proc = subprocess.Popen(
             [PYTHON, "manage.py", "runserver", f"127.0.0.1:{port}", "--noreload"],
@@ -105,6 +106,7 @@ def main():
                     env = os.environ.copy()
                     env["DJANGO_SETTINGS_MODULE"] = "portal.settings"
                     env["DEV_PORTAL_GROUP"] = str(group)
+                    env["IDENTITY_SERVICE_URL"] = f"http://127.0.0.1:{port}"
                     processes[i] = subprocess.Popen(
                         [
                             PYTHON,
