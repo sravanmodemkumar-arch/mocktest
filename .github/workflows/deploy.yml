@@ -24,7 +24,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -r portal/requirements.txt
+          pip install -r services/auth/requirements.txt
+          pip install -r services/home/requirements.txt
+          pip install -r services/tenant/requirements.txt
 
       - name: Run pre-deploy tests
         run: pytest --tb=short

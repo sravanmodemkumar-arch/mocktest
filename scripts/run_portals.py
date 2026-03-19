@@ -37,14 +37,14 @@ if not os.path.exists(PYTHON):
     PYTHON = sys.executable
 
 GROUPS = [
-    (1,  8010, "Platform Admin"),
-    (2,  8020, "Chain Admin"),
-    (3,  8030, "School"),
-    (4,  8040, "College"),
-    (5,  8050, "Coaching"),
-    (6,  8060, "Exam Domain"),
-    (7,  8070, "TSP"),
-    (9,  8090, "B2B Partner"),
+    (1, 8010, "Platform Admin"),
+    (2, 8020, "Chain Admin"),
+    (3, 8030, "School"),
+    (4, 8040, "College"),
+    (5, 8050, "Coaching"),
+    (6, 8060, "Exam Domain"),
+    (7, 8070, "TSP"),
+    (9, 8090, "B2B Partner"),
     (10, 8100, "Student Unified"),
 ]
 
@@ -95,7 +95,7 @@ def main():
         while True:
             time.sleep(1)
             # Check if any process died unexpectedly
-            for i, (proc) in enumerate(processes):
+            for i, proc in enumerate(processes):
                 if proc.poll() is not None:
                     group, port, label = GROUPS[i]
                     print(f"  [WARNING] Group {group} ({label}) on port {port} exited — restarting...")
