@@ -4,15 +4,62 @@ Total: **87 distinct roles** across 6 groups.
 
 ---
 
-## Group 1 — Platform Level (5 roles)
+## Group 1 — Platform Level (32 roles)
 
-| Role | Access |
-|---|---|
-| Platform Owner | Full access to everything |
-| Platform Admin | All tenants, billing, support |
-| Platform Support | Read-only across tenants |
-| Content Admin | MCQ bank, notes, videos |
-| DevOps Admin | Infrastructure only |
+> These are EduForge company employees — not institution staff.
+> Divided into 4 functional divisions.
+
+### Division A — Executive & Ownership (4 roles)
+
+| # | Role | What They Control |
+|---|---|---|
+| 1 | Platform Owner / CEO | Full access — all data, all tenants, billing, strategy |
+| 2 | Platform CTO | Technical infrastructure, architecture decisions |
+| 3 | Platform COO | Day-to-day operations, SLAs, team management |
+| 4 | Platform CFO | Revenue, invoicing, Razorpay settlements, GST filings |
+
+### Division B — Technical Operations (10 roles)
+
+| # | Role | What They Control |
+|---|---|---|
+| 5 | Platform Admin | All tenant management, user provisioning, system config |
+| 6 | DevOps Engineer | AWS Lambda, ECS, RDS, deployments, CI/CD |
+| 7 | Database Admin | PostgreSQL schemas, backups, migrations, query tuning |
+| 8 | Security Admin | JWT keys, KMS, WAF rules, breach response |
+| 9 | API Gateway Admin | Rate limits, routing rules, throttling per tenant |
+| 10 | Cloudflare Admin | CDN rules, R2 buckets, WAF policies, DNS |
+| 11 | Monitoring Engineer | CloudWatch dashboards, Sentry, alert rules |
+| 12 | L1 Support Engineer | First response — login issues, password reset |
+| 13 | L2 Support Engineer | Bug investigation, DB queries, log analysis |
+| 14 | L3 Support Engineer | Code-level fix, hotfixes, escalation owner |
+
+### Division C — Content & Academics (10 roles)
+
+| # | Role | What They Control |
+|---|---|---|
+| 15 | Content Director | All MCQ bank, notes, video strategy across all exams |
+| 16 | SME — Mathematics | Creates/reviews Maths MCQs (SSC, RRB, Board) |
+| 17 | SME — Science | Physics, Chemistry, Biology questions |
+| 18 | SME — English | Grammar, comprehension, vocabulary |
+| 19 | SME — General Knowledge | Current affairs, static GK, polity, history |
+| 20 | SME — Reasoning | Verbal + non-verbal reasoning |
+| 21 | Question Reviewer | Reviews AI-generated + SME-written MCQs for quality |
+| 22 | Question Approver | Final publish authority — no one bypasses this |
+| 23 | Notes Editor | Structures and formats faculty-uploaded notes |
+| 24 | Video Curator | Maps YouTube videos to subjects/topics/exams |
+
+### Division D — Business & Compliance (8 roles)
+
+| # | Role | What They Control |
+|---|---|---|
+| 25 | B2B Sales Manager | Institution onboarding pipeline, pricing strategy |
+| 26 | B2B Sales Executive | Individual school/college/coaching acquisition |
+| 27 | Account Manager | Existing institution relationships, renewal, upsell |
+| 28 | Partnership Manager | State board tie-ups, coaching chain deals |
+| 29 | Billing Admin | Subscription management, invoice generation, refunds |
+| 30 | Legal / Compliance Officer | DPDP 2023, POCSO, GST filings, data residency |
+| 31 | Analytics Manager | Platform-wide MIS — usage, revenue, exam trends |
+| 32 | Data Analyst | Institution reports, rank trends, dropout signals |
 
 ---
 
