@@ -31,7 +31,7 @@ jobs:
           pip install -r services/tenant/requirements.txt
 
       - name: Run pre-deploy tests
-        run: pytest --tb=short
+        run: pytest tests/unit/ tests/integration/ -v --tb=short --timeout=60
         env:
           PYTHONPATH: .:./portal
           DJANGO_SETTINGS_MODULE: portal.settings
