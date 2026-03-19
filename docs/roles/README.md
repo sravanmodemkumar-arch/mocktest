@@ -10,6 +10,28 @@ All role definitions are organized by group. Each group has its own dedicated do
 | [group4-college-roles.md](group4-college-roles.md) | College Level (Intermediate) | 147 | ✅ Done |
 | [group5-coaching-roles.md](group5-coaching-roles.md) | Coaching Centres | 136 | ✅ Done |
 | [group6-exam-domain-roles.md](group6-exam-domain-roles.md) | Online Exam Domains (SSC, RRB etc.) | 103 | ✅ Done |
+| [group7-tsp-roles.md](group7-tsp-roles.md) | TSP — White-Label Test Series Platform | 53 | ✅ Done |
+| [group8-parents-roles.md](group8-parents-roles.md) | Parents & Guardians (Unified) | 30 | ✅ Done |
+| [group9-b2b-api-partners-roles.md](group9-b2b-api-partners-roles.md) | B2B Technology & API Partners | 33 | ✅ Done |
+| [group10-students-roles.md](group10-students-roles.md) | Students — Unified Student Group | 32 | ✅ Done |
+
+---
+
+## Total Roles Across All Groups
+
+| Group | Name | Roles |
+|---|---|---|
+| 1 | Platform (EduForge employees) | 81 |
+| 2 | Institution Groups | 69 |
+| 3 | Schools | 125 |
+| 4 | Colleges (Intermediate) | 147 |
+| 5 | Coaching Centres | 136 |
+| 6 | Exam Domains (SSC, RRB, UPSC etc.) | 103 |
+| 7 | TSP (White-Label Test Series) | 53 |
+| 8 | Parents & Guardians | 30 |
+| 9 | B2B / API Partners | 33 |
+| 10 | Students (Unified) | 32 |
+| **Total** | | **809** |
 
 ---
 
