@@ -1,195 +1,188 @@
-<!-- Group 5: Coaching Institute Portal — role-aware (director / faculty / student / parent) -->
+<!-- GROUP 5: HIGH ENERGY ORANGE/FIRE — Coaching Institute -->
+<style>
+  .g5-wrap { background: #fff7ed; min-height: 100%; }
+  .g5-fire-header { background: linear-gradient(135deg,#ea580c 0%,#dc2626 60%,#b91c1c 100%); border-radius: 20px; position: relative; overflow: hidden; }
+  .g5-fire-orb { position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none; }
+  .g5-card { background:#fff;border-radius:16px;border:1px solid #fed7aa;box-shadow:0 1px 6px rgba(234,88,12,.06); }
+  .g5-kpi-stripe { height:5px;border-radius:5px 5px 0 0;background:linear-gradient(90deg,#ea580c,#f97316); }
+  .g5-rank-badge { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0; }
+  .g5-countdown { border-radius:12px;padding:14px;background:linear-gradient(135deg,#fff5f5 0%,#fff0e8 100%);border:1px solid #fca5a5; }
+  .g5-countdown-urgent { background:linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%);border-color:#f87171; }
+  @keyframes g5-fire { 0%,100%{transform:scaleY(1) translateX(0)} 33%{transform:scaleY(1.08) translateX(-2px)} 66%{transform:scaleY(.96) translateX(2px)} }
+  .g5-flame { animation: g5-fire 2s ease-in-out infinite; display:inline-block;transform-origin:bottom center; }
+  .g5-quote-strip { background:linear-gradient(90deg,#ea580c,#dc2626);border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;text-align:center;letter-spacing:.02em; }
+  .g5-btn { background:linear-gradient(135deg,#ea580c,#dc2626);color:#fff;padding:9px 22px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:filter .15s;text-transform:uppercase;letter-spacing:.05em; }
+  .g5-btn:hover { filter:brightness(1.1); }
+</style>
 
-<div class="flex items-start justify-between mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900">
-      Good {{ greeting_time }}, {{ user.name|default:"there" }}!
-    </h1>
-    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
-  </div>
-  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
-        style="background-color: {{ primary_color }};">
-    {{ user.role_display|default:"Member" }}
-  </span>
-</div>
+<div class="g5-wrap p-5 space-y-5">
 
-{% if alerts %}
-<div class="space-y-2 mb-6">
-  {% for alert in alerts %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
-              {% elif alert.level == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
-              {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
-    <span class="flex-shrink-0">
-      {% if alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}ℹ️{% endif %}
-    </span>
-    <span>{{ alert.message }}</span>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{% if kpis %}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% for kpi in kpis %}
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
-    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
-    {% if kpi.trend %}
-    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">{{ kpi.trend }}</p>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{% if user.role == 'director' or user.role == 'admin' %}
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-semibold text-gray-800">Batch Performance</h2>
-        <a href="/batches/" class="text-sm text-indigo-600 hover:underline">All batches</a>
+  <!-- ── FIRE HEADER ── -->
+  <div class="g5-fire-header p-6">
+    <div class="g5-fire-orb" style="width:200px;height:200px;background:rgba(251,146,60,.25);top:-60px;right:-40px;"></div>
+    <div class="g5-fire-orb" style="width:150px;height:150px;background:rgba(220,38,38,.2);bottom:-50px;left:-30px;"></div>
+    <div class="relative flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="text-orange-200 text-xs font-bold uppercase tracking-widest mb-2">{{ institution_name }}</div>
+        <h1 class="text-white font-black text-2xl md:text-3xl leading-tight uppercase tracking-wide">
+          <span class="g5-flame">🔥</span> KEEP PUSHING.<br>YOUR RANK IS RISING.
+        </h1>
+        <p class="text-orange-100/80 text-sm mt-2">Good {{ greeting_time }}, {{ user.name }} &nbsp;·&nbsp; {{ today_date }}</p>
       </div>
-      {% for batch in batch_performance|default:'' %}
-      <div class="flex items-center gap-4 py-2.5 border-b border-gray-50 last:border-0">
-        <div class="flex-1">
-          <div class="flex justify-between mb-1">
-            <span class="text-sm font-medium text-gray-800">{{ batch.name }}</span>
-            <span class="text-xs text-gray-500">{{ batch.student_count }} students</span>
+      <!-- Rank Badge -->
+      <div class="text-center">
+        <div class="w-20 h-20 rounded-2xl flex flex-col items-center justify-center" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);">
+          <div class="text-orange-200 text-xs font-bold uppercase">Rank</div>
+          <div class="text-white font-black text-3xl leading-none">#47</div>
+          <div class="text-orange-200 text-xs">State</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ALERTS ── -->
+  {% if alerts %}
+  <div class="space-y-2">
+    {% for alert in alerts %}
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+      {% if alert.level == 'error' or alert.level == 'critical' %}bg-red-50 text-red-700 border border-red-200
+      {% elif alert.level == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200
+      {% else %}bg-orange-50 text-orange-700 border border-orange-200{% endif %}">
+      <span>{% if alert.level == 'error' or alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}⚠️{% else %}🔔{% endif %}</span>
+      <span>{{ alert.message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── KPI CARDS ── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% for kpi in kpis %}
+    <div class="g5-card overflow-hidden">
+      <div class="g5-kpi-stripe"></div>
+      <div class="p-4">
+        <div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">{{ kpi.label }}</div>
+        <div class="text-orange-600 font-black text-3xl leading-none">{{ kpi.value }}</div>
+        {% if kpi.trend %}
+        <div class="mt-1 text-xs font-semibold {% if '-' in kpi.trend|stringformat:'s' %}text-red-500{% else %}text-green-600{% endif %}">
+          {% if '-' in kpi.trend|stringformat:'s' %}▼{% else %}▲{% endif %} {{ kpi.trend }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="g5-card overflow-hidden"><div class="g5-kpi-stripe"></div><div class="p-4"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Students</div><div class="text-orange-600 font-black text-3xl">1,840</div><div class="mt-1 text-xs font-semibold text-green-600">▲ +12%</div></div></div>
+    <div class="g5-card overflow-hidden"><div class="g5-kpi-stripe"></div><div class="p-4"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Tests Today</div><div class="text-orange-600 font-black text-3xl">6</div><div class="mt-1 text-xs font-semibold text-green-600">▲ On Track</div></div></div>
+    <div class="g5-card overflow-hidden"><div class="g5-kpi-stripe"></div><div class="p-4"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Avg Score</div><div class="text-orange-600 font-black text-3xl">72.4</div><div class="mt-1 text-xs font-semibold text-amber-500">▼ -1.2</div></div></div>
+    <div class="g5-card overflow-hidden"><div class="g5-kpi-stripe"></div><div class="p-4"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Selections</div><div class="text-orange-600 font-black text-3xl">89</div><div class="mt-1 text-xs font-semibold text-green-600">▲ +22 YoY</div></div></div>
+    {% endfor %}
+  </div>
+
+  <!-- ── LEADERBOARD + UPCOMING TESTS ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Leaderboard -->
+    <div class="g5-card p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-2xl">🏆</span>
+        <h2 class="font-bold text-gray-800 text-base">Top Performers</h2>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background:#fff7ed;border:1px solid #fed7aa;">
+          <div class="g5-rank-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;">#1</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-gray-900 font-bold text-sm truncate">Arjun Sharma</div>
+            <div class="text-gray-500 text-xs">Score: 487/500</div>
           </div>
-          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div class="h-full rounded-full" style="width:{{ batch.avg_score }}%; background-color:{{ primary_color }};"></div>
+          <div class="text-amber-500 font-bold text-sm">🥇 98%</div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background:#f9fafb;border:1px solid #e5e7eb;">
+          <div class="g5-rank-badge" style="background:linear-gradient(135deg,#9ca3af,#6b7280);color:#fff;">#2</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-gray-900 font-bold text-sm truncate">Priya Verma</div>
+            <div class="text-gray-500 text-xs">Score: 479/500</div>
+          </div>
+          <div class="text-gray-500 font-bold text-sm">🥈 95.8%</div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background:#f9fafb;border:1px solid #e5e7eb;">
+          <div class="g5-rank-badge" style="background:linear-gradient(135deg,#d97706,#b45309);color:#fff;">#3</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-gray-900 font-bold text-sm truncate">Rahul Singh</div>
+            <div class="text-gray-500 text-xs">Score: 471/500</div>
+          </div>
+          <div class="text-amber-600 font-bold text-sm">🥉 94.2%</div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background:#f9fafb;">
+          <div class="g5-rank-badge" style="background:#f3f4f6;color:#374151;">#4</div>
+          <div class="flex-1 min-w-0"><div class="text-gray-900 font-bold text-sm">Sneha Patel</div><div class="text-gray-500 text-xs">Score: 463/500</div></div>
+          <div class="text-gray-600 font-bold text-sm">92.6%</div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background:#f9fafb;">
+          <div class="g5-rank-badge" style="background:#f3f4f6;color:#374151;">#5</div>
+          <div class="flex-1 min-w-0"><div class="text-gray-900 font-bold text-sm">Vikram Mehta</div><div class="text-gray-500 text-xs">Score: 458/500</div></div>
+          <div class="text-gray-600 font-bold text-sm">91.6%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upcoming Tests -->
+    <div class="g5-card p-5">
+      <h2 class="font-bold text-gray-800 text-base mb-4">Upcoming Tests</h2>
+      <div class="space-y-3">
+        {% for section in sections %}{% for item in section.items %}
+        <div class="g5-countdown">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="text-gray-800 font-bold text-sm">{{ item.label }}</div>
+              <div class="text-gray-500 text-xs mt-0.5">{{ item.value }}</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 flex-shrink-0">Live Soon</span>
           </div>
         </div>
-        <span class="text-sm font-semibold text-gray-700 w-12 text-right">{{ batch.avg_score }}%</span>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No batch data available</p>
-      {% endfor %}
-    </div>
-
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-4">Quick Actions</h2>
-      <div class="space-y-2">
-        <a href="/students/enroll/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>➕</span> Enroll Student
-        </a>
-        <a href="/batches/create/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📚</span> New Batch
-        </a>
-        <a href="/tests/schedule/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📝</span> Schedule Test
-        </a>
-        <a href="/fees/pending/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>💰</span> Pending Fees
-        </a>
-        <a href="/reports/monthly/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📊</span> Monthly Report
-        </a>
+        {% endfor %}{% empty %}
+        <div class="g5-countdown g5-countdown-urgent">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="text-gray-800 font-bold text-sm">JEE Full Syllabus Mock #12</div>
+              <div class="text-gray-500 text-xs mt-0.5">180 Qs · 3 hrs · Today 2:00 PM</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 flex-shrink-0">⏰ 4h left</span>
+          </div>
+        </div>
+        <div class="g5-countdown">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="text-gray-800 font-bold text-sm">Physics Unit Test — Optics</div>
+              <div class="text-gray-500 text-xs mt-0.5">40 Qs · 1 hr · Tomorrow 10:00 AM</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex-shrink-0">Tomorrow</span>
+          </div>
+        </div>
+        <div class="g5-countdown">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="text-gray-800 font-bold text-sm">NEET Biology Grand Test</div>
+              <div class="text-gray-500 text-xs mt-0.5">120 Qs · 2 hrs · 22 March 2026</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 flex-shrink-0">3 days</span>
+          </div>
+        </div>
+        {% endfor %}
       </div>
     </div>
   </div>
 
-{% elif user.role == 'faculty' %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Today's Classes</h2>
-      {% for cls in today_classes|default:'' %}
-      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-gray-900">{{ cls.batch }}</p>
-          <p class="text-xs text-gray-500">{{ cls.subject }} · {{ cls.room }}</p>
-        </div>
-        <a href="/attendance/mark/{{ cls.id }}/"
-           class="text-xs px-2 py-1 rounded-lg text-white font-medium"
-           style="background-color: {{ primary_color }};">Mark</a>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No classes today</p>
-      {% endfor %}
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">My Batches</h2>
-      {% for batch in my_batches|default:'' %}
-      <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
-        <span class="font-medium text-gray-800">{{ batch.name }}</span>
-        <span class="text-gray-500">{{ batch.student_count }} students</span>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No batches assigned</p>
-      {% endfor %}
-    </div>
+  <!-- ── MOTIVATIONAL FOOTER ── -->
+  <div class="g5-quote-strip">
+    "Success is not owned. It is rented — and the rent is due every single day." &nbsp;🔥
   </div>
 
-{% elif user.role == 'student' %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Today's Schedule</h2>
-      {% for cls in today_schedule|default:'' %}
-      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
-        <div class="flex-1">
-          <p class="text-sm font-medium text-gray-900">{{ cls.subject }}</p>
-          <p class="text-xs text-gray-500">{{ cls.faculty }}</p>
-        </div>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No classes today</p>
-      {% endfor %}
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Recent Performance</h2>
-      {% for test in recent_tests|default:'' %}
-      <div class="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
-        <div>
-          <p class="text-sm font-medium text-gray-900">{{ test.name }}</p>
-          <p class="text-xs text-gray-500">{{ test.date }}</p>
-        </div>
-        <div class="text-right">
-          <p class="text-sm font-semibold text-gray-900">{{ test.score }}/{{ test.total }}</p>
-          <p class="text-xs text-gray-500">Rank {{ test.rank }}</p>
-        </div>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No test data yet</p>
-      {% endfor %}
-    </div>
+  <!-- ── ACTIONS ── -->
+  <div class="flex flex-wrap gap-3">
+    <button class="g5-btn">📝 Assign Test</button>
+    <button class="g5-btn">📊 Batch Analytics</button>
+    <button class="g5-btn">🏆 Leaderboard</button>
+    {% if is_premium %}<button class="g5-btn" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">✦ AI Insights</button>{% endif %}
   </div>
 
-{% elif user.role == 'parent' %}
-  <!-- Parent view within coaching portal -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-4">Ward Overview — {{ ward.name|default:"Your Child" }}</h2>
-      <div class="space-y-3 text-sm">
-        <div class="flex justify-between"><span class="text-gray-500">Batch</span><span class="font-medium">{{ ward.batch|default:"—" }}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Attendance</span>
-          <span class="font-medium {% if ward.attendance_pct < 75 %}text-red-600{% endif %}">
-            {{ ward.attendance_pct|default:"—" }}%
-          </span>
-        </div>
-        <div class="flex justify-between"><span class="text-gray-500">Last Test Rank</span><span class="font-medium">{{ ward.last_rank|default:"—" }}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Fee Due</span>
-          <span class="font-medium {% if ward.fee_due %}text-red-600{% endif %}">
-            {% if ward.fee_due %}₹{{ ward.fee_due }}{% else %}Nil{% endif %}
-          </span>
-        </div>
-      </div>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Quick Actions</h2>
-      <div class="space-y-2">
-        <a href="/fees/pay/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>💳</span> Pay Fees
-        </a>
-        <a href="/attendance/ward/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📅</span> Attendance Details
-        </a>
-        <a href="/results/ward/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📊</span> Test Results
-        </a>
-      </div>
-    </div>
-  </div>
-{% endif %}
+</div>

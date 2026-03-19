@@ -1,82 +1,207 @@
-<!-- Group 3: School Portal — adapts per role (principal / teacher / student / parent) -->
+<!-- GROUP 3: FRESH GREEN SCHOOL PORTAL -->
+<style>
+  .g3-wrap { background: #f0fdf4; min-height: 100%; }
+  .g3-card { background: #fff; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); border: 1px solid #e7f5ec; }
+  .g3-kpi-border-green  { border-left: 5px solid #16a34a; }
+  .g3-kpi-border-blue   { border-left: 5px solid #2563eb; }
+  .g3-kpi-border-amber  { border-left: 5px solid #d97706; }
+  .g3-kpi-border-rose   { border-left: 5px solid #e11d48; }
+  .g3-subject-bar { height:10px;border-radius:5px;transition:width .7s cubic-bezier(.4,0,.2,1); }
+  .g3-timeline-dot { width:14px;height:14px;border-radius:50%;flex-shrink:0; }
+  .g3-timeline-line { width:2px;background:#d1fae5;flex-shrink:0;margin:0 auto; }
+  .g3-tag { display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600; }
+  @keyframes g3-ring { from{stroke-dashoffset:220} to{stroke-dashoffset:var(--g3-offset)} }
+  .g3-ring-fill { animation: g3-ring 1s ease forwards; stroke-dasharray: 220; stroke-dashoffset: 220; }
+  .g3-btn { display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:10px;font-size:13px;font-weight:600;background:#16a34a;color:#fff;cursor:pointer;border:none;transition:filter .15s; }
+  .g3-btn:hover { filter:brightness(.92); }
+</style>
 
-<!-- Greeting -->
-<div class="flex items-start justify-between mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900">
-      {% if user.role == 'principal' or user.role == 'admin' %}
-        {% if greeting_time == 'morning' %}Your school, your day ahead.
-        {% elif greeting_time == 'afternoon' %}Afternoon check-in, {{ user.name|default:"Principal" }}.
-        {% else %}Evening review, {{ user.name|default:"Principal" }}.{% endif %}
-      {% elif user.role == 'teacher' %}
-        {% if greeting_time == 'morning' %}Good morning, {{ user.name|default:"Teacher" }}. Classes await.
-        {% else %}Good {{ greeting_time }}, {{ user.name|default:"Teacher" }}.{% endif %}
-      {% elif user.role == 'parent' %}
-        Good {{ greeting_time }}. Here's how your child is doing.
-      {% else %}
-        Good {{ greeting_time }}, {{ user.name|default:"there" }}.
+<div class="g3-wrap p-5 space-y-5">
+
+  <!-- ── GREETING BANNER ── -->
+  <div class="rounded-2xl overflow-hidden flex flex-col md:flex-row" style="min-height:140px;">
+    <!-- Left green panel -->
+    <div class="flex-1 p-6 flex flex-col justify-between" style="background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);">
+      <div>
+        <p class="text-green-100 text-sm font-semibold uppercase tracking-wider mb-1">Good {{ greeting_time }}</p>
+        <h1 class="text-white text-2xl font-bold leading-tight">{{ user.name }}</h1>
+        <p class="text-green-100 text-sm mt-1">{{ today_date }} &nbsp;·&nbsp; {{ user.role|capfirst }}</p>
+      </div>
+      <div class="mt-4">
+        <div class="inline-block bg-green-700/50 text-green-100 text-xs font-bold px-3 py-1 rounded-full tracking-wider">
+          {{ institution_name }}
+        </div>
+      </div>
+    </div>
+    <!-- Right stat panel -->
+    <div class="bg-white flex items-center justify-center px-8 py-6 gap-8 border-t md:border-t-0 md:border-l border-green-100">
+      <div class="text-center">
+        <div class="text-4xl font-bold text-green-600">87<span class="text-2xl">%</span></div>
+        <div class="text-gray-500 text-xs font-medium mt-1">Attendance Today</div>
+      </div>
+      <div class="w-px h-12 bg-green-100"></div>
+      <div class="text-center">
+        <div class="text-4xl font-bold text-blue-600">{{ today_date|slice:":3"|upper|default:"THU" }}</div>
+        <div class="text-gray-500 text-xs font-medium mt-1">{{ today_date }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ALERTS ── -->
+  {% if alerts %}
+  <div class="space-y-2">
+    {% for alert in alerts %}
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+      {% if alert.level == 'error' or alert.level == 'critical' %}bg-red-50 text-red-700 border border-red-200
+      {% elif alert.level == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200
+      {% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+      <span>{% if alert.level == 'error' or alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}✅{% endif %}</span>
+      <span>{{ alert.message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── KPI CARDS ── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% for kpi in kpis %}
+    <div class="g3-card p-4 {% cycle 'g3-kpi-border-green' 'g3-kpi-border-blue' 'g3-kpi-border-amber' 'g3-kpi-border-rose' %}">
+      <div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">{{ kpi.label }}</div>
+      <div class="text-gray-900 font-bold text-3xl leading-none">{{ kpi.value }}</div>
+      {% if kpi.trend %}
+      <div class="mt-1 text-xs font-semibold {% if '-' in kpi.trend|stringformat:'s' %}text-red-500{% else %}text-green-600{% endif %}">
+        {% if '-' in kpi.trend|stringformat:'s' %}▼{% else %}▲{% endif %} {{ kpi.trend }}
+      </div>
       {% endif %}
-    </h1>
-    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
+    </div>
+    {% empty %}
+    <div class="g3-card p-4 g3-kpi-border-green"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Total Students</div><div class="text-gray-900 font-bold text-3xl">1,240</div><div class="mt-1 text-xs font-semibold text-green-600">▲ +3%</div></div>
+    <div class="g3-card p-4 g3-kpi-border-blue"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Attendance</div><div class="text-gray-900 font-bold text-3xl">87%</div><div class="mt-1 text-xs font-semibold text-amber-500">▼ -1%</div></div>
+    <div class="g3-card p-4 g3-kpi-border-amber"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Teachers</div><div class="text-gray-900 font-bold text-3xl">68</div><div class="mt-1 text-xs font-semibold text-green-600">▲ +2</div></div>
+    <div class="g3-card p-4 g3-kpi-border-rose"><div class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Pending Fees</div><div class="text-gray-900 font-bold text-3xl">₹1.2L</div><div class="mt-1 text-xs font-semibold text-red-500">▼ 14 cases</div></div>
+    {% endfor %}
   </div>
-  <span class="hidden sm:block text-xs px-3 py-1 rounded-full font-medium text-white"
-        style="background-color: {{ primary_color }};">
-    {{ user.role_display }}
-  </span>
-</div>
 
-<!-- Alert banner -->
-{% if alerts %}
-<div class="space-y-2 mb-6">
-  {% for alert in alerts %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
-              {% elif alert.level == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
-              {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
-    <span class="text-base flex-shrink-0">
-      {% if alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}ℹ️{% endif %}
-    </span>
-    <span class="flex-1">{{ alert.message }}</span>
-    {% if alert.action_url %}
-    <a href="{{ alert.action_url }}"
-       class="font-semibold underline ml-2 flex-shrink-0">{{ alert.action_label }}</a>
-    {% endif %}
+  <!-- ── ATTENDANCE + SCHEDULE ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Attendance -->
+    <div class="g3-card p-5">
+      <h2 class="font-bold text-gray-800 text-base mb-5">Attendance Overview</h2>
+      <div class="flex items-center gap-6">
+        <!-- Circular Ring SVG -->
+        <div class="relative flex-shrink-0" style="width:100px;height:100px;">
+          <svg viewBox="0 0 80 80" width="100" height="100" style="transform:rotate(-90deg);">
+            <circle cx="40" cy="40" r="35" fill="none" stroke="#dcfce7" stroke-width="8"/>
+            <circle cx="40" cy="40" r="35" fill="none" stroke="#16a34a" stroke-width="8"
+              stroke-linecap="round"
+              class="g3-ring-fill" style="--g3-offset: calc(220 - 220 * 0.87);">
+            </circle>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-gray-900 font-bold text-xl">87%</span>
+            <span class="text-gray-500 text-xs">Present</span>
+          </div>
+        </div>
+        <!-- Subject bars -->
+        <div class="flex-1 space-y-3">
+          <div>
+            <div class="flex justify-between mb-1"><span class="text-gray-600 text-xs font-medium">Mathematics</span><span class="text-gray-800 text-xs font-bold">92%</span></div>
+            <div style="background:#dcfce7;border-radius:5px;height:10px;"><div class="g3-subject-bar" style="width:92%;background:#16a34a;"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1"><span class="text-gray-600 text-xs font-medium">Science</span><span class="text-gray-800 text-xs font-bold">88%</span></div>
+            <div style="background:#dbeafe;border-radius:5px;height:10px;"><div class="g3-subject-bar" style="width:88%;background:#2563eb;"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1"><span class="text-gray-600 text-xs font-medium">English</span><span class="text-gray-800 text-xs font-bold">84%</span></div>
+            <div style="background:#fef3c7;border-radius:5px;height:10px;"><div class="g3-subject-bar" style="width:84%;background:#d97706;"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1"><span class="text-gray-600 text-xs font-medium">Social Studies</span><span class="text-gray-800 text-xs font-bold">79%</span></div>
+            <div style="background:#ffe4e6;border-radius:5px;height:10px;"><div class="g3-subject-bar" style="width:79%;background:#e11d48;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Schedule Timeline -->
+    <div class="g3-card p-5">
+      <h2 class="font-bold text-gray-800 text-base mb-4">Today's Schedule</h2>
+      <div class="space-y-0">
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <div class="g3-timeline-dot bg-green-500"></div>
+            <div class="g3-timeline-line flex-1 mt-1 mb-1" style="height:36px;"></div>
+          </div>
+          <div class="pb-4">
+            <div class="text-gray-800 text-sm font-semibold">Mathematics — Class 9A</div>
+            <div class="text-gray-500 text-xs">8:00 – 8:45 AM &nbsp;·&nbsp; Room 101</div>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <div class="g3-timeline-dot bg-blue-500"></div>
+            <div class="g3-timeline-line flex-1 mt-1 mb-1" style="height:36px;"></div>
+          </div>
+          <div class="pb-4">
+            <div class="text-gray-800 text-sm font-semibold">Science — Class 10B</div>
+            <div class="text-gray-500 text-xs">9:00 – 9:45 AM &nbsp;·&nbsp; Lab 2</div>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <div class="g3-timeline-dot bg-amber-400"></div>
+            <div class="g3-timeline-line flex-1 mt-1 mb-1" style="height:36px;"></div>
+          </div>
+          <div class="pb-4">
+            <div class="text-gray-800 text-sm font-semibold">Staff Meeting</div>
+            <div class="text-gray-500 text-xs">11:00 AM &nbsp;·&nbsp; Conference Room</div>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <div class="g3-timeline-dot bg-rose-400"></div>
+          </div>
+          <div>
+            <div class="text-gray-800 text-sm font-semibold">Parent-Teacher Meet</div>
+            <div class="text-gray-500 text-xs">3:00 – 5:00 PM &nbsp;·&nbsp; Main Hall</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  {% endfor %}
-</div>
-{% endif %}
 
-<!-- KPI bar -->
-{% if kpis %}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% for kpi in kpis %}
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
-    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
-    {% if kpi.trend %}
-    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">
-      {{ kpi.trend }}
-    </p>
-    {% endif %}
+  <!-- ── ANNOUNCEMENTS ── -->
+  <div class="g3-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-bold text-gray-800 text-base">Recent Announcements</h2>
+      <a href="#" class="text-green-600 text-sm font-semibold hover:underline">View all</a>
+    </div>
+    <div class="space-y-3">
+      {% for section in sections %}{% for item in section.items %}
+      <div class="flex items-start gap-3 p-3 rounded-xl bg-green-50 border border-green-100">
+        <div class="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0"></div>
+        <div>
+          <div class="text-gray-800 text-sm font-semibold">{{ item.label }}</div>
+          <div class="text-gray-500 text-xs">{{ item.value }}</div>
+        </div>
+      </div>
+      {% endfor %}{% empty %}
+      <div class="flex items-start gap-3 p-3 rounded-xl bg-green-50 border border-green-100">
+        <div class="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0"></div>
+        <div><div class="text-gray-800 text-sm font-semibold">Annual Sports Day — 25 March 2026</div><span class="g3-tag bg-green-100 text-green-700">Event</span></div>
+      </div>
+      <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+        <div class="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"></div>
+        <div><div class="text-gray-800 text-sm font-semibold">Exam schedule for April uploaded</div><span class="g3-tag bg-blue-100 text-blue-700">Exam</span></div>
+      </div>
+      <div class="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+        <div class="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></div>
+        <div><div class="text-gray-800 text-sm font-semibold">Fee payment last date: 31 March 2026</div><span class="g3-tag bg-amber-100 text-amber-700">Finance</span></div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
-  {% endfor %}
-</div>
-{% endif %}
 
-<!-- Role-specific main sections -->
-{% if user.role == 'principal' %}
-  {% include "home/partials/sections/attendance_grid.html" %}
-  {% include "home/partials/sections/fee_summary.html" %}
-  {% include "home/partials/sections/exam_schedule.html" %}
-{% elif user.role == 'teacher' %}
-  {% include "home/partials/sections/timetable.html" %}
-  {% include "home/partials/sections/attendance_entry.html" %}
-{% elif user.role == 'student' %}
-  {% include "home/partials/sections/today_schedule.html" %}
-  {% include "home/partials/sections/marks_summary.html" %}
-  {% include "home/partials/sections/upcoming_tests.html" %}
-{% elif user.role == 'parent' %}
-  {% include "home/partials/sections/children_cards.html" %}
-  {% include "home/partials/sections/fee_centre.html" %}
-  {% include "home/partials/sections/messages.html" %}
-{% endif %}
+</div>

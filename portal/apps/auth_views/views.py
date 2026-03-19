@@ -1,4 +1,5 @@
 """Auth views — login, OTP verify, role select, profile setup, 2FA."""
+
 import httpx
 from django.conf import settings
 from django.http import HttpResponse
@@ -48,8 +49,17 @@ def password_login(request):
             user = me_resp.json() if me_resp.status_code == 200 else {}
 
             # Staff/admin roles require 2FA; students/parents go directly home
-            staff_roles = {"principal", "vice_principal", "director", "admin",
-                           "teacher", "faculty", "hod", "chain_admin", "platform_admin"}
+            staff_roles = {
+                "principal",
+                "vice_principal",
+                "director",
+                "admin",
+                "teacher",
+                "faculty",
+                "hod",
+                "chain_admin",
+                "platform_admin",
+            }
             role = user.get("role", "")
 
             if role in staff_roles and user.get("requires_2fa", False):
@@ -64,14 +74,20 @@ def password_login(request):
             response = HttpResponse(status=204)
             response["HX-Redirect"] = next_url
             response.set_cookie(
-                settings.AUTH_COOKIE_NAME, access,
-                httponly=True, samesite="Lax",
-                secure=not settings.DEBUG, max_age=60 * 30,
+                settings.AUTH_COOKIE_NAME,
+                access,
+                httponly=True,
+                samesite="Lax",
+                secure=not settings.DEBUG,
+                max_age=60 * 30,
             )
             response.set_cookie(
-                settings.AUTH_COOKIE_REFRESH, refresh,
-                httponly=True, samesite="Lax",
-                secure=not settings.DEBUG, max_age=60 * 60 * 24 * 7,
+                settings.AUTH_COOKIE_REFRESH,
+                refresh,
+                httponly=True,
+                samesite="Lax",
+                secure=not settings.DEBUG,
+                max_age=60 * 60 * 24 * 7,
             )
             return response
 
@@ -99,6 +115,7 @@ def password_login(request):
 # Used for critical actions (password reset confirmation, suspicious login, etc.)
 # when the institution enables it. Not part of standard daily login flow.
 # ---------------------------------------------------------------------------
+
 
 @require_http_methods(["POST"])
 @csrf_protect
@@ -145,10 +162,14 @@ def otp_verify_view(request):
     channel = request.session.get("otp_channel", "whatsapp")
     if not mobile:
         return redirect("/login/")
-    return render(request, "auth/verify_otp.html", {
-        "mobile": mobile,
-        "channel": channel,
-    })
+    return render(
+        request,
+        "auth/verify_otp.html",
+        {
+            "mobile": mobile,
+            "channel": channel,
+        },
+    )
 
 
 @require_http_methods(["POST"])
@@ -197,14 +218,20 @@ def otp_verify_submit(request):
             response["HX-Redirect"] = next_url
             # Set httpOnly cookies
             response.set_cookie(
-                settings.AUTH_COOKIE_NAME, access,
-                httponly=True, samesite="Lax",
-                secure=not settings.DEBUG, max_age=60 * 30,
+                settings.AUTH_COOKIE_NAME,
+                access,
+                httponly=True,
+                samesite="Lax",
+                secure=not settings.DEBUG,
+                max_age=60 * 30,
             )
             response.set_cookie(
-                settings.AUTH_COOKIE_REFRESH, refresh,
-                httponly=True, samesite="Lax",
-                secure=not settings.DEBUG, max_age=60 * 60 * 24 * 7,
+                settings.AUTH_COOKIE_REFRESH,
+                refresh,
+                httponly=True,
+                samesite="Lax",
+                secure=not settings.DEBUG,
+                max_age=60 * 60 * 24 * 7,
             )
             return response
 

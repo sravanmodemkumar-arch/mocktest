@@ -8,6 +8,7 @@ Static assets (logo, favicon, brand colors) are stored in:
 
 CDN URL: https://cdn.eduforge.in/static/tenants/{slug}/
 """
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -19,8 +20,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from shared.client import detect_client, is_mobile
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-CDN_BASE_URL  = os.getenv("CDN_BASE_URL", "https://cdn.eduforge.in")
-STATIC_DIR    = os.path.join(os.path.dirname(__file__), "..", "..", "static", "tenants")
+CDN_BASE_URL = os.getenv("CDN_BASE_URL", "https://cdn.eduforge.in")
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "static", "tenants")
 
 
 def static_assets(slug: str) -> dict:
@@ -45,25 +46,25 @@ def static_assets(slug: str) -> dict:
 
     colors = brand.get("colors", {})
     return {
-        "primary":      colors.get("primary", "#1A237E"),
+        "primary": colors.get("primary", "#1A237E"),
         "primary_dark": colors.get("primary_dark", "#0D1B6E"),
-        "accent":       colors.get("accent", "#FF6F00"),
-        "background":   colors.get("background", "#FFFFFF"),
-        "surface":      colors.get("surface", "#F5F7FA"),
-        "text":         colors.get("text", "#1A1A2E"),
-        "text_muted":   colors.get("text_muted", "#6B7280"),
-        "success":      colors.get("success", "#2E7D32"),
-        "warning":      colors.get("warning", "#F57F17"),
-        "error":        colors.get("error", "#C62828"),
+        "accent": colors.get("accent", "#FF6F00"),
+        "background": colors.get("background", "#FFFFFF"),
+        "surface": colors.get("surface", "#F5F7FA"),
+        "text": colors.get("text", "#1A1A2E"),
+        "text_muted": colors.get("text_muted", "#6B7280"),
+        "success": colors.get("success", "#2E7D32"),
+        "warning": colors.get("warning", "#F57F17"),
+        "error": colors.get("error", "#C62828"),
         # CDN URLs — frontend/mobile use these directly (never hardcode paths)
-        "logo":         f"{cdn_base}/logo.svg",
-        "logo_dark":    f"{cdn_base}/logo-dark.svg",
-        "favicon":      f"{cdn_base}/favicon.ico",
-        "og_image":     f"{cdn_base}/og-image.png",
+        "logo": f"{cdn_base}/logo.svg",
+        "logo_dark": f"{cdn_base}/logo-dark.svg",
+        "favicon": f"{cdn_base}/favicon.ico",
+        "og_image": f"{cdn_base}/og-image.png",
         "pwa_icon_192": f"{cdn_base}/favicon-192.png",
         "pwa_icon_512": f"{cdn_base}/favicon-512.png",
         # Font
-        "font_family":  brand.get("font", {}).get("family", "Inter"),
+        "font_family": brand.get("font", {}).get("family", "Inter"),
     }
 
 
@@ -82,19 +83,39 @@ app.add_middleware(
 )
 
 FIRST_PARTY_DOMAINS = {
-    "admin.eduforge.in":    {"slug": "platform-admin",  "group": 1, "name": "EduForge Admin"},
-    "app.eduforge.in":      {"slug": "chain-admin",      "group": 2, "name": "EduForge Chain"},
-    "ssc.eduforge.in":      {"slug": "ssc-domain",       "group": 6, "name": "EduForge SSC"},
-    "rrb.eduforge.in":      {"slug": "rrb-domain",       "group": 6, "name": "EduForge RRB"},
-    "upsc.eduforge.in":     {"slug": "upsc-domain",      "group": 6, "name": "EduForge UPSC"},
-    "banking.eduforge.in":  {"slug": "banking-domain",  "group": 6, "name": "EduForge Banking"},
-    "ap.eduforge.in":       {"slug": "ap-board",         "group": 6, "name": "EduForge AP"},
-    "ts.eduforge.in":       {"slug": "ts-board",         "group": 6, "name": "EduForge Telangana"},
-    "partners.eduforge.in": {"slug": "partner-portal",  "group": 9, "name": "EduForge Partners"},
-    "student.eduforge.in":  {"slug": "student-unified", "group": 10, "name": "EduForge Student"},
-    "parent.eduforge.in":   {"slug": "parent-portal",   "group": 8, "name": "EduForge Parent"},
-    "localhost":            {"slug": "default",          "group": 1, "name": "Local Dev"},
-    "127.0.0.1":            {"slug": "default",          "group": 1, "name": "Local Dev"},
+    "admin.eduforge.in": {
+        "slug": "platform-admin",
+        "group": 1,
+        "name": "EduForge Admin",
+    },
+    "app.eduforge.in": {"slug": "chain-admin", "group": 2, "name": "EduForge Chain"},
+    "ssc.eduforge.in": {"slug": "ssc-domain", "group": 6, "name": "EduForge SSC"},
+    "rrb.eduforge.in": {"slug": "rrb-domain", "group": 6, "name": "EduForge RRB"},
+    "upsc.eduforge.in": {"slug": "upsc-domain", "group": 6, "name": "EduForge UPSC"},
+    "banking.eduforge.in": {
+        "slug": "banking-domain",
+        "group": 6,
+        "name": "EduForge Banking",
+    },
+    "ap.eduforge.in": {"slug": "ap-board", "group": 6, "name": "EduForge AP"},
+    "ts.eduforge.in": {"slug": "ts-board", "group": 6, "name": "EduForge Telangana"},
+    "partners.eduforge.in": {
+        "slug": "partner-portal",
+        "group": 9,
+        "name": "EduForge Partners",
+    },
+    "student.eduforge.in": {
+        "slug": "student-unified",
+        "group": 10,
+        "name": "EduForge Student",
+    },
+    "parent.eduforge.in": {
+        "slug": "parent-portal",
+        "group": 8,
+        "name": "EduForge Parent",
+    },
+    "localhost": {"slug": "default", "group": 1, "name": "Local Dev"},
+    "127.0.0.1": {"slug": "default", "group": 1, "name": "Local Dev"},
 }
 
 
@@ -125,10 +146,14 @@ async def get_tenant_config(domain: str, request: Request):
         }
         response = JSONResponse(content=body)
         if is_mobile(client):
-            response.headers["Cache-Control"] = "private, max-age=86400, stale-while-revalidate=3600"
+            response.headers["Cache-Control"] = (
+                "private, max-age=86400, stale-while-revalidate=3600"
+            )
             response.headers["Vary"] = "X-Client-Type, X-App-Version"
         else:
-            response.headers["Cache-Control"] = "public, s-maxage=3600, stale-while-revalidate=300"
+            response.headers["Cache-Control"] = (
+                "public, s-maxage=3600, stale-while-revalidate=300"
+            )
             response.headers["Vary"] = "Accept-Encoding"
         return response
 
@@ -137,18 +162,23 @@ async def get_tenant_config(domain: str, request: Request):
 
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-        row = await conn.fetchrow("""
+        row = await conn.fetchrow(
+            """
             SELECT t.slug, t.portal_group, t.name, t.branding, t.features, t.is_active
             FROM identity.tenant_domains td
             JOIN identity.tenants t ON t.id = td.tenant_id
             WHERE td.domain = $1 AND td.is_verified = true
-        """, domain)
+        """,
+            domain,
+        )
         await conn.close()
     except Exception:
         raise HTTPException(status_code=503, detail="Configuration service unavailable")
 
     if not row:
-        raise HTTPException(status_code=404, detail=f"Domain '{domain}' not registered with EduForge")
+        raise HTTPException(
+            status_code=404, detail=f"Domain '{domain}' not registered with EduForge"
+        )
     if not row["is_active"]:
         raise HTTPException(status_code=503, detail="This portal is currently inactive")
 
@@ -169,10 +199,14 @@ async def get_tenant_config(domain: str, request: Request):
     }
     response = JSONResponse(content=body)
     if is_mobile(client):
-        response.headers["Cache-Control"] = "private, max-age=86400, stale-while-revalidate=3600"
+        response.headers["Cache-Control"] = (
+            "private, max-age=86400, stale-while-revalidate=3600"
+        )
         response.headers["Vary"] = "X-Client-Type, X-App-Version"
     else:
-        response.headers["Cache-Control"] = "public, s-maxage=3600, stale-while-revalidate=300"
+        response.headers["Cache-Control"] = (
+            "public, s-maxage=3600, stale-while-revalidate=300"
+        )
         response.headers["Vary"] = "Accept-Encoding"
     return response
 

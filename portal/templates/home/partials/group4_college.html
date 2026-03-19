@@ -1,229 +1,186 @@
-<!-- Group 4: College Portal — role-aware (principal / HOD / faculty / student / parent) -->
+<!-- GROUP 4: ACADEMIC MAROON / GOLD — College / University Faculty Portal -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap');
+  .g4-serif { font-family: 'Playfair Display', Georgia, serif; }
+  .g4-wrap { background: #fdf9f2; min-height: 100%; }
+  .g4-card { background: #fff; border-radius: 12px; border: 1px solid #e8e0d0; box-shadow: 0 1px 6px rgba(123,29,29,.06); }
+  .g4-accent-bar { border-left: 5px solid #7b1d1d; }
+  .g4-gold { color: #c9a84c; }
+  .g4-maroon { color: #7b1d1d; }
+  .g4-tag { display:inline-block;padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase; }
+  .g4-dept-card {
+    background: #fff;
+    border: 1px solid #e8e0d0;
+    border-radius: 12px;
+    min-width: 160px;
+    padding: 16px;
+    flex-shrink: 0;
+    transition: box-shadow .2s;
+  }
+  .g4-dept-card:hover { box-shadow: 0 4px 16px rgba(123,29,29,.12); }
+  .g4-timeline-dot { width:12px;height:12px;border-radius:50%;background:#7b1d1d;flex-shrink:0;margin-top:4px; }
+  .g4-timeline-line { width:2px;background:#f3e8d8;margin:0 auto;flex-shrink:0; }
+  .g4-gold-card { border:2px solid #c9a84c;border-radius:12px;background:linear-gradient(135deg,#fefcf3 0%,#fdf5dc 100%);padding:20px; }
+  .g4-btn { background:#7b1d1d;color:#fff;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:filter .15s; }
+  .g4-btn:hover { filter:brightness(1.1); }
+  .g4-btn-gold { background:transparent;color:#c9a84c;border:1px solid #c9a84c;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s; }
+  .g4-btn-gold:hover { background:#c9a84c;color:#fff; }
+</style>
 
-<div class="flex items-start justify-between mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900">
-      Good {{ greeting_time }}, {{ user.name|default:"there" }}!
-    </h1>
-    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
-  </div>
-  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
-        style="background-color: {{ primary_color }};">
-    {{ user.role_display|default:"Faculty" }}
-  </span>
-</div>
+<div class="g4-wrap p-5 space-y-5">
 
-{% if alerts %}
-<div class="space-y-2 mb-6">
-  {% for alert in alerts %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
-              {% elif alert.level == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
-              {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
-    <span class="flex-shrink-0">
-      {% if alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}ℹ️{% endif %}
-    </span>
-    <span class="flex-1">{{ alert.message }}</span>
-    {% if alert.action_url %}
-    <a href="{{ alert.action_url }}" class="font-semibold underline ml-2 flex-shrink-0">{{ alert.action_label }}</a>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{% if kpis %}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% for kpi in kpis %}
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
-    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
-    {% if kpi.trend %}
-    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">
-      {{ kpi.trend }}
-    </p>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- Role-specific sections -->
-{% if user.role == 'principal' %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-4">Department Attendance</h2>
-      {% for dept in department_attendance|default:'' %}
-      <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
-        <span class="text-gray-700">{{ dept.name }}</span>
-        <div class="flex items-center gap-2">
-          <div class="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div class="h-full rounded-full" style="width:{{ dept.pct }}%; background-color:{{ primary_color }};"></div>
+  <!-- ── HEADER ── -->
+  <div class="rounded-2xl overflow-hidden" style="background:linear-gradient(135deg,#7b1d1d 0%,#9b2a2a 60%,#6b1515 100%);">
+    <div class="px-6 pt-6 pb-4">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="text-red-200/70 text-xs font-semibold uppercase tracking-widest mb-2">Faculty Portal</p>
+          <h1 class="g4-serif text-white text-3xl font-bold leading-tight">{{ institution_name }}</h1>
+          <p class="text-red-200/80 text-sm mt-2">Good {{ greeting_time }}, {{ user.name }} &nbsp;·&nbsp; {{ user.role|capfirst }}</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="text-red-200/60 text-xs uppercase tracking-wider font-semibold">Academic Year</div>
+            <div class="text-white font-bold text-lg">2025 – 26</div>
           </div>
-          <span class="text-gray-600 w-10 text-right">{{ dept.pct }}%</span>
+          {% if is_premium %}
+          <div class="px-3 py-1 rounded-full text-xs font-bold" style="background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.5);color:#c9a84c;">PREMIUM</div>
+          {% endif %}
         </div>
       </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No attendance data yet</p>
-      {% endfor %}
+      <!-- Gold horizontal rule -->
+      <div class="mt-4 h-px" style="background:linear-gradient(90deg,transparent,#c9a84c,#c9a84c,transparent);"></div>
+      <div class="mt-3 text-red-200/60 text-xs">{{ today_date }}</div>
     </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-4">Fee Collection</h2>
-      <div class="space-y-3">
-        {% for item in fee_summary|default:'' %}
-        <div class="flex items-center justify-between text-sm">
-          <span class="text-gray-600">{{ item.label }}</span>
-          <span class="font-semibold text-gray-900">{{ item.value }}</span>
+  </div>
+
+  <!-- ── ALERTS ── -->
+  {% if alerts %}
+  <div class="space-y-2">
+    {% for alert in alerts %}
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+      {% if alert.level == 'error' or alert.level == 'critical' %}bg-red-50 text-red-700 border border-red-200
+      {% elif alert.level == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200
+      {% else %}bg-stone-50 text-stone-700 border border-stone-200{% endif %}">
+      <span>{% if alert.level == 'error' or alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}ℹ️{% endif %}</span>
+      <span>{{ alert.message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── KPI CARDS ── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% for kpi in kpis %}
+    <div class="g4-card p-5 g4-accent-bar">
+      <div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-2">{{ kpi.label }}</div>
+      <div class="g4-maroon font-bold text-3xl leading-none g4-serif">{{ kpi.value }}</div>
+      {% if kpi.trend %}
+      <div class="mt-2 text-sm font-semibold g4-gold flex items-center gap-1">
+        {% if '-' in kpi.trend|stringformat:'s' %}▼{% else %}▲{% endif %} {{ kpi.trend }}
+      </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="g4-card p-5 g4-accent-bar"><div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-2">Total Students</div><div class="g4-maroon font-bold text-3xl g4-serif">4,820</div><div class="mt-2 text-sm font-semibold g4-gold">▲ +6%</div></div>
+    <div class="g4-card p-5 g4-accent-bar"><div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-2">Faculty</div><div class="g4-maroon font-bold text-3xl g4-serif">312</div><div class="mt-2 text-sm font-semibold g4-gold">▲ +4</div></div>
+    <div class="g4-card p-5 g4-accent-bar"><div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-2">Departments</div><div class="g4-maroon font-bold text-3xl g4-serif">18</div><div class="mt-2 text-sm font-semibold text-stone-400">— Stable</div></div>
+    <div class="g4-card p-5 g4-accent-bar"><div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-2">Avg Attendance</div><div class="g4-maroon font-bold text-3xl g4-serif">79%</div><div class="mt-2 text-sm font-semibold text-amber-500">▼ -2%</div></div>
+    {% endfor %}
+  </div>
+
+  <!-- ── DEPARTMENT SNAPSHOT ── -->
+  <div class="g4-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="g4-serif g4-maroon font-bold text-lg">Department Snapshot</h2>
+      <a href="#" class="text-sm g4-gold font-semibold hover:underline">All Departments →</a>
+    </div>
+    <div class="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1" style="scrollbar-width:thin;scrollbar-color:#c9a84c #f3e8d8;">
+      {% for section in sections %}
+      <div class="g4-dept-card">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fdf3e0;border:1px solid #c9a84c;">
+          <span class="g4-maroon font-bold text-sm g4-serif">{{ section.title|slice:":2"|upper }}</span>
         </div>
-        {% empty %}
-        <p class="text-sm text-gray-400">No fee data</p>
+        <div class="g4-maroon font-bold text-sm g4-serif leading-tight">{{ section.title }}</div>
+        {% for item in section.items|slice:":2" %}
+        <div class="mt-1 text-xs text-stone-500">{{ item.label }}: <span class="font-semibold text-stone-700">{{ item.value }}</span></div>
         {% endfor %}
       </div>
+      {% empty %}
+      <div class="g4-dept-card"><div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fdf3e0;border:1px solid #c9a84c;"><span class="g4-maroon font-bold text-sm">CS</span></div><div class="g4-maroon font-bold text-sm g4-serif">Computer Science</div><div class="mt-1 text-xs text-stone-500">Students: <span class="font-semibold text-stone-700">480</span></div><div class="text-xs text-stone-500">Faculty: <span class="font-semibold text-stone-700">28</span></div></div>
+      <div class="g4-dept-card"><div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fdf3e0;border:1px solid #c9a84c;"><span class="g4-maroon font-bold text-sm">ME</span></div><div class="g4-maroon font-bold text-sm g4-serif">Mechanical Eng.</div><div class="mt-1 text-xs text-stone-500">Students: <span class="font-semibold text-stone-700">520</span></div><div class="text-xs text-stone-500">Faculty: <span class="font-semibold text-stone-700">34</span></div></div>
+      <div class="g4-dept-card"><div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fdf3e0;border:1px solid #c9a84c;"><span class="g4-maroon font-bold text-sm">EE</span></div><div class="g4-maroon font-bold text-sm g4-serif">Electrical Eng.</div><div class="mt-1 text-xs text-stone-500">Students: <span class="font-semibold text-stone-700">390</span></div><div class="text-xs text-stone-500">Faculty: <span class="font-semibold text-stone-700">26</span></div></div>
+      <div class="g4-dept-card"><div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fdf3e0;border:1px solid #c9a84c;"><span class="g4-maroon font-bold text-sm">BA</span></div><div class="g4-maroon font-bold text-sm g4-serif">Business Admin.</div><div class="mt-1 text-xs text-stone-500">Students: <span class="font-semibold text-stone-700">610</span></div><div class="text-xs text-stone-500">Faculty: <span class="font-semibold text-stone-700">32</span></div></div>
+      <div class="g4-dept-card"><div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fdf3e0;border:1px solid #c9a84c;"><span class="g4-maroon font-bold text-sm">CH</span></div><div class="g4-maroon font-bold text-sm g4-serif">Chemistry</div><div class="mt-1 text-xs text-stone-500">Students: <span class="font-semibold text-stone-700">240</span></div><div class="text-xs text-stone-500">Faculty: <span class="font-semibold text-stone-700">18</span></div></div>
+      {% endfor %}
     </div>
   </div>
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    <a href="/students/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-      <div class="text-2xl mb-1">👨‍🎓</div><p class="text-xs font-medium text-gray-700">Students</p>
-    </a>
-    <a href="/faculty/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-      <div class="text-2xl mb-1">👩‍🏫</div><p class="text-xs font-medium text-gray-700">Faculty</p>
-    </a>
-    <a href="/exams/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-      <div class="text-2xl mb-1">📝</div><p class="text-xs font-medium text-gray-700">Exams</p>
-    </a>
-    <a href="/reports/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-      <div class="text-2xl mb-1">📊</div><p class="text-xs font-medium text-gray-700">Reports</p>
-    </a>
-  </div>
 
-{% elif user.role == 'hod' %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-4">Department — {{ user.department }}</h2>
+  <!-- ── CALENDAR + PLACEMENT ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Academic Calendar -->
+    <div class="g4-card p-5">
+      <h2 class="g4-serif g4-maroon font-bold text-lg mb-4">Academic Calendar</h2>
       <div class="space-y-3">
-        <div class="flex justify-between text-sm"><span class="text-gray-500">Faculty</span><span class="font-medium">{{ dept_stats.faculty_count|default:"—" }}</span></div>
-        <div class="flex justify-between text-sm"><span class="text-gray-500">Students</span><span class="font-medium">{{ dept_stats.student_count|default:"—" }}</span></div>
-        <div class="flex justify-between text-sm"><span class="text-gray-500">Today's Attendance</span><span class="font-medium">{{ dept_stats.attendance_today|default:"—" }}%</span></div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center"><div class="g4-timeline-dot"></div><div class="g4-timeline-line flex-1 mt-1" style="height:30px;"></div></div>
+          <div class="pb-4"><div class="text-gray-800 text-sm font-semibold">End-Semester Exams Begin</div><div class="text-stone-500 text-xs">25 March 2026</div></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center"><div class="g4-timeline-dot" style="background:#c9a84c;"></div><div class="g4-timeline-line flex-1 mt-1" style="height:30px;"></div></div>
+          <div class="pb-4"><div class="text-gray-800 text-sm font-semibold">Result Declaration</div><div class="text-stone-500 text-xs">10 April 2026</div></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center"><div class="g4-timeline-dot"></div><div class="g4-timeline-line flex-1 mt-1" style="height:30px;"></div></div>
+          <div class="pb-4"><div class="text-gray-800 text-sm font-semibold">Summer Recess</div><div class="text-stone-500 text-xs">15 April – 10 June 2026</div></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center"><div class="g4-timeline-dot" style="background:#c9a84c;"></div></div>
+          <div><div class="text-gray-800 text-sm font-semibold">New Academic Year Begins</div><div class="text-stone-500 text-xs">11 June 2026</div></div>
+        </div>
       </div>
     </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Today's Classes</h2>
-      {% for cls in today_classes|default:'' %}
-      <div class="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 text-sm">
-        <span class="text-gray-500 w-16 flex-shrink-0">{{ cls.time }}</span>
-        <span class="font-medium text-gray-900">{{ cls.subject }}</span>
-        <span class="text-gray-500 ml-auto">{{ cls.room }}</span>
+
+    <!-- Placement Highlights -->
+    <div class="p-5" style="background:linear-gradient(135deg,#fefcf3 0%,#fdf5dc 100%);border:2px solid #c9a84c;border-radius:12px;">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:#7b1d1d;">
+          <span class="text-white text-sm">🎓</span>
+        </div>
+        <h2 class="g4-serif g4-maroon font-bold text-lg">Placement Highlights 2025–26</h2>
       </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No classes today</p>
-      {% endfor %}
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white rounded-xl p-4" style="border:1px solid #e8e0d0;">
+          <div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-1">Placed Students</div>
+          <div class="g4-serif g4-maroon font-bold text-2xl">342</div>
+          <div class="g4-gold text-xs font-semibold mt-1">▲ +18% YoY</div>
+        </div>
+        <div class="bg-white rounded-xl p-4" style="border:1px solid #e8e0d0;">
+          <div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-1">Highest Package</div>
+          <div class="g4-serif g4-maroon font-bold text-2xl">₹42 LPA</div>
+          <div class="g4-gold text-xs font-semibold mt-1">Google, Inc.</div>
+        </div>
+        <div class="bg-white rounded-xl p-4" style="border:1px solid #e8e0d0;">
+          <div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-1">Avg Package</div>
+          <div class="g4-serif g4-maroon font-bold text-2xl">₹8.4 LPA</div>
+          <div class="g4-gold text-xs font-semibold mt-1">▲ +12% YoY</div>
+        </div>
+        <div class="bg-white rounded-xl p-4" style="border:1px solid #e8e0d0;">
+          <div class="text-stone-500 text-xs font-semibold uppercase tracking-wider mb-1">Recruiters</div>
+          <div class="g4-serif g4-maroon font-bold text-2xl">86</div>
+          <div class="g4-gold text-xs font-semibold mt-1">▲ +10 new</div>
+        </div>
+      </div>
     </div>
   </div>
 
-{% elif user.role == 'faculty' %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Today's Timetable</h2>
-      {% for cls in today_classes|default:'' %}
-      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-gray-900">{{ cls.subject }}</p>
-          <p class="text-xs text-gray-500">{{ cls.class_name }} · {{ cls.room }}</p>
-        </div>
-        <a href="/attendance/mark/{{ cls.id }}/"
-           class="text-xs px-2 py-1 rounded-lg text-white font-medium flex-shrink-0"
-           style="background-color: {{ primary_color }};">Mark</a>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No classes scheduled today</p>
-      {% endfor %}
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Pending Tasks</h2>
-      {% for task in pending_tasks|default:'' %}
-      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 text-sm">
-        <span class="w-2 h-2 rounded-full flex-shrink-0"
-              style="background-color: {{ primary_color }};"></span>
-        <span class="text-gray-700">{{ task.label }}</span>
-        <span class="ml-auto text-xs text-gray-400">{{ task.due }}</span>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No pending tasks</p>
-      {% endfor %}
-    </div>
+  <!-- ── ACTIONS ── -->
+  <div class="g4-card p-4 flex flex-wrap gap-3">
+    <button class="g4-btn">📋 Attendance Sheet</button>
+    <button class="g4-btn">📝 Result Entry</button>
+    <button class="g4-btn-gold">📅 Academic Calendar</button>
+    <button class="g4-btn-gold">🎓 Placement Portal</button>
   </div>
 
-{% elif user.role == 'student' %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Today's Schedule</h2>
-      {% for cls in today_schedule|default:'' %}
-      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
-        <div class="flex-1">
-          <p class="text-sm font-medium text-gray-900">{{ cls.subject }}</p>
-          <p class="text-xs text-gray-500">{{ cls.faculty }} · {{ cls.room }}</p>
-        </div>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No classes today</p>
-      {% endfor %}
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">My Attendance</h2>
-      {% for sub in attendance_by_subject|default:'' %}
-      <div class="mb-3">
-        <div class="flex justify-between text-sm mb-1">
-          <span class="text-gray-700">{{ sub.subject }}</span>
-          <span class="{% if sub.pct < 75 %}text-red-600 font-semibold{% else %}text-gray-600{% endif %}">
-            {{ sub.pct }}%
-          </span>
-        </div>
-        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div class="h-full rounded-full {% if sub.pct < 75 %}bg-red-400{% else %}"
-               style="width:{{ sub.pct }}%; {% if sub.pct >= 75 %}background-color:{{ primary_color }};{% endif %}"></div>
-        </div>
-      </div>
-      {% empty %}
-      <p class="text-sm text-gray-400">No attendance data</p>
-      {% endfor %}
-    </div>
-  </div>
-
-{% elif user.role == 'parent' %}
-  <!-- Parent view within college portal -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-4">My Ward — {{ ward.name|default:"Your Child" }}</h2>
-      <div class="space-y-3 text-sm">
-        <div class="flex justify-between"><span class="text-gray-500">Course</span><span class="font-medium">{{ ward.course|default:"—" }}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Semester</span><span class="font-medium">{{ ward.semester|default:"—" }}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Attendance</span>
-          <span class="font-medium {% if ward.attendance_pct < 75 %}text-red-600{% endif %}">
-            {{ ward.attendance_pct|default:"—" }}%
-          </span>
-        </div>
-        <div class="flex justify-between"><span class="text-gray-500">Fee Due</span>
-          <span class="font-medium {% if ward.fee_due %}text-red-600{% endif %}">
-            {% if ward.fee_due %}₹{{ ward.fee_due }}{% else %}Nil{% endif %}
-          </span>
-        </div>
-      </div>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Quick Actions</h2>
-      <div class="space-y-2">
-        <a href="/fees/pay/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>💳</span> Pay Fees Online
-        </a>
-        <a href="/messages/faculty/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>💬</span> Message Faculty
-        </a>
-        <a href="/attendance/ward/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📅</span> Attendance Detail
-        </a>
-      </div>
-    </div>
-  </div>
-{% endif %}
+</div>

@@ -1,256 +1,217 @@
-{% load humanize %}
-<!-- Group 6: Exam Domain — SSC / RRB / Banking / UPSC / State PSC -->
+<!-- GROUP 6: DARK TECH EXAM — Competitive Exam Domain -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap');
+  .g6-font { font-family: 'Rajdhani', system-ui, sans-serif; }
+  .g6-wrap { background: #0a0a0f; min-height: 100%; position: relative; }
+  .g6-grid-bg { position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:32px 32px;pointer-events:none; }
+  .g6-card { background:#111118;border:1px solid rgba(0,212,255,.18);border-radius:14px;position:relative;overflow:hidden;transition:border-color .2s,box-shadow .2s; }
+  .g6-card:hover { border-color:rgba(0,212,255,.45);box-shadow:0 0 20px rgba(0,212,255,.08); }
+  .g6-card-glow::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,.6),transparent); }
+  .g6-cyan { color: #00d4ff; }
+  .g6-label { font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,212,255,.6);margin-bottom:6px; }
+  @keyframes g6-glow { 0%,100%{box-shadow:0 0 8px rgba(0,212,255,.4)} 50%{box-shadow:0 0 18px rgba(0,212,255,.7)} }
+  .g6-streak-badge { animation: g6-glow 2.5s ease-in-out infinite; border:1px solid rgba(0,212,255,.4);border-radius:10px;padding:10px 16px;background:rgba(0,212,255,.05); }
+  /* Progress bar */
+  @keyframes g6-prog { from{width:0} to{width:var(--g6-pw)} }
+  .g6-prog-fill { animation: g6-prog .8s ease forwards; height:100%;border-radius:999px;background:linear-gradient(90deg,#00d4ff,#0ea5e9); }
+  /* Hexagon via clip-path */
+  .g6-hex { clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); display:flex;align-items:center;justify-content:center;flex-direction:column; }
+  .g6-diff-easy   { background:#16a34a;color:#fff;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+  .g6-diff-medium { background:#d97706;color:#fff;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+  .g6-diff-hard   { background:#dc2626;color:#fff;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+  .g6-score-a { background:#16a34a;color:#fff;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700; }
+  .g6-score-b { background:#2563eb;color:#fff;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700; }
+  .g6-score-c { background:#d97706;color:#fff;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700; }
+  .g6-rank-glow { display:inline-block;padding:4px 12px;border-radius:8px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.35);color:#00d4ff;font-weight:800;font-size:1.1rem; }
+  table.g6-table { width:100%;border-collapse:collapse; }
+  table.g6-table th { padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,212,255,.5);border-bottom:1px solid rgba(0,212,255,.1); }
+  table.g6-table td { padding:10px 12px;font-size:13px;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,.04); }
+  table.g6-table tr:last-child td { border-bottom:none; }
+  table.g6-table tr:hover td { background:rgba(0,212,255,.03); }
+</style>
 
-<!-- Greeting -->
-<div class="flex items-start justify-between mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900">
-      {% if greeting_time == 'morning' %}
-        Start strong, {{ user.name|default:"Aspirant" }}.
-      {% elif greeting_time == 'afternoon' %}
-        Keep the momentum, {{ user.name|default:"Aspirant" }}.
-      {% else %}
-        Evening revision pays off, {{ user.name|default:"Aspirant" }}.
-      {% endif %}
-    </h1>
-    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ domain_name }}</p>
+<!-- Sticky Daily Goal Bar -->
+<div style="position:sticky;top:0;z-index:20;background:#0a0a0f;padding:10px 20px;border-bottom:1px solid rgba(0,212,255,.12);">
+  <div class="flex items-center justify-between mb-1">
+    <span class="g6-label mb-0">Daily Goal — Tests Completed</span>
+    <span class="g6-cyan font-bold text-sm">3 / 5</span>
   </div>
-  <span class="text-xs px-3 py-1 rounded-full font-bold flex-shrink-0
-               {% if is_premium %}text-white{% else %}bg-gray-100 text-gray-600{% endif %}"
-        {% if is_premium %}style="background-color: {{ primary_color }};"{% endif %}>
-    {% if is_premium %}Premium{% else %}Free Plan{% endif %}
-  </span>
-</div>
-
-<!-- Alerts -->
-{% if alerts %}
-<div class="space-y-2 mb-6">
-  {% for alert in alerts %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
-              {% elif alert.level == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
-              {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
-    <span class="flex-shrink-0">
-      {% if alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}ℹ️{% endif %}
-    </span>
-    <span class="flex-1">{{ alert.message }}</span>
-    {% if alert.action_url %}
-    <a href="{{ alert.action_url }}" class="font-semibold underline ml-2 flex-shrink-0">{{ alert.action_label }}</a>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- Upgrade banner for free users -->
-{% if not is_premium %}
-<div class="mb-6 rounded-2xl p-5 text-white relative overflow-hidden"
-     style="background: linear-gradient(135deg, {{ primary_color }}, #1a1a2e);">
-  <div class="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
-       style="background: radial-gradient(circle, white, transparent); transform: translate(20%, -20%);"></div>
-  <div class="relative z-10">
-    <div class="flex items-start justify-between gap-4">
-      <div class="space-y-1">
-        <p class="font-bold text-lg leading-tight">Unlock your full potential</p>
-        <p class="text-sm opacity-80">
-          You've used {{ tests_used|default:0 }} of 5 free sessions this month.
-          Premium removes every limit.
-        </p>
-      </div>
-      <a href="/subscription/"
-         class="flex-shrink-0 bg-white font-bold text-xs px-4 py-2 rounded-lg whitespace-nowrap hover:bg-gray-100 transition"
-         style="color: {{ primary_color }};">
-        Upgrade — ₹299/mo
-      </a>
-    </div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 text-xs opacity-90">
-      <span class="flex items-center gap-1">
-        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-        </svg>
-        Unlimited practice sessions
-      </span>
-      <span class="flex items-center gap-1">
-        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-        </svg>
-        AI-personalised study plan
-      </span>
-      <span class="flex items-center gap-1">
-        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-        </svg>
-        Deep topic-wise analysis
-      </span>
-      <span class="flex items-center gap-1">
-        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-        </svg>
-        All India Rank after every session
-      </span>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-<!-- Snapshot KPIs -->
-<div class="grid grid-cols-3 gap-4 mb-6">
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">Sessions This Month</p>
-    <p class="text-2xl font-bold text-gray-900">
-      {% if is_premium %}
-        {{ tests_taken|default:"0" }}
-      {% else %}
-        {{ tests_used|default:0 }}<span class="text-sm text-gray-400 font-normal">/5</span>
-      {% endif %}
-    </p>
-    <p class="text-xs text-gray-400">vs {{ last_month_tests|default:"0" }} last month</p>
-  </div>
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">Best All India Rank</p>
-    <p class="text-2xl font-bold text-gray-900">{{ best_air|default:"—" }}</p>
-    <p class="text-xs text-gray-400">
-      {% if best_air %}among {{ total_aspirants|default:"lakhs of" }} aspirants{% else %}Attempt to unlock{% endif %}
-    </p>
-  </div>
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">Preparation Streak</p>
-    <p class="text-2xl font-bold text-gray-900">{{ streak|default:0 }}<span class="text-base font-normal text-gray-400"> days</span></p>
-    <p class="text-xs {% if streak >= 7 %}text-green-600 font-medium{% else %}text-gray-400{% endif %}">
-      {% if streak >= 30 %}Exceptional consistency
-      {% elif streak >= 14 %}Great habit forming
-      {% elif streak >= 7 %}On a strong run
-      {% elif streak >= 3 %}Building momentum
-      {% else %}Every session counts{% endif %}
-    </p>
+  <div style="background:#1e293b;border-radius:999px;height:6px;overflow:hidden;">
+    <div class="g6-prog-fill" style="--g6-pw:60%;width:60%;"></div>
   </div>
 </div>
 
-<!-- Live session alert -->
-{% if live_test %}
-<div class="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-4">
-  <div class="flex-1 min-w-0">
-    <span class="inline-flex items-center gap-1.5 text-xs font-bold text-red-700 mb-1">
-      <span class="w-2 h-2 rounded-full bg-red-500 animate-ping flex-shrink-0"></span>
-      LIVE SESSION
-    </span>
-    <p class="font-semibold text-gray-900 truncate">{{ live_test.name }}</p>
-    <p class="text-sm text-gray-500">
-      {{ live_test.remaining }} left to join &middot; {{ live_test.attempts|default:"0"|intcomma }} currently attempting
-    </p>
-  </div>
-  <a href="{{ live_test.url }}"
-     class="flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-bold text-white hover:opacity-90 transition"
-     style="background-color: {{ primary_color }};">
-    Attempt Now
-  </a>
-</div>
-{% endif %}
+<div class="g6-wrap">
+  <div class="g6-grid-bg"></div>
+  <div class="relative p-5 space-y-5">
 
-<!-- Today's recommended session -->
-{% if ai_recommendation %}
-<div class="mb-6 bg-white rounded-xl border border-gray-200 p-5">
-  <div class="flex items-start gap-4">
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-         style="background-color: {{ primary_color }}20;">
-      <svg class="w-5 h-5" style="color: {{ primary_color }};" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-      </svg>
-    </div>
-    <div class="flex-1 min-w-0">
-      <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-0.5">AI Recommendation</p>
-      <p class="font-semibold text-gray-900">{{ ai_recommendation.title }}</p>
-      <p class="text-sm text-gray-500 mt-0.5">{{ ai_recommendation.reason }}</p>
-    </div>
-    <a href="{{ ai_recommendation.url }}"
-       class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-lg border-2 hover:text-white transition"
-       style="border-color: {{ primary_color }}; color: {{ primary_color }};"
-       onmouseover="this.style.backgroundColor='{{ primary_color }}'"
-       onmouseout="this.style.backgroundColor='transparent'">
-      Start
-    </a>
-  </div>
-</div>
-{% endif %}
-
-<!-- Recent results -->
-{% if recent_results %}
-<div class="mb-6">
-  <div class="flex items-center justify-between mb-3">
-    <h2 class="text-base font-bold text-gray-900">Recent Sessions</h2>
-    <a href="/results/" class="text-xs font-medium hover:underline" style="color: {{ primary_color }};">
-      Full history
-    </a>
-  </div>
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-    {% for result in recent_results %}
-    <a href="{{ result.analysis_url }}"
-       class="bg-white rounded-xl border border-gray-200 p-4 space-y-2 hover:shadow-sm transition block">
-      <p class="text-sm font-semibold text-gray-900 leading-tight">{{ result.test_name }}</p>
-      <div class="flex items-end justify-between">
+    <!-- ── HEADER CARD ── -->
+    <div class="g6-card g6-card-glow p-5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p class="text-xl font-bold" style="color: {{ primary_color }};">{{ result.score }}</p>
-          <p class="text-xs text-gray-400">{{ result.score_label|default:"Score" }}</p>
+          <div class="g6-label">{{ institution_name }}</div>
+          <h1 class="g6-font text-white font-bold text-2xl leading-tight">Good {{ greeting_time }}, <span class="g6-cyan">{{ user.name }}</span></h1>
+          <p class="text-slate-500 text-sm mt-1">{{ today_date }} &nbsp;·&nbsp; {{ user.role }}</p>
         </div>
-        <div class="text-right">
-          <p class="text-sm font-semibold text-gray-700">AIR {{ result.air|default:"—"|intcomma }}</p>
-          <p class="text-xs text-gray-400">{{ result.date }}</p>
+        <div class="flex items-center gap-4">
+          <div class="g6-streak-badge text-center">
+            <div class="text-2xl mb-0">🔥</div>
+            <div class="text-white font-black text-xl g6-font leading-none">7</div>
+            <div class="text-slate-400 text-xs">Day Streak</div>
+          </div>
+          <div class="text-center">
+            <div class="g6-label mb-1">All India Rank</div>
+            <div class="g6-rank-glow g6-font">#1,247</div>
+          </div>
+          {% if is_premium %}
+          <div class="px-3 py-1 rounded-full text-xs font-bold" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa;">PRO</div>
+          {% endif %}
         </div>
       </div>
-    </a>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
+    </div>
 
-<!-- Leaderboard snapshot + Weak topics side by side -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <div class="bg-white rounded-xl border border-gray-200 p-5">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-base font-bold text-gray-900">National Leaderboard</h2>
-      <a href="/leaderboard/" class="text-xs font-medium hover:underline" style="color: {{ primary_color }};">
-        View full
-      </a>
-    </div>
-    <div hx-get="/home/leaderboard-snippet/"
-         hx-trigger="load"
-         hx-swap="innerHTML">
-      <div class="animate-pulse space-y-3">
-        {% for i in "123" %}
-        <div class="flex items-center gap-3">
-          <div class="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0"></div>
-          <div class="flex-1 h-4 bg-gray-100 rounded"></div>
-          <div class="w-10 h-4 bg-gray-100 rounded"></div>
-        </div>
-        {% endfor %}
+    <!-- ── ALERTS ── -->
+    {% if alerts %}
+    <div class="space-y-2">
+      {% for alert in alerts %}
+      <div class="g6-card flex items-center gap-3 px-4 py-3 text-sm font-medium
+        {% if alert.level == 'error' or alert.level == 'critical' %}text-red-300
+        {% elif alert.level == 'warning' %}text-amber-300
+        {% else %}text-cyan-300{% endif %}">
+        <span class="w-2 h-2 rounded-full flex-shrink-0 {% if alert.level == 'error' or alert.level == 'critical' %}bg-red-400{% elif alert.level == 'warning' %}bg-amber-400{% else %}bg-cyan-400{% endif %}"></span>
+        {{ alert.message }}
       </div>
+      {% endfor %}
     </div>
-  </div>
+    {% endif %}
 
-  <div class="bg-white rounded-xl border border-gray-200 p-5">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-base font-bold text-gray-900">Focus Areas</h2>
-      <a href="/ai-plan/" class="text-xs font-medium hover:underline" style="color: {{ primary_color }};">
-        Study plan
-      </a>
-    </div>
-    {% for topic in weak_topics|default:'' %}
-    <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-      <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium text-gray-900 truncate">{{ topic.name }}</p>
-        <p class="text-xs text-gray-500">{{ topic.subject }}</p>
+    <!-- ── KPI CARDS ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for kpi in kpis %}
+      <div class="g6-card g6-card-glow p-5">
+        <div class="g6-label">{{ kpi.label }}</div>
+        <div class="g6-cyan g6-font font-bold leading-none" style="font-size:2.2rem;">{{ kpi.value }}</div>
+        {% if kpi.trend %}
+        <div class="mt-2 text-xs font-semibold {% if '-' in kpi.trend|stringformat:'s' %}text-red-400{% else %}text-emerald-400{% endif %}">
+          {% if '-' in kpi.trend|stringformat:'s' %}▼{% else %}▲{% endif %} {{ kpi.trend }}
+        </div>
+        {% endif %}
       </div>
-      <span class="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0
-                   {% if topic.accuracy < 40 %}bg-red-100 text-red-700
-                   {% elif topic.accuracy < 65 %}bg-amber-100 text-amber-700
-                   {% else %}bg-green-100 text-green-700{% endif %}">
-        {{ topic.accuracy }}% accuracy
-      </span>
+      {% empty %}
+      <div class="g6-card g6-card-glow p-5"><div class="g6-label">Tests Taken</div><div class="g6-cyan g6-font font-bold text-4xl">142</div><div class="mt-2 text-xs text-emerald-400">▲ +8 this week</div></div>
+      <div class="g6-card g6-card-glow p-5"><div class="g6-label">Avg Score</div><div class="g6-cyan g6-font font-bold text-4xl">73.4%</div><div class="mt-2 text-xs text-emerald-400">▲ +2.1%</div></div>
+      <div class="g6-card g6-card-glow p-5"><div class="g6-label">AI Rank</div><div class="g6-cyan g6-font font-bold text-4xl">#1,247</div><div class="mt-2 text-xs text-emerald-400">▲ +203</div></div>
+      <div class="g6-card g6-card-glow p-5"><div class="g6-label">Accuracy</div><div class="g6-cyan g6-font font-bold text-4xl">81%</div><div class="mt-2 text-xs text-amber-400">▼ -1%</div></div>
+      {% endfor %}
     </div>
-    {% empty %}
-    <p class="text-sm text-gray-400 py-4 text-center">
-      Complete a session to unlock your personalised focus areas.
-    </p>
-    {% endfor %}
+
+    <!-- ── RADAR + RECOMMENDED TESTS ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+      <!-- Performance Radar (CSS Hexagons) -->
+      <div class="g6-card p-5">
+        <div class="g6-label mb-4">Performance Radar</div>
+        <div class="flex justify-center mb-4">
+          <svg viewBox="0 0 200 200" width="200" height="200">
+            <!-- Background hexagons -->
+            <polygon points="100,20 168,60 168,140 100,180 32,140 32,60" fill="none" stroke="rgba(0,212,255,.15)" stroke-width="1"/>
+            <polygon points="100,40 152,70 152,130 100,160 48,130 48,70" fill="none" stroke="rgba(0,212,255,.12)" stroke-width="1"/>
+            <polygon points="100,60 136,80 136,120 100,140 64,120 64,80" fill="none" stroke="rgba(0,212,255,.1)" stroke-width="1"/>
+            <!-- Axes -->
+            <line x1="100" y1="100" x2="100" y2="20" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+            <line x1="100" y1="100" x2="168" y2="60" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+            <line x1="100" y1="100" x2="168" y2="140" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+            <line x1="100" y1="100" x2="100" y2="180" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+            <line x1="100" y1="100" x2="32" y2="140" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+            <line x1="100" y1="100" x2="32" y2="60" stroke="rgba(0,212,255,.2)" stroke-width="1"/>
+            <!-- Data polygon (75% Quant, 80% Reasoning, 65% English, 70% GA, 85% Maths, 60% Science) -->
+            <polygon
+              points="100,34 155,67 158,133 100,162 46,134 46,67"
+              fill="rgba(0,212,255,.15)" stroke="#00d4ff" stroke-width="2"
+              opacity="0.9"/>
+            <!-- Dots -->
+            <circle cx="100" cy="34" r="4" fill="#00d4ff"/>
+            <circle cx="155" cy="67" r="4" fill="#00d4ff"/>
+            <circle cx="158" cy="133" r="4" fill="#00d4ff"/>
+            <circle cx="100" cy="162" r="4" fill="#00d4ff"/>
+            <circle cx="46" cy="134" r="4" fill="#00d4ff"/>
+            <circle cx="46" cy="67" r="4" fill="#00d4ff"/>
+            <!-- Labels -->
+            <text x="100" y="14" text-anchor="middle" fill="rgba(0,212,255,.8)" font-size="10" font-family="sans-serif">Quant</text>
+            <text x="178" y="62" text-anchor="start" fill="rgba(0,212,255,.8)" font-size="10" font-family="sans-serif">Reasoning</text>
+            <text x="178" y="144" text-anchor="start" fill="rgba(0,212,255,.8)" font-size="10" font-family="sans-serif">English</text>
+            <text x="100" y="196" text-anchor="middle" fill="rgba(0,212,255,.8)" font-size="10" font-family="sans-serif">GA</text>
+            <text x="22" y="144" text-anchor="end" fill="rgba(0,212,255,.8)" font-size="10" font-family="sans-serif">Maths</text>
+            <text x="22" y="62" text-anchor="end" fill="rgba(0,212,255,.8)" font-size="10" font-family="sans-serif">Science</text>
+          </svg>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="text-center"><div class="g6-cyan font-bold text-sm">75%</div><div class="text-slate-500 text-xs">Quant</div></div>
+          <div class="text-center"><div class="g6-cyan font-bold text-sm">80%</div><div class="text-slate-500 text-xs">Reasoning</div></div>
+          <div class="text-center"><div class="g6-cyan font-bold text-sm">65%</div><div class="text-slate-500 text-xs">English</div></div>
+          <div class="text-center"><div class="g6-cyan font-bold text-sm">70%</div><div class="text-slate-500 text-xs">GA</div></div>
+          <div class="text-center"><div class="g6-cyan font-bold text-sm">85%</div><div class="text-slate-500 text-xs">Maths</div></div>
+          <div class="text-center"><div class="g6-cyan font-bold text-sm">60%</div><div class="text-slate-500 text-xs">Science</div></div>
+        </div>
+      </div>
+
+      <!-- Recommended Tests -->
+      <div class="g6-card p-5">
+        <div class="g6-label mb-3">Recommended Tests</div>
+        <div class="space-y-3">
+          {% for section in sections %}{% for item in section.items %}
+          <div class="flex items-center gap-3 p-3 rounded-xl" style="background:rgba(255,255,255,.03);border:1px solid rgba(0,212,255,.1);">
+            <div class="flex-1 min-w-0">
+              <div class="text-white text-sm font-semibold truncate">{{ item.label }}</div>
+              <div class="text-slate-500 text-xs">{{ item.value }}</div>
+            </div>
+            <span class="g6-diff-easy">Easy</span>
+          </div>
+          {% endfor %}{% empty %}
+          <div class="flex items-center gap-3 p-3 rounded-xl" style="background:rgba(255,255,255,.03);border:1px solid rgba(0,212,255,.1);">
+            <div class="flex-1 min-w-0"><div class="text-white text-sm font-semibold">SSC CGL — Quantitative Aptitude</div><div class="text-slate-500 text-xs">50 Qs · 45 min</div></div>
+            <span class="g6-diff-easy">Easy</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-xl" style="background:rgba(255,255,255,.03);border:1px solid rgba(0,212,255,.1);">
+            <div class="flex-1 min-w-0"><div class="text-white text-sm font-semibold">RRB NTPC — Reasoning Mock</div><div class="text-slate-500 text-xs">60 Qs · 60 min</div></div>
+            <span class="g6-diff-medium">Medium</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-xl" style="background:rgba(255,255,255,.03);border:1px solid rgba(0,212,255,.1);">
+            <div class="flex-1 min-w-0"><div class="text-white text-sm font-semibold">UPSC GS Paper I — Full Mock</div><div class="text-slate-500 text-xs">100 Qs · 120 min</div></div>
+            <span class="g6-diff-hard">Hard</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-xl" style="background:rgba(255,255,255,.03);border:1px solid rgba(0,212,255,.1);">
+            <div class="flex-1 min-w-0"><div class="text-white text-sm font-semibold">Banking — English Language</div><div class="text-slate-500 text-xs">40 Qs · 30 min</div></div>
+            <span class="g6-diff-medium">Medium</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RECENT RESULTS TABLE ── -->
+    <div class="g6-card p-5">
+      <div class="g6-label mb-3">Recent Results</div>
+      <div class="overflow-x-auto">
+        <table class="g6-table">
+          <thead>
+            <tr>
+              <th>Test Name</th>
+              <th>Date</th>
+              <th>Score</th>
+              <th>Percentile</th>
+              <th>Rank</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>SSC CGL Tier 1 Mock #8</td><td class="text-slate-500">18 Mar 2026</td><td><span class="g6-score-a">186/200</span></td><td class="g6-cyan">97.4</td><td class="text-white">#312</td></tr>
+            <tr><td>Reasoning Speed Drill</td><td class="text-slate-500">16 Mar 2026</td><td><span class="g6-score-b">74/100</span></td><td class="g6-cyan">84.1</td><td class="text-white">#1,024</td></tr>
+            <tr><td>English Grammar Test</td><td class="text-slate-500">15 Mar 2026</td><td><span class="g6-score-c">61/100</span></td><td class="g6-cyan">72.8</td><td class="text-white">#2,108</td></tr>
+            <tr><td>General Awareness Weekly</td><td class="text-slate-500">14 Mar 2026</td><td><span class="g6-score-a">88/100</span></td><td class="g6-cyan">93.2</td><td class="text-white">#680</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>

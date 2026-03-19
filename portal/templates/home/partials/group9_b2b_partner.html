@@ -1,96 +1,193 @@
-<!-- Group 9: B2B Partner Portal (content providers, ed-tech partners) -->
+<!-- GROUP 9: REVENUE GREEN ANALYTICS — B2B Partner Portal -->
+<style>
+  .g9-wrap { background: #fff; min-height: 100%; padding: 24px; }
+  .g9-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .g9-card:hover { box-shadow: 0 4px 20px rgba(5,150,105,.08); transition: box-shadow .2s; }
+  .g9-em-card { border-left: 5px solid #059669; }
+  .g9-em { color: #059669; }
+  .g9-label { font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6b7280;margin-bottom:4px; }
+  /* Animated sparkline bars */
+  @keyframes g9-barUp { from{height:4px} to{height:var(--g9-h)} }
+  .g9-spark-col { flex:1;border-radius:3px 3px 0 0;animation: g9-barUp .6s ease forwards;animation-delay:var(--g9-delay,0s);height:4px; }
+  .g9-amber-card { background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #fde68a;border-radius:12px;padding:18px; }
+  .g9-pill { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+  .g9-pill-green { background:#ecfdf5;color:#059669;border:1px solid #a7f3d0; }
+  .g9-pill-amber { background:#fffbeb;color:#d97706;border:1px solid #fde68a; }
+  .g9-pill-gray  { background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb; }
+  .g9-bar-views { height:8px;border-radius:4px;background:linear-gradient(90deg,#059669,#10b981);transition:width .7s ease; }
+  .g9-footer-strip { background:linear-gradient(90deg,#059669,#047857);border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px; }
+  .g9-btn { background:#059669;color:#fff;padding:9px 22px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:filter .15s; }
+  .g9-btn:hover { filter:brightness(.92); }
+  .g9-metric-card { background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center; }
+</style>
 
-<div class="flex items-start justify-between mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900">
-      Good {{ greeting_time }}, {{ user.name|default:"Partner" }}!
-    </h1>
-    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name|default:"EduForge Partners" }}</p>
-  </div>
-  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
-        style="background-color: {{ primary_color }};">
-    PARTNER
-  </span>
-</div>
+<div class="g9-wrap space-y-5">
 
-{% if alerts %}
-<div class="space-y-2 mb-6">
-  {% for alert in alerts %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
-              {% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
-    <span>{% if alert.level == 'critical' %}🔴{% else %}🟡{% endif %}</span>
-    <span>{{ alert.message }}</span>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- Revenue KPIs -->
-{% if kpis %}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% for kpi in kpis %}
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
-    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
-    {% if kpi.trend %}
-    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">{{ kpi.trend }}</p>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- Revenue & Content stats -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-  <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="font-semibold text-gray-800">Content Performance</h2>
-      <a href="/content/" class="text-sm text-indigo-600 hover:underline">Manage content</a>
+  <!-- ── REVENUE HEADER CARD ── -->
+  <div class="g9-card g9-em-card p-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div class="g9-label">Revenue This Month</div>
+        <div class="flex items-baseline gap-3">
+          <div class="font-black text-5xl g9-em leading-none">₹2,84,500</div>
+          <div class="flex items-center gap-1 text-emerald-600 font-bold text-base">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17l9.2-9.2M17 17V7H7"/></svg>
+            +23.4%
+          </div>
+        </div>
+        <p class="text-gray-500 text-sm mt-2">Good {{ greeting_time }}, {{ user.name }} &nbsp;·&nbsp; {{ today_date }}</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <div class="g9-label">Partner</div>
+          <div class="text-gray-900 font-bold text-lg">{{ institution_name }}</div>
+        </div>
+        {% if is_premium %}
+        <div class="g9-pill g9-pill-green">✦ Premium Partner</div>
+        {% endif %}
+      </div>
     </div>
-    {% for item in content_stats|default:'' %}
-    <div class="flex items-center gap-4 py-2.5 border-b border-gray-50 last:border-0">
-      <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium text-gray-900 truncate">{{ item.title }}</p>
-        <p class="text-xs text-gray-500">{{ item.type }} · {{ item.views }} views</p>
+  </div>
+
+  <!-- ── ALERTS ── -->
+  {% if alerts %}
+  <div class="space-y-2">
+    {% for alert in alerts %}
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+      {% if alert.level == 'error' or alert.level == 'critical' %}bg-red-50 text-red-700 border border-red-100
+      {% elif alert.level == 'warning' %}bg-amber-50 text-amber-700 border border-amber-100
+      {% else %}bg-emerald-50 text-emerald-700 border border-emerald-100{% endif %}">
+      <span>{% if alert.level == 'error' or alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}⚠️{% else %}✅{% endif %}</span>
+      <span>{{ alert.message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── KPI CARDS ── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% for kpi in kpis %}
+    <div class="g9-card p-5">
+      <div class="g9-label">{{ kpi.label }}</div>
+      <div class="font-bold text-gray-900 leading-none" style="font-size:2rem;">{{ kpi.value }}</div>
+      {% if kpi.trend %}
+      <div class="mt-2 text-xs font-semibold {% if '-' in kpi.trend|stringformat:'s' %}text-red-500{% else %}text-emerald-600{% endif %}">
+        {% if '-' in kpi.trend|stringformat:'s' %}▼{% else %}▲{% endif %} {{ kpi.trend }}
       </div>
-      <div class="text-right flex-shrink-0">
-        <p class="text-sm font-semibold text-gray-900">₹{{ item.revenue }}</p>
-        <p class="text-xs text-gray-500">this month</p>
-      </div>
+      {% endif %}
     </div>
     {% empty %}
-    <p class="text-sm text-gray-400 text-center py-4">No content data yet</p>
+    <div class="g9-card p-5"><div class="g9-label">Content Items</div><div class="font-bold text-gray-900 text-4xl">1,240</div><div class="mt-2 text-xs font-semibold text-emerald-600">▲ +42 this month</div></div>
+    <div class="g9-card p-5"><div class="g9-label">Total Views</div><div class="font-bold text-gray-900 text-4xl">8.4M</div><div class="mt-2 text-xs font-semibold text-emerald-600">▲ +18%</div></div>
+    <div class="g9-card p-5"><div class="g9-label">Downloads</div><div class="font-bold text-gray-900 text-4xl">2.1M</div><div class="mt-2 text-xs font-semibold text-emerald-600">▲ +11%</div></div>
+    <div class="g9-card p-5"><div class="g9-label">Avg CPM</div><div class="font-bold text-gray-900 text-4xl">₹42</div><div class="mt-2 text-xs font-semibold text-amber-500">▼ -3%</div></div>
     {% endfor %}
   </div>
 
-  <div class="space-y-4">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Revenue Summary</h2>
-      <div class="space-y-2 text-sm">
-        <div class="flex justify-between"><span class="text-gray-500">This Month</span><span class="font-semibold text-gray-900">₹{{ revenue.this_month|default:"0" }}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Last Month</span><span class="text-gray-700">₹{{ revenue.last_month|default:"0" }}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Pending Payout</span>
-          <span class="font-medium {% if revenue.pending_payout %}text-amber-600{% endif %}">
-            ₹{{ revenue.pending_payout|default:"0" }}
-          </span>
-        </div>
+  <!-- ── SPARKLINE + CONTENT PERFORMANCE ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Revenue Sparkline -->
+    <div class="g9-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wider">Revenue Trend — 12 Months</h2>
+        <span class="font-bold g9-em text-sm">₹28.4L YTD</span>
+      </div>
+      <!-- Animated bar chart -->
+      <div class="flex items-end gap-1.5" style="height:80px;align-items:flex-end;">
+        <div class="g9-spark-col" style="--g9-h:45px;--g9-delay:0s;background:#a7f3d0;"></div>
+        <div class="g9-spark-col" style="--g9-h:52px;--g9-delay:.05s;background:#6ee7b7;"></div>
+        <div class="g9-spark-col" style="--g9-h:40px;--g9-delay:.1s;background:#6ee7b7;"></div>
+        <div class="g9-spark-col" style="--g9-h:58px;--g9-delay:.15s;background:#34d399;"></div>
+        <div class="g9-spark-col" style="--g9-h:48px;--g9-delay:.2s;background:#34d399;"></div>
+        <div class="g9-spark-col" style="--g9-h:62px;--g9-delay:.25s;background:#10b981;"></div>
+        <div class="g9-spark-col" style="--g9-h:55px;--g9-delay:.3s;background:#10b981;"></div>
+        <div class="g9-spark-col" style="--g9-h:68px;--g9-delay:.35s;background:#059669;"></div>
+        <div class="g9-spark-col" style="--g9-h:72px;--g9-delay:.4s;background:#059669;"></div>
+        <div class="g9-spark-col" style="--g9-h:65px;--g9-delay:.45s;background:#047857;"></div>
+        <div class="g9-spark-col" style="--g9-h:78px;--g9-delay:.5s;background:#047857;"></div>
+        <div class="g9-spark-col" style="--g9-h:80px;--g9-delay:.55s;background:#065f46;"></div>
+      </div>
+      <div class="flex justify-between text-xs text-gray-400 mt-2">
+        <span>Apr</span><span>Jun</span><span>Aug</span><span>Oct</span><span>Dec</span><span>Mar</span>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="font-semibold text-gray-800 mb-3">Quick Actions</h2>
-      <div class="space-y-2">
-        <a href="/content/upload/" class="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📤</span> Upload Content
-        </a>
-        <a href="/payouts/" class="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>💰</span> Request Payout
-        </a>
-        <a href="/analytics/" class="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-          <span>📊</span> Analytics
-        </a>
+    <!-- Content Performance -->
+    <div class="g9-card p-5">
+      <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wider mb-4">Content Performance</h2>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="g9-metric-card">
+          <div class="font-bold text-gray-900 text-2xl">8.4M</div>
+          <div class="text-gray-500 text-xs mt-1">Total Views</div>
+          <div class="text-emerald-600 text-xs font-semibold mt-1">▲ +18%</div>
+        </div>
+        <div class="g9-metric-card">
+          <div class="font-bold text-gray-900 text-2xl">2.1M</div>
+          <div class="text-gray-500 text-xs mt-1">Downloads</div>
+          <div class="text-emerald-600 text-xs font-semibold mt-1">▲ +11%</div>
+        </div>
+        <div class="g9-metric-card">
+          <div class="font-bold text-gray-900 text-2xl">68.4%</div>
+          <div class="text-gray-500 text-xs mt-1">Engagement Rate</div>
+          <div class="text-amber-500 text-xs font-semibold mt-1">▼ -2.1%</div>
+        </div>
+        <div class="g9-metric-card">
+          <div class="font-bold text-gray-900 text-2xl">4:24</div>
+          <div class="text-gray-500 text-xs mt-1">Avg Time (min)</div>
+          <div class="text-emerald-600 text-xs font-semibold mt-1">▲ +0:18</div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- ── PENDING PAYOUT ── -->
+  <div class="g9-amber-card">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-amber-500 text-lg">⚠️</span>
+          <span class="font-bold text-amber-800 text-base">Pending Payout</span>
+        </div>
+        <div class="text-amber-700 text-sm">₹<strong>74,200</strong> is pending for the March 2026 cycle. Expected payment: <strong>31 March 2026</strong></div>
+      </div>
+      <button class="g9-btn" style="background:#d97706;">View Payout Details</button>
+    </div>
+  </div>
+
+  <!-- ── TOP CONTENT ── -->
+  <div class="g9-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wider">Top Content This Month</h2>
+      <a href="#" class="text-emerald-600 text-sm font-semibold hover:underline">All content →</a>
+    </div>
+    <div class="space-y-3">
+      {% for section in sections %}{% for item in section.items %}
+      <div class="flex items-center gap-3">
+        <div class="text-gray-700 font-medium text-sm flex-1 min-w-0 truncate">{{ item.label }}</div>
+        <div class="text-gray-500 text-xs w-16 text-right">{{ item.value }}</div>
+        <div style="width:120px;background:#f0fdf4;border-radius:4px;height:8px;flex-shrink:0;overflow:hidden;"><div class="g9-bar-views" style="width:{{ item.value|default:'70%' }};"></div></div>
+      </div>
+      {% endfor %}{% empty %}
+      <div class="flex items-center gap-3"><div class="text-gray-700 font-medium text-sm flex-1 truncate">SSC CGL 2025 Complete Course</div><div class="text-gray-500 text-xs w-16 text-right">482K views</div><div style="width:120px;background:#f0fdf4;border-radius:4px;height:8px;overflow:hidden;"><div class="g9-bar-views" style="width:95%;"></div></div></div>
+      <div class="flex items-center gap-3"><div class="text-gray-700 font-medium text-sm flex-1 truncate">Reasoning Shortcut Techniques</div><div class="text-gray-500 text-xs w-16 text-right">341K views</div><div style="width:120px;background:#f0fdf4;border-radius:4px;height:8px;overflow:hidden;"><div class="g9-bar-views" style="width:72%;"></div></div></div>
+      <div class="flex items-center gap-3"><div class="text-gray-700 font-medium text-sm flex-1 truncate">NEET Biology — All Chapters</div><div class="text-gray-500 text-xs w-16 text-right">298K views</div><div style="width:120px;background:#f0fdf4;border-radius:4px;height:8px;overflow:hidden;"><div class="g9-bar-views" style="width:62%;"></div></div></div>
+      <div class="flex items-center gap-3"><div class="text-gray-700 font-medium text-sm flex-1 truncate">JEE Mains Mock Test Series</div><div class="text-gray-500 text-xs w-16 text-right">254K views</div><div style="width:120px;background:#f0fdf4;border-radius:4px;height:8px;overflow:hidden;"><div class="g9-bar-views" style="width:54%;"></div></div></div>
+      <div class="flex items-center gap-3"><div class="text-gray-700 font-medium text-sm flex-1 truncate">Banking Awareness 2025–26</div><div class="text-gray-500 text-xs w-16 text-right">198K views</div><div style="width:120px;background:#f0fdf4;border-radius:4px;height:8px;overflow:hidden;"><div class="g9-bar-views" style="width:42%;"></div></div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── NEXT PAYOUT STRIP + ACTIONS ── -->
+  <div class="g9-footer-strip">
+    <div class="text-white">
+      <div class="text-green-200 text-xs font-semibold uppercase tracking-wider mb-0.5">Next Automatic Payout</div>
+      <div class="font-bold text-lg">31 March 2026 &nbsp;·&nbsp; ₹74,200 pending</div>
+    </div>
+    <div class="flex gap-3 flex-wrap">
+      <button class="g9-btn" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);">📦 Upload Content</button>
+      <button class="g9-btn" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);">📊 Analytics</button>
+    </div>
+  </div>
+
 </div>

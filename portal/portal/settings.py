@@ -27,8 +27,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "apps.core.middleware.TenantMiddleware",   # resolves domain → tenant config
-    "apps.core.middleware.AuthMiddleware",     # validates JWT from cookie
+    "apps.core.middleware.TenantMiddleware",  # resolves domain → tenant config
+    "apps.core.middleware.AuthMiddleware",  # validates JWT from cookie
 ]
 
 ROOT_URLCONF = "portal.urls"
@@ -53,6 +53,7 @@ WSGI_APPLICATION = "portal.wsgi.application"
 ASGI_APPLICATION = "portal.asgi.application"
 
 import sys as _sys
+
 # Signed cookies in production (stateless). DB-backed only during testing so
 # Django's test client can set session data via client.session.
 SESSION_ENGINE = (
@@ -62,7 +63,7 @@ SESSION_ENGINE = (
 )
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 7   # 7 days
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 days
 SESSION_COOKIE_SECURE = not DEBUG
 
 # JWT stored in httpOnly cookie named "ef_token"

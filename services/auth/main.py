@@ -1,4 +1,5 @@
 """Auth Service — Lambda function. OTP + JWT only. CDN bypassed for all routes."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
