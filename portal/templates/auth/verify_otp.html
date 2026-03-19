@@ -1,0 +1,168 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Enter OTP — {{ tenant_name }}{% endblock %}
+
+{% block auth_content %}
+<div class="space-y-8">
+
+  <!-- Header -->
+  <div>
+    <a href="/login/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4">
+      ← Back
+    </a>
+    <h2 class="text-3xl font-bold text-gray-900">Enter OTP</h2>
+    <p class="mt-2 text-gray-500">
+      Sent to <span class="font-semibold text-gray-800">+91 {{ mobile|default:"XXXXXXXXXX" }}</span>
+      via {{ channel|default:"WhatsApp" }}
+    </p>
+  </div>
+
+  <!-- OTP form -->
+  <form id="otp-form"
+        hx-post="/otp/verify/"
+        hx-target="#otp-response"
+        hx-swap="innerHTML"
+        hx-indicator="#verify-btn"
+        class="space-y-6">
+    {% csrf_token %}
+    <input type="hidden" name="mobile" value="{{ mobile }}" />
+    <input type="hidden" name="channel" value="{{ channel|default:'whatsapp' }}" />
+
+    <!-- 6-box OTP input -->
+    <div class="space-y-2">
+      <label class="block text-sm font-medium text-gray-700">6-digit OTP</label>
+      <div id="otp-boxes" class="flex gap-3 justify-start">
+        {% for i in "123456" %}
+        <input type="text"
+               maxlength="1"
+               inputmode="numeric"
+               pattern="[0-9]"
+               data-otp-index="{{ forloop.counter0 }}"
+               class="otp-box w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300
+                      rounded-lg outline-none transition-all
+                      focus:border-brand focus:ring-2"
+               style="--tw-ring-color: {{ primary_color }};"
+               autocomplete="{% if forloop.first %}one-time-code{% else %}off{% endif %}" />
+        {% endfor %}
+      </div>
+      <!-- Hidden combined value submitted -->
+      <input type="hidden" id="otp-value" name="otp" />
+      <div id="otp-response" class="text-sm"></div>
+    </div>
+
+    <!-- Timer -->
+    <div class="flex items-center justify-between text-sm">
+      <div id="timer-wrap">
+        OTP expires in <span id="timer" class="font-semibold text-brand">3:00</span>
+      </div>
+      <button type="button"
+              id="resend-btn"
+              disabled
+              class="text-brand font-medium disabled:text-gray-400 disabled:cursor-not-allowed hover:underline"
+              hx-post="/otp/send/"
+              hx-target="#resend-response"
+              hx-include="[name='mobile'],[name='channel']"
+              onclick="resetTimer()">
+        Resend OTP
+      </button>
+    </div>
+    <div id="resend-response" class="text-xs text-gray-500"></div>
+
+    <!-- Verify button -->
+    <button type="submit"
+            id="verify-btn"
+            class="btn-brand w-full py-3 px-6 rounded-lg font-semibold text-base
+                   flex items-center justify-center gap-2">
+      <span class="htmx-indicator">
+        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </span>
+      <span>Verify OTP</span>
+    </button>
+
+  </form>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const boxes = document.querySelectorAll('.otp-box');
+  const otpValue = document.getElementById('otp-value');
+
+  // Auto-advance between boxes
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/, '');
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+      syncOTP();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
+    });
+  });
+
+  // Handle paste — fill all 6 boxes
+  boxes[0].addEventListener('paste', e => {
+    e.preventDefault();
+    const digits = (e.clipboardData.getData('text')).replace(/\D/g, '').slice(0, 6);
+    digits.split('').forEach((d, i) => { if (boxes[i]) boxes[i].value = d; });
+    if (boxes[digits.length - 1]) boxes[Math.min(digits.length, 5)].focus();
+    syncOTP();
+  });
+
+  function syncOTP() {
+    otpValue.value = [...boxes].map(b => b.value).join('');
+  }
+
+  // Shake animation on wrong OTP (triggered by HTMX response)
+  document.addEventListener('htmx:afterRequest', e => {
+    if (e.detail.elt.id === 'otp-form' && e.detail.xhr.status === 401) {
+      const wrap = document.getElementById('otp-boxes');
+      wrap.classList.add('animate-shake');
+      boxes.forEach(b => { b.value = ''; b.classList.add('border-red-400'); });
+      boxes[0].focus();
+      syncOTP();
+      setTimeout(() => {
+        wrap.classList.remove('animate-shake');
+        boxes.forEach(b => b.classList.remove('border-red-400'));
+      }, 600);
+    }
+  });
+
+  // Countdown timer
+  let remaining = 180;
+  const timerEl = document.getElementById('timer');
+  const resendBtn = document.getElementById('resend-btn');
+
+  function resetTimer() { remaining = 180; resendBtn.disabled = true; }
+
+  const tick = setInterval(() => {
+    remaining--;
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    if (remaining <= 60) timerEl.className = 'font-semibold text-amber-500';
+    if (remaining <= 30) timerEl.className = 'font-semibold text-red-500';
+    if (remaining <= 0) {
+      clearInterval(tick);
+      timerEl.textContent = 'Expired';
+      resendBtn.disabled = false;
+    }
+  }, 1000);
+
+  // Enable resend after 30s
+  setTimeout(() => { resendBtn.disabled = false; }, 30000);
+
+  // Focus first box on load
+  boxes[0].focus();
+</script>
+<style>
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+  }
+  .animate-shake { animation: shake .5s ease-in-out; }
+</style>
+{% endblock %}

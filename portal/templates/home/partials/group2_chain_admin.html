@@ -1,0 +1,120 @@
+<!-- Group 2: Chain Admin Dashboard (multi-institution management) -->
+
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">
+      Good {{ greeting_time }}, {{ user.name|default:"Admin" }}
+    </h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
+  </div>
+  <span class="hidden sm:block text-xs px-3 py-1 rounded-full font-semibold text-white"
+        style="background-color: {{ primary_color }};">
+    CHAIN ADMIN
+  </span>
+</div>
+
+{% if alerts %}
+<div class="space-y-2 mb-6">
+  {% for alert in alerts %}
+  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
+              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
+              {% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
+    <span>{% if alert.level == 'critical' %}🔴{% else %}🟡{% endif %}</span>
+    <span>{{ alert.message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Chain KPIs -->
+{% if kpis %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {% for kpi in kpis %}
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
+    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
+    {% if kpi.trend %}
+    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">
+      {{ kpi.trend }}
+    </p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Branches Overview -->
+<div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-semibold text-gray-800">Branches / Campuses</h2>
+    <div class="flex gap-2">
+      <input type="text" placeholder="Search branch..."
+             class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+      <a href="/branches/add/" class="text-sm px-3 py-1.5 rounded-lg text-white font-medium"
+         style="background-color: {{ primary_color }};">+ Add</a>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100">
+          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Branch</th>
+          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Students</th>
+          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Staff</th>
+          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Attendance</th>
+          <th class="text-left py-2 text-gray-500 font-medium">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for branch in branches|default:'' %}
+        <tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='/branches/{{ branch.id }}/'">
+          <td class="py-3 pr-4 font-medium text-gray-900">{{ branch.name }}</td>
+          <td class="py-3 pr-4 text-gray-600">{{ branch.student_count }}</td>
+          <td class="py-3 pr-4 text-gray-600">{{ branch.staff_count }}</td>
+          <td class="py-3 pr-4">
+            <div class="flex items-center gap-2">
+              <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full"
+                     style="width: {{ branch.attendance_pct|default:0 }}%;
+                            background-color: {{ primary_color }};"></div>
+              </div>
+              <span class="text-gray-600">{{ branch.attendance_pct|default:0 }}%</span>
+            </div>
+          </td>
+          <td class="py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                         {% if branch.status == 'active' %}bg-green-100 text-green-700
+                         {% else %}bg-gray-100 text-gray-600{% endif %}">
+              {{ branch.status|default:"Active" }}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="py-8 text-center text-gray-400 text-sm">No branches configured</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Quick actions -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  <a href="/fee-collection/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+    <div class="text-2xl mb-1">💰</div>
+    <p class="text-xs font-medium text-gray-700">Fee Collection</p>
+  </a>
+  <a href="/exam-schedule/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+    <div class="text-2xl mb-1">📝</div>
+    <p class="text-xs font-medium text-gray-700">Exam Schedule</p>
+  </a>
+  <a href="/staff-transfer/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+    <div class="text-2xl mb-1">🔄</div>
+    <p class="text-xs font-medium text-gray-700">Staff Transfer</p>
+  </a>
+  <a href="/reports/chain/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+    <div class="text-2xl mb-1">📊</div>
+    <p class="text-xs font-medium text-gray-700">Chain Reports</p>
+  </a>
+</div>

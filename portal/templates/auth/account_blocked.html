@@ -1,0 +1,76 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Account Suspended — {{ tenant_name }}{% endblock %}
+
+{% block auth_content %}
+<div class="space-y-6 text-center">
+
+  <!-- Icon -->
+  <div class="flex justify-center">
+    <div class="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
+      <svg class="w-10 h-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Heading -->
+  <div>
+    <h2 class="text-2xl font-bold text-gray-900">Account Suspended</h2>
+    <p class="mt-2 text-sm text-gray-500">
+      Reference ID:
+      <span class="font-mono font-semibold text-gray-700">{{ reference_id|default:"EF-ERR-0000" }}</span>
+    </p>
+  </div>
+
+  <!-- Reason block (only shown if non-sensitive) -->
+  {% if reason %}
+  <div class="text-left bg-red-50 border border-red-200 rounded-xl p-4 space-y-1">
+    <p class="text-sm font-semibold text-red-700">Reason</p>
+    <p class="text-sm text-red-600">{{ reason }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Resolution steps -->
+  <div class="text-left space-y-3">
+    <p class="text-sm font-semibold text-gray-700">To resolve this:</p>
+    {% for step in resolution_steps %}
+    <div class="flex items-start gap-3 text-sm text-gray-600">
+      <span class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                   text-xs font-bold"
+            style="border-color: {{ primary_color }}; color: {{ primary_color }};">
+        {{ forloop.counter }}
+      </span>
+      <span>{{ step }}</span>
+    </div>
+    {% empty %}
+    <div class="flex items-start gap-3 text-sm text-gray-600">
+      <span class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-xs font-bold"
+            style="border-color: {{ primary_color }}; color: {{ primary_color }};">1</span>
+      <span>Contact your institution administrator for assistance.</span>
+    </div>
+    <div class="flex items-start gap-3 text-sm text-gray-600">
+      <span class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-xs font-bold"
+            style="border-color: {{ primary_color }}; color: {{ primary_color }};">2</span>
+      <span>Provide the reference ID above when contacting support.</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Contact info -->
+  {% if support_email or support_phone %}
+  <div class="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
+    <p class="font-semibold text-gray-700">Contact Support</p>
+    {% if support_email %}
+    <a href="mailto:{{ support_email }}" class="block text-brand hover:underline">{{ support_email }}</a>
+    {% endif %}
+    {% if support_phone %}
+    <a href="tel:{{ support_phone }}" class="block text-brand hover:underline">{{ support_phone }}</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <a href="/login/" class="block text-sm text-gray-500 hover:text-gray-700">← Back to login</a>
+</div>
+{% endblock %}

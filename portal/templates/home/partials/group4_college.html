@@ -1,0 +1,229 @@
+<!-- Group 4: College Portal — role-aware (principal / HOD / faculty / student / parent) -->
+
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">
+      Good {{ greeting_time }}, {{ user.name|default:"there" }}!
+    </h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
+  </div>
+  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
+        style="background-color: {{ primary_color }};">
+    {{ user.role_display|default:"Faculty" }}
+  </span>
+</div>
+
+{% if alerts %}
+<div class="space-y-2 mb-6">
+  {% for alert in alerts %}
+  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
+              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
+              {% elif alert.level == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
+              {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+    <span class="flex-shrink-0">
+      {% if alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}ℹ️{% endif %}
+    </span>
+    <span class="flex-1">{{ alert.message }}</span>
+    {% if alert.action_url %}
+    <a href="{{ alert.action_url }}" class="font-semibold underline ml-2 flex-shrink-0">{{ alert.action_label }}</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if kpis %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {% for kpi in kpis %}
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
+    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
+    {% if kpi.trend %}
+    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">
+      {{ kpi.trend }}
+    </p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Role-specific sections -->
+{% if user.role == 'principal' %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-4">Department Attendance</h2>
+      {% for dept in department_attendance|default:'' %}
+      <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
+        <span class="text-gray-700">{{ dept.name }}</span>
+        <div class="flex items-center gap-2">
+          <div class="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:{{ dept.pct }}%; background-color:{{ primary_color }};"></div>
+          </div>
+          <span class="text-gray-600 w-10 text-right">{{ dept.pct }}%</span>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No attendance data yet</p>
+      {% endfor %}
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-4">Fee Collection</h2>
+      <div class="space-y-3">
+        {% for item in fee_summary|default:'' %}
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-600">{{ item.label }}</span>
+          <span class="font-semibold text-gray-900">{{ item.value }}</span>
+        </div>
+        {% empty %}
+        <p class="text-sm text-gray-400">No fee data</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <a href="/students/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+      <div class="text-2xl mb-1">👨‍🎓</div><p class="text-xs font-medium text-gray-700">Students</p>
+    </a>
+    <a href="/faculty/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+      <div class="text-2xl mb-1">👩‍🏫</div><p class="text-xs font-medium text-gray-700">Faculty</p>
+    </a>
+    <a href="/exams/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+      <div class="text-2xl mb-1">📝</div><p class="text-xs font-medium text-gray-700">Exams</p>
+    </a>
+    <a href="/reports/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
+      <div class="text-2xl mb-1">📊</div><p class="text-xs font-medium text-gray-700">Reports</p>
+    </a>
+  </div>
+
+{% elif user.role == 'hod' %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-4">Department — {{ user.department }}</h2>
+      <div class="space-y-3">
+        <div class="flex justify-between text-sm"><span class="text-gray-500">Faculty</span><span class="font-medium">{{ dept_stats.faculty_count|default:"—" }}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-gray-500">Students</span><span class="font-medium">{{ dept_stats.student_count|default:"—" }}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-gray-500">Today's Attendance</span><span class="font-medium">{{ dept_stats.attendance_today|default:"—" }}%</span></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Today's Classes</h2>
+      {% for cls in today_classes|default:'' %}
+      <div class="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 text-sm">
+        <span class="text-gray-500 w-16 flex-shrink-0">{{ cls.time }}</span>
+        <span class="font-medium text-gray-900">{{ cls.subject }}</span>
+        <span class="text-gray-500 ml-auto">{{ cls.room }}</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No classes today</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% elif user.role == 'faculty' %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Today's Timetable</h2>
+      {% for cls in today_classes|default:'' %}
+      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-900">{{ cls.subject }}</p>
+          <p class="text-xs text-gray-500">{{ cls.class_name }} · {{ cls.room }}</p>
+        </div>
+        <a href="/attendance/mark/{{ cls.id }}/"
+           class="text-xs px-2 py-1 rounded-lg text-white font-medium flex-shrink-0"
+           style="background-color: {{ primary_color }};">Mark</a>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No classes scheduled today</p>
+      {% endfor %}
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Pending Tasks</h2>
+      {% for task in pending_tasks|default:'' %}
+      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 text-sm">
+        <span class="w-2 h-2 rounded-full flex-shrink-0"
+              style="background-color: {{ primary_color }};"></span>
+        <span class="text-gray-700">{{ task.label }}</span>
+        <span class="ml-auto text-xs text-gray-400">{{ task.due }}</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No pending tasks</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% elif user.role == 'student' %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Today's Schedule</h2>
+      {% for cls in today_schedule|default:'' %}
+      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-gray-900">{{ cls.subject }}</p>
+          <p class="text-xs text-gray-500">{{ cls.faculty }} · {{ cls.room }}</p>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No classes today</p>
+      {% endfor %}
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">My Attendance</h2>
+      {% for sub in attendance_by_subject|default:'' %}
+      <div class="mb-3">
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-gray-700">{{ sub.subject }}</span>
+          <span class="{% if sub.pct < 75 %}text-red-600 font-semibold{% else %}text-gray-600{% endif %}">
+            {{ sub.pct }}%
+          </span>
+        </div>
+        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full {% if sub.pct < 75 %}bg-red-400{% else %}"
+               style="width:{{ sub.pct }}%; {% if sub.pct >= 75 %}background-color:{{ primary_color }};{% endif %}"></div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No attendance data</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% elif user.role == 'parent' %}
+  <!-- Parent view within college portal -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-4">My Ward — {{ ward.name|default:"Your Child" }}</h2>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-gray-500">Course</span><span class="font-medium">{{ ward.course|default:"—" }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Semester</span><span class="font-medium">{{ ward.semester|default:"—" }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Attendance</span>
+          <span class="font-medium {% if ward.attendance_pct < 75 %}text-red-600{% endif %}">
+            {{ ward.attendance_pct|default:"—" }}%
+          </span>
+        </div>
+        <div class="flex justify-between"><span class="text-gray-500">Fee Due</span>
+          <span class="font-medium {% if ward.fee_due %}text-red-600{% endif %}">
+            {% if ward.fee_due %}₹{{ ward.fee_due }}{% else %}Nil{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Quick Actions</h2>
+      <div class="space-y-2">
+        <a href="/fees/pay/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>💳</span> Pay Fees Online
+        </a>
+        <a href="/messages/faculty/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>💬</span> Message Faculty
+        </a>
+        <a href="/attendance/ward/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>📅</span> Attendance Detail
+        </a>
+      </div>
+    </div>
+  </div>
+{% endif %}

@@ -1,0 +1,136 @@
+service: eduforge-platform
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.12
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'ap-south-1'}  # Mumbai — low latency for India
+  environment:
+    DATABASE_URL: ${ssm:/eduforge/${self:provider.stage}/database_url}
+    JWT_SECRET_KEY: ${ssm:/eduforge/${self:provider.stage}/jwt_secret_key}
+    AUTH_SERVICE_URL: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}"
+    TENANT_SERVICE_URL: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}"
+
+functions:
+  # Auth Service — NO CDN cache. Every OTP is unique.
+  auth:
+    handler: services/auth/main.handler
+    memorySize: 256
+    timeout: 10
+    events:
+      - http:
+          path: /auth/{proxy+}
+          method: ANY
+          cors: true
+    environment:
+      SERVICE: auth
+
+  # Home Service — CDN cached 30s–300s per portal group
+  home:
+    handler: services/home/main.handler
+    memorySize: 512
+    timeout: 10
+    events:
+      - http:
+          path: /page/home
+          method: GET
+          cors: true
+    environment:
+      SERVICE: home
+
+  # Tenant Service — CDN cached 1hr. Runs rarely.
+  tenant:
+    handler: services/tenant/main.handler
+    memorySize: 128
+    timeout: 5
+    events:
+      - http:
+          path: /tenant/config
+          method: GET
+          cors: true
+    environment:
+      SERVICE: tenant
+
+resources:
+  Resources:
+    # CloudFront Distribution — CDN layer in front of API Gateway
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          Comment: EduForge CDN — API + Frontend
+          PriceClass: PriceClass_200  # US, EU, Asia
+          HttpVersion: http2and3
+
+          Origins:
+            - Id: ApiGateway
+              DomainName: !Sub "${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+              CustomOriginConfig:
+                HTTPSPort: 443
+                OriginProtocolPolicy: https-only
+              OriginPath: /${self:provider.stage}
+
+            - Id: FrontendS3
+              DomainName: !Sub "${FrontendBucket}.s3.${AWS::Region}.amazonaws.com"
+              S3OriginConfig:
+                OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+
+          DefaultCacheBehavior:
+            # Frontend static assets — long cache
+            TargetOriginId: FrontendS3
+            ViewerProtocolPolicy: redirect-to-https
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
+            AllowedMethods: [GET, HEAD]
+
+          CacheBehaviors:
+            # Auth endpoints — NO cache (OTP is unique)
+            - PathPattern: /auth/*
+              TargetOriginId: ApiGateway
+              ViewerProtocolPolicy: https-only
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # AllViewerExceptHostHeader
+
+            # Tenant config — 1hr CDN cache
+            - PathPattern: /tenant/config
+              TargetOriginId: ApiGateway
+              ViewerProtocolPolicy: https-only
+              CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
+              AllowedMethods: [GET, HEAD]
+              # Cache by: domain query param
+              ForwardedValues:
+                QueryString: true
+                QueryStringCacheKeys: [domain]
+                Headers: [Accept-Encoding]
+                Cookies:
+                  Forward: none
+
+            # Home page — short CDN cache, vary by role+tenant
+            - PathPattern: /page/home
+              TargetOriginId: ApiGateway
+              ViewerProtocolPolicy: https-only
+              AllowedMethods: [GET, HEAD]
+              CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+              # Lambda@Edge strips JWT → sets X-User-Role + X-Tenant-Slug headers
+              # CDN caches by those headers (not the raw JWT)
+              ForwardedValues:
+                QueryString: false
+                Headers: [X-Tenant-Slug, X-User-Role, X-Portal-Group]
+                Cookies:
+                  Forward: none
+
+    FrontendBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: eduforge-frontend-${self:provider.stage}
+        WebsiteConfiguration:
+          IndexDocument: index.html
+
+    CloudFrontOAI:
+      Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: EduForge Frontend OAI
