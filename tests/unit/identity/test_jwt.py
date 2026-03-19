@@ -50,7 +50,7 @@ class TestAccessToken:
 
     def test_access_token_wrong_secret_returns_none(self):
         """Token signed with wrong key should not decode."""
-        import jwt as pyjwt
+        from jose import jwt as jose_jwt
         import datetime
         payload = {
             "sub": "1",
@@ -58,7 +58,7 @@ class TestAccessToken:
             "type": "access",
             "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30),
         }
-        bad_token = pyjwt.encode(payload, "wrong-secret", algorithm="HS256")
+        bad_token = jose_jwt.encode(payload, "wrong-secret", algorithm="HS256")
         from app.services.jwt import decode_token
         assert decode_token(bad_token) is None
 

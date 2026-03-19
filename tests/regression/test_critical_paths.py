@@ -72,25 +72,37 @@ class TestHomeCriticalPath:
         assert "/login/" in resp["Location"]
 
     def test_home_renders_for_authenticated_user(self, authed_portal_client):
-        resp = authed_portal_client.get("/home/")
+        user_data = {"id": 1, "role": "student", "is_active": True}
+        with patch("apps.core.middleware.httpx.get") as mock_mw:
+            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
+            resp = authed_portal_client.get("/home/")
         assert resp.status_code == 200
 
     def test_home_data_endpoint_never_500(self, authed_portal_client):
         import httpx
-        with patch("apps.home.views.httpx.get",
+        user_data = {"id": 1, "role": "student", "is_active": True}
+        with patch("apps.core.middleware.httpx.get") as mock_mw, \
+             patch("apps.home.views.httpx.get",
                    side_effect=httpx.ConnectError("home service down")):
+            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
             resp = authed_portal_client.get("/home/data/")
         # Should degrade gracefully, not crash
         assert resp.status_code < 500
 
     def test_home_data_handles_bad_json_from_service(self, authed_portal_client):
-        with patch("apps.home.views.httpx.get") as mock:
-            mock.return_value = MagicMock(status_code=200, json=lambda: {})
+        user_data = {"id": 1, "role": "student", "is_active": True}
+        with patch("apps.core.middleware.httpx.get") as mock_mw, \
+             patch("apps.home.views.httpx.get") as mock_home:
+            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
+            mock_home.return_value = MagicMock(status_code=200, json=lambda: {})
             resp = authed_portal_client.get("/home/data/")
         assert resp.status_code == 200
 
     def test_nav_links_endpoint_works(self, authed_portal_client):
-        resp = authed_portal_client.get("/home/nav/")
+        user_data = {"id": 1, "role": "student", "is_active": True}
+        with patch("apps.core.middleware.httpx.get") as mock_mw:
+            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
+            resp = authed_portal_client.get("/home/nav/")
         assert resp.status_code == 200
 
 

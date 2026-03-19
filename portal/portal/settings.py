@@ -13,6 +13,8 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.messages",
+    "django.contrib.sessions",
+    "django.contrib.humanize",
     "apps.core",
     "apps.auth_views",
     "apps.home",
@@ -50,8 +52,14 @@ TEMPLATES = [
 WSGI_APPLICATION = "portal.wsgi.application"
 ASGI_APPLICATION = "portal.asgi.application"
 
-# Sessions — stored in signed cookies (no DB needed)
-SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+import sys as _sys
+# Signed cookies in production (stateless). DB-backed only during testing so
+# Django's test client can set session data via client.session.
+SESSION_ENGINE = (
+    "django.contrib.sessions.backends.db"
+    if "pytest" in _sys.modules
+    else "django.contrib.sessions.backends.signed_cookies"
+)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7   # 7 days
@@ -77,7 +85,13 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# No database — portal is stateless; all data from API services
-DATABASES = {}
+# Portal is stateless — no database queries in production.
+# SQLite in-memory is configured only to satisfy Django's test runner / django_db marker.
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    }
+}
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"

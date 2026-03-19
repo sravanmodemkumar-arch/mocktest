@@ -15,6 +15,7 @@ class TestAuthRoutesNeverCached:
     """Auth routes must always be no-cache — security requirement."""
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_db
     async def test_login_endpoint_no_cache(self, identity_client):
         resp = await identity_client.post(
             "/api/v1/auth/login",
@@ -24,6 +25,7 @@ class TestAuthRoutesNeverCached:
         assert "no-cache" in cc or "no-store" in cc or resp.status_code in (401, 422)
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_db
     async def test_auth_me_no_cache(self, identity_client, student_token):
         resp = await identity_client.get(
             "/api/v1/auth/me",

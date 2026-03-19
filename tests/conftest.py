@@ -33,6 +33,56 @@ os.environ.setdefault("DEBUG", "True")
 fake = Faker("en_IN")
 
 
+# ── Auto-skip requires_db tests when PostgreSQL is unavailable ────────────────
+def _postgres_available() -> bool:
+    """Check PostgreSQL is reachable AND credentials are valid."""
+    import socket
+    try:
+        with socket.create_connection(("localhost", 5432), timeout=1):
+            pass  # port open
+    except OSError:
+        return False
+    # Port open — verify credentials work
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["pg_isready", "-U", "postgres", "-h", "localhost", "-p", "5432"],
+            capture_output=True, timeout=2,
+        )
+        if result.returncode != 0:
+            return False
+        # Try a minimal psql connection to verify auth
+        env_check = os.environ.get("DATABASE_URL", "")
+        if "postgres:postgres" in env_check:
+            # default test creds — attempt a quick connect
+            import asyncio as _asyncio
+            async def _check():
+                try:
+                    import asyncpg
+                    conn = await asyncpg.connect(
+                        "postgresql://postgres:postgres@localhost:5432/postgres",
+                        timeout=2,
+                    )
+                    await conn.close()
+                    return True
+                except Exception:
+                    return False
+            return _asyncio.run(_check())
+        return True
+    except Exception:
+        return False
+
+
+_POSTGRES_UP = _postgres_available()
+
+
+def pytest_collection_modifyitems(config, items):
+    skip_no_db = pytest.mark.skip(reason="PostgreSQL not available locally (start DB to run)")
+    for item in items:
+        if "requires_db" in item.keywords and not _POSTGRES_UP:
+            item.add_marker(skip_no_db)
+
+
 # ── Event loop ────────────────────────────────────────────────────────────────
 @pytest.fixture(scope="session")
 def event_loop():
@@ -225,8 +275,9 @@ def htmx_headers() -> dict:
 @pytest.fixture
 def mock_identity_service(respx_mock):
     """Pre-configured respx mock for identity service calls."""
+    import httpx
     respx_mock.get("http://localhost:8001/api/v1/auth/me").mock(
-        return_value=respx_mock.build_response(200, json={
+        return_value=httpx.Response(200, json={
             "id": 1,
             "mobile": "+919876543210",
             "role": "student",
@@ -240,8 +291,9 @@ def mock_identity_service(respx_mock):
 @pytest.fixture
 def mock_tenant_service(respx_mock):
     """Pre-configured respx mock for tenant service calls."""
+    import httpx
     respx_mock.get("http://localhost:8003/api/v1/tenant/config").mock(
-        return_value=respx_mock.build_response(200, json={
+        return_value=httpx.Response(200, json={
             "slug": "test-school",
             "portal_group": 3,
             "name": "Test School",

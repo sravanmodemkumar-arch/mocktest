@@ -64,7 +64,7 @@
       <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">All systems OK</span>
     </div>
     <div class="space-y-3">
-      {% for service in services|default:svc_placeholders %}
+      {% for service in services %}
       <div class="flex items-center justify-between text-sm">
         <span class="text-gray-600">{{ service.name|default:"Auth Service" }}</span>
         <span class="px-2 py-0.5 rounded-full text-xs font-medium

@@ -56,7 +56,8 @@ class TestCookieSecurity:
 
         cookie = resp.cookies.get("ef_token")
         if cookie:
-            assert cookie.has_header("HttpOnly") or resp.cookies["ef_token"]
+            # Django test client cookies are Morsel objects; cookie["httponly"] is truthy when set
+            assert cookie["httponly"] or resp.cookies["ef_token"]
 
     def test_auth_cookie_has_samesite(self, client):
         """ef_token must have SameSite=Lax to mitigate CSRF."""

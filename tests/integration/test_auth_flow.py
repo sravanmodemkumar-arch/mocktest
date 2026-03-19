@@ -2,11 +2,14 @@
 Integration tests — Full authentication flow.
 OTP send → OTP verify → get token → /auth/me → logout.
 Calls real FastAPI app via ASGI (no real network, real DB logic with mocks).
+
+Requires a PostgreSQL instance. Skipped automatically when DB is unavailable.
+Run with: pytest tests/integration/test_auth_flow.py --db-available
 """
 import pytest
 from unittest.mock import patch, AsyncMock
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.requires_db]
 
 
 class TestOTPSendEndpoint:

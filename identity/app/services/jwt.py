@@ -8,7 +8,8 @@ def create_access_token(user_id: int, role: str, institution_id: int | None) -> 
     payload = {
         "sub": str(user_id),
         "role": role,
-        "inst": institution_id,
+        "institution_id": institution_id,
+        "type": "access",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_ACCESS_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
@@ -23,8 +24,10 @@ def create_refresh_token(user_id: int) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def decode_token(token: str) -> dict:
+def decode_token(token: str | None) -> dict | None:
+    if not token:
+        return None
     try:
         return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except JWTError:
-        return {}
+        return None
