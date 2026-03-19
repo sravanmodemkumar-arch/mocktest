@@ -67,13 +67,16 @@ class TestNotifications:
 
 class TestHomeDataEdgeCases:
     def test_home_data_service_down(self, authed_portal_client):
-        import httpx
+        import httpx as _httpx
 
         user_data = {"id": 1, "role": "student", "is_active": True}
-        with patch("apps.core.middleware.httpx.get") as mock_mw, patch(
-            "apps.home.views.httpx.get",
-            side_effect=httpx.ConnectError("down"),
-        ):
-            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
+        auth_resp = MagicMock(status_code=200, json=lambda: user_data)
+
+        def _selective_get(url, **kwargs):
+            if "/auth/me" in url:
+                return auth_resp
+            raise _httpx.ConnectError("down")
+
+        with patch("httpx.get", side_effect=_selective_get):
             resp = authed_portal_client.get("/home/data/")
         assert resp.status_code == 200
