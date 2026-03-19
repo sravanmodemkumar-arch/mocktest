@@ -6,7 +6,7 @@ All role definitions are organized by group. Each group has its own dedicated do
 |---|---|---|---|
 | [group1-platform-roles.md](group1-platform-roles.md) | Platform Level (EduForge employees) | 81 | ✅ Done |
 | [group2-institution-group-roles.md](group2-institution-group-roles.md) | Institution Groups (chains/trusts) | 69 | ✅ Done |
-| group3-school-roles.md | School Level | TBD | 🔜 Next |
+| [group3-school-roles.md](group3-school-roles.md) | School Level | 125 | ✅ Done |
 | group4-college-roles.md | College Level (Intermediate) | TBD | 🔜 Upcoming |
 | group5-coaching-roles.md | Coaching Centres | TBD | 🔜 Upcoming |
 | group6-exam-domain-roles.md | Online Exam Domains (SSC, RRB etc.) | TBD | 🔜 Upcoming |
