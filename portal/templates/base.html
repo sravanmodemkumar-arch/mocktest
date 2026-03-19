@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ tenant_name }}{% endblock %}</title>
+  <link rel="icon" href="{{ favicon_url }}" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: "{{ primary_color }}",
+              50:  "color-mix(in srgb, {{ primary_color }} 10%, white)",
+              100: "color-mix(in srgb, {{ primary_color }} 20%, white)",
+              500: "{{ primary_color }}",
+              600: "color-mix(in srgb, {{ primary_color }} 85%, black)",
+              700: "color-mix(in srgb, {{ primary_color }} 70%, black)",
+            }
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+  <!-- HTMX extensions -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/json-enc.js" defer></script>
+
+  <!-- Inline CSS for brand color (Tailwind CDN can't use CSS vars in JIT) -->
+  <style>
+    :root { --brand: {{ primary_color }}; }
+    .bg-brand  { background-color: {{ primary_color }}; }
+    .text-brand { color: {{ primary_color }}; }
+    .border-brand { border-color: {{ primary_color }}; }
+    .ring-brand { --tw-ring-color: {{ primary_color }}; }
+    .btn-brand {
+      background-color: {{ primary_color }};
+      color: #fff;
+      transition: filter .15s;
+    }
+    .btn-brand:hover { filter: brightness(0.9); }
+    .btn-brand:disabled { opacity: .5; cursor: not-allowed; }
+    /* HTMX loading indicator */
+    .htmx-indicator { opacity: 0; transition: opacity 200ms; }
+    .htmx-request .htmx-indicator { opacity: 1; }
+    .htmx-request.htmx-indicator { opacity: 1; }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50 font-sans text-gray-900 antialiased"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+  {% block body %}{% endblock %}
+
+  <!-- Toast container -->
+  <div id="toast-container"
+       class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
+       aria-live="polite">
+  </div>
+
+  <!-- Global JS utilities -->
+  <script>
+    // Toast helper — called by HTMX OOB swaps or manually
+    function showToast(message, type = 'success') {
+      const colors = {
+        success: 'bg-green-600',
+        error:   'bg-red-600',
+        warning: 'bg-amber-500',
+        info:    'bg-blue-600',
+      };
+      const icons = {
+        success: '✓', error: '✕', warning: '⚠', info: 'ℹ',
+      };
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${colors[type]} translate-x-0 transition-all duration-300`;
+      toast.innerHTML = `<span class="text-base">${icons[type]}</span><span>${message}</span>`;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; }, 3500);
+      setTimeout(() => toast.remove(), 3800);
+    }
+
+    // HTMX global error handler
+    document.addEventListener('htmx:responseError', function(e) {
+      const msg = e.detail.xhr.responseJSON?.detail || 'Something went wrong. Please try again.';
+      showToast(msg, 'error');
+    });
+
+    // CSRF token for HTMX
+    document.addEventListener('htmx:configRequest', function(e) {
+      e.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

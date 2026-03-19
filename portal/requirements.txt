@@ -1,0 +1,5 @@
+Django==4.2.17
+django-environ==0.11.2
+httpx==0.27.2
+whitenoise==6.8.2
+gunicorn==23.0.0

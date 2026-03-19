@@ -1,5 +1,6 @@
 """Auth endpoints — send OTP, verify OTP, refresh token."""
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
@@ -71,3 +72,49 @@ async def refresh_token(payload: RefreshRequest, db: AsyncSession = Depends(get_
     access_token = create_access_token(user.id, user.role, user.institution_id)
     new_refresh = create_refresh_token(user.id)
     return TokenResponse(access_token=access_token, refresh_token=new_refresh)
+
+
+@router.post("/logout")
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+    db: AsyncSession = Depends(get_db),
+):
+    """Revoke refresh token — invalidate session."""
+    data = decode_token(credentials.credentials)
+    if not data:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user_id = int(data["sub"])
+    # Revoke all sessions for this user (simple approach)
+    result = await db.execute(select(Session).where(Session.user_id == user_id, Session.is_revoked == False))
+    sessions = result.scalars().all()
+    for session in sessions:
+        session.is_revoked = True
+    await db.commit()
+    return {"message": "Logged out successfully"}
+
+
+@router.get("/me")
+async def get_me(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return current user profile."""
+    data = decode_token(credentials.credentials)
+    if not data or data.get("type") != "access":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user_id = int(data["sub"])
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "id": user.id,
+        "mobile": user.mobile,
+        "role": user.role,
+        "institution_id": user.institution_id,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+    }

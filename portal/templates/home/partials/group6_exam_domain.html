@@ -1,0 +1,107 @@
+<!-- Group 6: Exam Domain (SSC/RRB/UPSC etc.) — Free vs Premium -->
+
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Welcome back, {{ user.name|default:"Aspirant" }}! 👋</h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ domain_name }}</p>
+  </div>
+  <span class="text-xs px-3 py-1 rounded-full font-bold
+               {% if is_premium %}text-white{% else %}bg-gray-100 text-gray-600{% endif %}"
+        {% if is_premium %}style="background-color: {{ primary_color }};"{% endif %}>
+    {% if is_premium %}⭐ Premium{% else %}Free{% endif %}
+  </span>
+</div>
+
+<!-- Upgrade banner (free users only) -->
+{% if not is_premium %}
+<div class="mb-6 rounded-xl p-5 text-white space-y-3"
+     style="background: linear-gradient(135deg, {{ primary_color }}, color-mix(in srgb, {{ primary_color }} 60%, black));">
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="font-bold text-lg">🌟 Upgrade to Premium</p>
+      <p class="text-sm opacity-80">{{ tests_used }}/5 free tests used this month</p>
+    </div>
+    <a href="/subscription/" class="bg-white font-bold text-sm px-4 py-2 rounded-lg"
+       style="color: {{ primary_color }};">
+      ₹299/mo
+    </a>
+  </div>
+  <div class="grid grid-cols-2 gap-1.5 text-sm opacity-90">
+    <span>✅ Unlimited mock tests</span>
+    <span>✅ AI study plan</span>
+    <span>✅ Topic-wise analysis</span>
+    <span>✅ Rank among 2L+ aspirants</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- KPI bar -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500">Tests This Month</p>
+    <p class="text-2xl font-bold text-gray-900">
+      {% if is_premium %}{{ tests_taken }}{% else %}{{ tests_used }}<span class="text-sm text-gray-400">/5</span>{% endif %}
+    </p>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500">Best AIR</p>
+    <p class="text-2xl font-bold text-gray-900">{{ best_air|default:"—" }}</p>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500">Study Streak</p>
+    <p class="text-2xl font-bold text-gray-900">{{ streak|default:0 }}d</p>
+  </div>
+</div>
+
+<!-- Live test -->
+{% if live_test %}
+<div class="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+  <div>
+    <span class="inline-flex items-center gap-1.5 text-xs font-bold text-red-700 mb-1">
+      <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>LIVE NOW
+    </span>
+    <p class="font-semibold text-gray-900">{{ live_test.name }}</p>
+    <p class="text-sm text-gray-500">{{ live_test.remaining }} remaining · {{ live_test.attempts|intcomma }} attempting</p>
+  </div>
+  <a href="{{ live_test.url }}"
+     class="btn-brand px-4 py-2.5 rounded-lg text-sm font-bold">
+    Attempt Now
+  </a>
+</div>
+{% endif %}
+
+<!-- Recent results -->
+{% if recent_results %}
+<div class="mb-6">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-base font-bold text-gray-900">Recent Results</h2>
+    <a href="/results/" class="text-xs text-brand hover:underline">View all →</a>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    {% for result in recent_results %}
+    <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
+      <p class="text-sm font-semibold text-gray-900">{{ result.test_name }}</p>
+      <p class="text-xl font-bold" style="color: {{ primary_color }};">{{ result.score }}</p>
+      <p class="text-xs text-gray-500">AIR {{ result.air|intcomma }}</p>
+      <a href="{{ result.analysis_url }}" class="text-xs text-brand hover:underline">View Analysis →</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Leaderboard snippet -->
+<div class="bg-white rounded-xl border border-gray-200 p-5">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-base font-bold text-gray-900">🏆 National Leaderboard</h2>
+    <a href="/leaderboard/" class="text-xs text-brand hover:underline">View all →</a>
+  </div>
+  <div class="space-y-2"
+       hx-get="/home/leaderboard-snippet/"
+       hx-trigger="load"
+       hx-swap="innerHTML">
+    <div class="animate-pulse space-y-2">
+      {% for i in "123" %}<div class="h-10 bg-gray-100 rounded-lg"></div>{% endfor %}
+    </div>
+  </div>
+</div>

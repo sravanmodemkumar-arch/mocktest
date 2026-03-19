@@ -1,0 +1,137 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Create Account — {{ tenant_name }}{% endblock %}
+
+{% block brand_message %}
+<h1 class="text-4xl font-bold leading-tight">
+  Join millions of<br/>aspirants on EduForge
+</h1>
+<p class="text-lg opacity-80">Free mock tests · AI study plan · All India Rank</p>
+{% endblock %}
+
+{% block auth_content %}
+<div class="space-y-6">
+
+  <div>
+    <h2 class="text-2xl font-bold text-gray-900">Create account</h2>
+    <p class="mt-1 text-sm text-gray-500">
+      Already have an account?
+      <a href="/login/" class="text-brand font-medium hover:underline">Login</a>
+    </p>
+  </div>
+
+  <form id="register-form"
+        hx-post="/register/"
+        hx-target="#register-response"
+        hx-swap="innerHTML"
+        hx-indicator="#register-btn"
+        class="space-y-4">
+    {% csrf_token %}
+
+    <!-- Full name -->
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-gray-700">Full Name</label>
+      <input type="text" name="full_name" placeholder="Ravi Kumar" required
+             class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
+                    focus:ring-2 focus:border-brand text-sm"
+             style="--tw-ring-color: {{ primary_color }};" />
+    </div>
+
+    <!-- Mobile -->
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-gray-700">Mobile Number</label>
+      <div class="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:border-brand"
+           style="--tw-ring-color: {{ primary_color }};">
+        <div class="flex items-center px-4 bg-gray-50 border-r border-gray-300 text-gray-600 text-sm font-medium select-none">
+          🇮🇳 +91
+        </div>
+        <input type="tel" name="mobile" placeholder="98765 43210" required maxlength="10"
+               class="flex-1 px-4 py-3 outline-none text-sm"
+               oninput="this.value=this.value.replace(/\D/g,'')" />
+      </div>
+    </div>
+
+    <!-- Date of birth (age gate) -->
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-gray-700">
+        Date of Birth
+        {% if portal_group == 6 %}
+        <span class="text-xs text-gray-400 font-normal">(must be 18+)</span>
+        {% endif %}
+      </label>
+      <input type="date" name="dob" required
+             max="{% now 'Y-m-d' %}"
+             class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
+                    focus:ring-2 focus:border-brand text-sm bg-white"
+             style="--tw-ring-color: {{ primary_color }};" />
+    </div>
+
+    <!-- State -->
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-gray-700">State</label>
+      <select name="state" required
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
+                     focus:ring-2 focus:border-brand text-sm bg-white"
+              style="--tw-ring-color: {{ primary_color }};">
+        <option value="">Select state</option>
+        <option>Andhra Pradesh</option><option>Telangana</option>
+        <option>Maharashtra</option><option>Karnataka</option>
+        <option>Tamil Nadu</option><option>Gujarat</option>
+        <option>Rajasthan</option><option>Uttar Pradesh</option>
+        <option>Bihar</option><option>West Bengal</option>
+        <option>Madhya Pradesh</option><option>Other</option>
+      </select>
+    </div>
+
+    <!-- Exam selection (exam domain only) -->
+    {% if portal_group == 6 %}
+    <div class="space-y-1">
+      <label class="text-sm font-medium text-gray-700">Target Exam</label>
+      <select name="target_exam" required
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none
+                     focus:ring-2 focus:border-brand text-sm bg-white"
+              style="--tw-ring-color: {{ primary_color }};">
+        <option value="">Select exam</option>
+        <option>SSC CGL</option><option>SSC CHSL</option>
+        <option>RRB NTPC</option><option>RRB Group D</option>
+        <option>UPSC CSE</option><option>IBPS PO</option>
+        <option>SBI PO / Clerk</option><option>State PSC</option>
+      </select>
+    </div>
+    {% endif %}
+
+    <!-- Consent checkboxes -->
+    <div class="space-y-2 pt-1">
+      <label class="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+        <input type="checkbox" name="terms" required class="mt-0.5 accent-brand w-4 h-4 flex-shrink-0" />
+        <span>
+          I agree to the
+          <a href="#" class="text-brand underline">Terms of Service</a> and
+          <a href="#" class="text-brand underline">Privacy Policy</a>
+        </span>
+      </label>
+      <label class="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+        <input type="checkbox" name="dpdp" required class="mt-0.5 accent-brand w-4 h-4 flex-shrink-0" />
+        <span>
+          I consent to data processing as per the
+          <a href="#" class="text-brand underline">DPDP Act 2023</a>
+        </span>
+      </label>
+    </div>
+
+    <button id="register-btn" type="submit"
+            class="btn-brand w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2">
+      <span class="htmx-indicator">
+        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </span>
+      <span>Create Account & Send OTP</span>
+    </button>
+
+    <div id="register-response"></div>
+  </form>
+
+</div>
+{% endblock %}
