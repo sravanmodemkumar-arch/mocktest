@@ -1,120 +1,185 @@
-<!-- Group 2: Chain Admin Dashboard (multi-institution management) -->
+<!-- GROUP 2: CORPORATE BLUE GLASS — Chain Admin -->
+<style>
+  .g2-wrap { background: linear-gradient(160deg, #0c1a3a 0%, #1a3a6b 50%, #0c2a52 100%); min-height: 100%; padding: 24px; position: relative; overflow: hidden; }
+  .g2-orb1 { position:absolute;top:-80px;right:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.18) 0%,transparent 70%);pointer-events:none; }
+  .g2-orb2 { position:absolute;bottom:-60px;left:-60px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 70%);pointer-events:none; }
+  .g2-glass {
+    background: rgba(255,255,255,.07);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 16px;
+  }
+  .g2-glass:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.22); transition: all .2s; }
+  .g2-label { font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(147,197,253,.75);margin-bottom:4px; }
+  .g2-bar { height:14px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#6366f1);transition:width .8s cubic-bezier(.4,0,.2,1); }
+  .g2-pill-btn {
+    background: rgba(255,255,255,.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.2);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .18s;
+  }
+  .g2-pill-btn:hover { background:rgba(59,130,246,.4);border-color:rgba(99,162,255,.6); }
+  @keyframes g2-slideIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+  .g2-anim { animation: g2-slideIn .4s ease forwards; }
+</style>
 
-<div class="flex items-start justify-between mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900">
-      Good {{ greeting_time }}, {{ user.name|default:"Admin" }}
-    </h1>
-    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
-  </div>
-  <span class="hidden sm:block text-xs px-3 py-1 rounded-full font-semibold text-white"
-        style="background-color: {{ primary_color }};">
-    CHAIN ADMIN
-  </span>
-</div>
+<div class="g2-wrap">
+  <div class="g2-orb1"></div>
+  <div class="g2-orb2"></div>
+  <div class="relative space-y-5">
 
-{% if alerts %}
-<div class="space-y-2 mb-6">
-  {% for alert in alerts %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
-              {% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
-    <span>{% if alert.level == 'critical' %}🔴{% else %}🟡{% endif %}</span>
-    <span>{{ alert.message }}</span>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- Chain KPIs -->
-{% if kpis %}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% for kpi in kpis %}
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
-    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
-    {% if kpi.trend %}
-    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">
-      {{ kpi.trend }}
-    </p>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-<!-- Branches Overview -->
-<div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="font-semibold text-gray-800">Branches / Campuses</h2>
-    <div class="flex gap-2">
-      <input type="text" placeholder="Search branch..."
-             class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-      <a href="/branches/add/" class="text-sm px-3 py-1.5 rounded-lg text-white font-medium"
-         style="background-color: {{ primary_color }};">+ Add</a>
+    <!-- ── HEADER BANNER ── -->
+    <div class="g2-glass p-6 relative overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-5">
+        <div class="flex items-center gap-5">
+          <!-- Chain SVG Icon -->
+          <div class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style="background:rgba(59,130,246,.25);border:1px solid rgba(59,130,246,.4);">
+            <svg class="w-7 h-7 text-blue-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-blue-200 text-xs font-semibold tracking-widest uppercase mb-1">Chain Administration</div>
+            <h1 class="text-white text-2xl font-bold leading-tight">Chain Operations Dashboard</h1>
+            <p class="text-blue-200/70 text-sm mt-1">Good {{ greeting_time }}, {{ user.name }} &nbsp;·&nbsp; {{ today_date }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-center px-5 py-3 rounded-xl" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);">
+            <div class="text-blue-200 text-xs font-semibold uppercase tracking-wider mb-1">Network</div>
+            <div class="text-white font-bold text-2xl">{{ institution_name }}</div>
+          </div>
+          <div class="text-center px-5 py-3 rounded-xl" style="background:rgba(59,130,246,.2);border:1px solid rgba(59,130,246,.35);">
+            <div class="text-blue-200 text-xs font-semibold uppercase tracking-wider mb-1">Branches</div>
+            <div class="text-white font-bold text-2xl">24</div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b border-gray-100">
-          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Branch</th>
-          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Students</th>
-          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Staff</th>
-          <th class="text-left py-2 pr-4 text-gray-500 font-medium">Attendance</th>
-          <th class="text-left py-2 text-gray-500 font-medium">Status</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-50">
-        {% for branch in branches|default:'' %}
-        <tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='/branches/{{ branch.id }}/'">
-          <td class="py-3 pr-4 font-medium text-gray-900">{{ branch.name }}</td>
-          <td class="py-3 pr-4 text-gray-600">{{ branch.student_count }}</td>
-          <td class="py-3 pr-4 text-gray-600">{{ branch.staff_count }}</td>
-          <td class="py-3 pr-4">
-            <div class="flex items-center gap-2">
-              <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div class="h-full rounded-full"
-                     style="width: {{ branch.attendance_pct|default:0 }}%;
-                            background-color: {{ primary_color }};"></div>
-              </div>
-              <span class="text-gray-600">{{ branch.attendance_pct|default:0 }}%</span>
-            </div>
-          </td>
-          <td class="py-3">
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                         {% if branch.status == 'active' %}bg-green-100 text-green-700
-                         {% else %}bg-gray-100 text-gray-600{% endif %}">
-              {{ branch.status|default:"Active" }}
-            </span>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" class="py-8 text-center text-gray-400 text-sm">No branches configured</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
 
-<!-- Quick actions -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-  <a href="/fee-collection/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-    <div class="text-2xl mb-1">💰</div>
-    <p class="text-xs font-medium text-gray-700">Fee Collection</p>
-  </a>
-  <a href="/exam-schedule/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-    <div class="text-2xl mb-1">📝</div>
-    <p class="text-xs font-medium text-gray-700">Exam Schedule</p>
-  </a>
-  <a href="/staff-transfer/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-    <div class="text-2xl mb-1">🔄</div>
-    <p class="text-xs font-medium text-gray-700">Staff Transfer</p>
-  </a>
-  <a href="/reports/chain/" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition text-center">
-    <div class="text-2xl mb-1">📊</div>
-    <p class="text-xs font-medium text-gray-700">Chain Reports</p>
-  </a>
+    <!-- ── ALERTS ── -->
+    {% if alerts %}
+    <div class="space-y-2">
+      {% for alert in alerts %}
+      <div class="g2-glass flex items-center gap-3 px-4 py-3 text-sm font-medium
+        {% if alert.level == 'error' or alert.level == 'critical' %}text-red-200
+        {% elif alert.level == 'warning' %}text-amber-200
+        {% else %}text-blue-200{% endif %}">
+        {% if alert.level == 'error' or alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}🔵{% endif %}
+        <span>{{ alert.message }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── KPI GLASS CARDS ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for kpi in kpis %}
+      <div class="g2-glass p-5 g2-anim">
+        <div class="g2-label">{{ kpi.label }}</div>
+        <div class="text-white font-bold leading-none" style="font-size:2.1rem;">{{ kpi.value }}</div>
+        {% if kpi.trend %}
+        <div class="mt-2 text-xs font-semibold {% if '-' in kpi.trend|stringformat:'s' %}text-red-300{% else %}text-emerald-300{% endif %}">
+          {% if '-' in kpi.trend|stringformat:'s' %}▼{% else %}▲{% endif %} {{ kpi.trend }}
+        </div>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="g2-glass p-5"><div class="g2-label">Total Branches</div><div class="text-white font-bold text-4xl">24</div><div class="mt-2 text-xs font-semibold text-emerald-300">▲ +2 this yr</div></div>
+      <div class="g2-glass p-5"><div class="g2-label">Total Students</div><div class="text-white font-bold text-4xl">14.8K</div><div class="mt-2 text-xs font-semibold text-emerald-300">▲ +8%</div></div>
+      <div class="g2-glass p-5"><div class="g2-label">Staff Across Chain</div><div class="text-white font-bold text-4xl">892</div><div class="mt-2 text-xs font-semibold text-emerald-300">▲ +5%</div></div>
+      <div class="g2-glass p-5"><div class="g2-label">Avg Attendance</div><div class="text-white font-bold text-4xl">87%</div><div class="mt-2 text-xs font-semibold text-amber-300">▼ -1.2%</div></div>
+      {% endfor %}
+    </div>
+
+    <!-- ── BRANCH PERFORMANCE + TOP BRANCHES ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+      <!-- Branch Performance Horizontal Bar Chart -->
+      <div class="g2-glass p-5">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-white font-semibold text-base">Branch Performance</h2>
+          <span class="text-blue-200 text-xs">Attendance %</span>
+        </div>
+        <div class="space-y-3">
+          {% for section in sections %}{% for item in section.items %}
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-blue-100 text-xs font-medium">{{ item.label }}</span>
+              <span class="text-white text-xs font-bold">{{ item.value }}</span>
+            </div>
+            <div style="background:rgba(255,255,255,.07);border-radius:4px;height:14px;overflow:hidden;">
+              <div class="g2-bar" style="width:{{ item.value|default:'70%' }};"></div>
+            </div>
+          </div>
+          {% endfor %}{% empty %}
+          <div><div class="flex justify-between mb-1"><span class="text-blue-100 text-xs">Delhi Branch</span><span class="text-white text-xs font-bold">93%</span></div><div style="background:rgba(255,255,255,.07);border-radius:4px;height:14px;overflow:hidden;"><div class="g2-bar" style="width:93%;"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="text-blue-100 text-xs">Mumbai Branch</span><span class="text-white text-xs font-bold">88%</span></div><div style="background:rgba(255,255,255,.07);border-radius:4px;height:14px;overflow:hidden;"><div class="g2-bar" style="width:88%;"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="text-blue-100 text-xs">Bangalore Branch</span><span class="text-white text-xs font-bold">91%</span></div><div style="background:rgba(255,255,255,.07);border-radius:4px;height:14px;overflow:hidden;"><div class="g2-bar" style="width:91%;"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="text-blue-100 text-xs">Hyderabad Branch</span><span class="text-white text-xs font-bold">79%</span></div><div style="background:rgba(255,255,255,.07);border-radius:4px;height:14px;overflow:hidden;"><div class="g2-bar" style="width:79%;"></div></div></div>
+          <div><div class="flex justify-between mb-1"><span class="text-blue-100 text-xs">Chennai Branch</span><span class="text-white text-xs font-bold">85%</span></div><div style="background:rgba(255,255,255,.07);border-radius:4px;height:14px;overflow:hidden;"><div class="g2-bar" style="width:85%;"></div></div></div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Top Performing Branches -->
+      <div class="g2-glass p-5">
+        <h2 class="text-white font-semibold text-base mb-5">Top Performing Branches</h2>
+        <div class="space-y-3">
+          <div class="flex items-center gap-4 p-3 rounded-xl" style="background:rgba(255,255,255,.06);">
+            <span class="text-2xl">🥇</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-white font-semibold text-sm truncate">Delhi North Campus</div>
+              <div class="text-blue-200 text-xs">Score: 96.4 · 1,240 students</div>
+            </div>
+            <div class="text-emerald-300 font-bold text-sm">+4.2%</div>
+          </div>
+          <div class="flex items-center gap-4 p-3 rounded-xl" style="background:rgba(255,255,255,.06);">
+            <span class="text-2xl">🥈</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-white font-semibold text-sm truncate">Bangalore South</div>
+              <div class="text-blue-200 text-xs">Score: 94.1 · 980 students</div>
+            </div>
+            <div class="text-emerald-300 font-bold text-sm">+2.8%</div>
+          </div>
+          <div class="flex items-center gap-4 p-3 rounded-xl" style="background:rgba(255,255,255,.06);">
+            <span class="text-2xl">🥉</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-white font-semibold text-sm truncate">Mumbai Central</div>
+              <div class="text-blue-200 text-xs">Score: 91.7 · 1,450 students</div>
+            </div>
+            <div class="text-emerald-300 font-bold text-sm">+1.5%</div>
+          </div>
+          <div class="flex items-center gap-4 p-3 rounded-xl" style="background:rgba(255,255,255,.04);">
+            <span class="text-xl font-bold text-blue-300">&nbsp;4</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-white font-semibold text-sm truncate">Chennai West</div>
+              <div class="text-blue-200 text-xs">Score: 89.3 · 760 students</div>
+            </div>
+            <div class="text-amber-300 font-bold text-sm">-0.3%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QUICK ACTIONS ── -->
+    <div class="g2-glass p-5">
+      <h2 class="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Quick Actions</h2>
+      <div class="flex flex-wrap gap-3">
+        <button class="g2-pill-btn">🏛 Add Branch</button>
+        <button class="g2-pill-btn">📋 Cross-Branch Report</button>
+        <button class="g2-pill-btn">👥 Staff Transfer</button>
+        <button class="g2-pill-btn">📊 Chain Analytics</button>
+        {% if is_premium %}<button class="g2-pill-btn" style="border-color:rgba(192,132,252,.5);color:#c084fc;">✦ Premium Insights</button>{% endif %}
+      </div>
+    </div>
+
+  </div>
 </div>

@@ -18,7 +18,7 @@
 
     <!-- Nav links (HTMX loads per role) -->
     <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1"
-         hx-get="/nav/links/"
+         hx-get="/home/nav/"
          hx-trigger="load"
          hx-swap="innerHTML">
       <!-- Loading placeholder -->
@@ -32,7 +32,7 @@
     <!-- User card at bottom -->
     <div class="border-t border-gray-200 p-3">
       <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-           hx-get="/nav/profile-menu/" hx-target="#profile-dropdown" hx-swap="innerHTML">
+           hx-get="/home/profile-menu/" hx-target="#profile-dropdown" hx-swap="innerHTML">
         <!-- Avatar -->
         <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center
                     text-sm font-bold text-white"
@@ -48,6 +48,15 @@
         </svg>
       </div>
       <div id="profile-dropdown"></div>
+      <!-- Always-visible logout -->
+      <a href="/logout/"
+         class="flex items-center gap-2 mt-1 px-2 py-1.5 text-sm text-red-600 rounded-lg hover:bg-red-50 w-full">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Sign out
+      </a>
     </div>
   </aside>
 
@@ -92,7 +101,7 @@
         <!-- Notifications -->
         <div class="relative">
           <button class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
-                  hx-get="/nav/notifications/"
+                  hx-get="/home/notifications/"
                   hx-target="#notif-dropdown"
                   hx-swap="innerHTML"
                   title="Notifications">

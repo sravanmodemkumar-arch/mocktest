@@ -1,108 +1,201 @@
-<!-- Group 7: TSP White-Label Portal (Technology Service Provider) -->
+<!-- GROUP 7: CLEAN TEAL / SLATE SaaS — TSP (Technology Service Provider) -->
+<style>
+  .g7-wrap { background: #fff; min-height: 100%; padding: 28px; }
+  .g7-teal-line { height: 3px; background: linear-gradient(90deg, #0d9488, #14b8a6, transparent); border-radius: 2px; margin-bottom: 28px; }
+  .g7-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; transition: box-shadow .18s; }
+  .g7-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.07); }
+  .g7-label { font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px; }
+  .g7-mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+  .g7-pill { display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600; }
+  .g7-pill-green  { background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0; }
+  .g7-pill-amber  { background:#fffbeb;color:#d97706;border:1px solid #fde68a; }
+  .g7-pill-red    { background:#fef2f2;color:#dc2626;border:1px solid #fecaca; }
+  .g7-pill-teal   { background:#f0fdfa;color:#0d9488;border:1px solid #99f6e4; }
+  .g7-pill-gray   { background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb; }
+  .g7-plan-badge  { padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+  .g7-plan-starter { background:#f0fdf4;color:#16a34a; }
+  .g7-plan-growth  { background:#eff6ff;color:#2563eb; }
+  .g7-plan-enterprise { background:#fdf4ff;color:#9333ea; }
+  /* API usage sparkline dots */
+  .g7-spark { display:flex;align-items:flex-end;gap:3px;height:48px; }
+  .g7-spark-bar { flex:1;border-radius:3px 3px 0 0;background:#99f6e4;transition:height .5s ease;min-width:6px; }
+  table.g7-table { width:100%;border-collapse:collapse; }
+  table.g7-table th { padding:8px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;border-bottom:1px solid #f3f4f6; }
+  table.g7-table td { padding:11px 12px;font-size:13px;color:#374151;border-bottom:1px solid #f9fafb; }
+  table.g7-table tr:last-child td { border-bottom:none; }
+  table.g7-table tr:hover td { background:#f9fafb; }
+  .g7-btn { background:#0d9488;color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:filter .15s; }
+  .g7-btn:hover { filter:brightness(.93); }
+  .g7-btn-outline { background:transparent;color:#0d9488;border:1px solid #99f6e4;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s; }
+  .g7-btn-outline:hover { background:#f0fdfa; }
+  .g7-client-initial { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0; }
+</style>
 
-<div class="flex items-start justify-between mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900">
-      Good {{ greeting_time }}, {{ user.name|default:"there" }}!
-    </h1>
-    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
-  </div>
-  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
-        style="background-color: {{ primary_color }};">
-    {{ user.role_display|default:"TSP Admin" }}
-  </span>
-</div>
+<div class="g7-wrap">
+  <div class="g7-teal-line"></div>
+  <div class="space-y-6">
 
-{% if alerts %}
-<div class="space-y-2 mb-6">
-  {% for alert in alerts %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
-              {% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
-    <span>{% if alert.level == 'critical' %}🔴{% else %}🟡{% endif %}</span>
-    <span>{{ alert.message }}</span>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
+    <!-- ── HEADER ── -->
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div class="g7-label">TSP Dashboard</div>
+        <h1 class="text-gray-900 font-bold text-2xl leading-tight">{{ institution_name }}</h1>
+        <p class="text-gray-500 text-sm mt-1">Good {{ greeting_time }}, {{ user.name }} &nbsp;·&nbsp; {{ today_date }}</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="g7-pill g7-pill-green">
+          <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+          API Status: Operational
+        </div>
+        {% if is_premium %}
+        <div class="g7-pill g7-pill-teal">✦ Partner Pro</div>
+        {% endif %}
+      </div>
+    </div>
 
-{% if kpis %}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% for kpi in kpis %}
-  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
-    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
-    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
-    {% if kpi.trend %}
-    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">{{ kpi.trend }}</p>
+    <!-- ── ALERTS ── -->
+    {% if alerts %}
+    <div class="space-y-2">
+      {% for alert in alerts %}
+      <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+        {% if alert.level == 'error' or alert.level == 'critical' %}bg-red-50 text-red-700 border border-red-100
+        {% elif alert.level == 'warning' %}bg-amber-50 text-amber-700 border border-amber-100
+        {% else %}bg-teal-50 text-teal-700 border border-teal-100{% endif %}">
+        <span>{% if alert.level == 'error' or alert.level == 'critical' %}✕{% elif alert.level == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+        <span>{{ alert.message }}</span>
+      </div>
+      {% endfor %}
+    </div>
     {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
 
-<!-- Client Institutions -->
-<div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="font-semibold text-gray-800">Client Institutions</h2>
-    <a href="/clients/" class="text-sm text-indigo-600 hover:underline">View all</a>
-  </div>
-  <div class="space-y-3">
-    {% for client in client_institutions|default:'' %}
-    <div class="flex items-center gap-4 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition"
-         onclick="location.href='/clients/{{ client.id }}/'">
-      <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-           style="background-color: {{ primary_color }};">
-        {{ client.name|slice:":2"|upper }}
+    <!-- ── KPI CARDS ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for kpi in kpis %}
+      <div class="g7-card p-5">
+        <div class="g7-label">{{ kpi.label }}</div>
+        <div class="g7-mono font-bold text-gray-900 leading-none" style="font-size:1.9rem;">{{ kpi.value }}</div>
+        {% if kpi.trend %}
+        <div class="mt-2 text-xs font-semibold {% if '-' in kpi.trend|stringformat:'s' %}text-red-500{% else %}text-teal-600{% endif %}">
+          {% if '-' in kpi.trend|stringformat:'s' %}▼{% else %}▲{% endif %} {{ kpi.trend }}
+        </div>
+        {% endif %}
       </div>
-      <div class="flex-1 min-w-0">
-        <p class="font-medium text-gray-900 text-sm truncate">{{ client.name }}</p>
-        <p class="text-xs text-gray-500">{{ client.type }} · {{ client.student_count }} students</p>
-      </div>
-      <span class="px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0
-                   {% if client.status == 'active' %}bg-green-100 text-green-700
-                   {% elif client.status == 'trial' %}bg-amber-100 text-amber-700
-                   {% else %}bg-gray-100 text-gray-600{% endif %}">
-        {{ client.status|title }}
-      </span>
+      {% empty %}
+      <div class="g7-card p-5"><div class="g7-label">Active Clients</div><div class="g7-mono font-bold text-gray-900 text-4xl">38</div><div class="mt-2 text-xs font-semibold text-teal-600">▲ +4 this month</div></div>
+      <div class="g7-card p-5"><div class="g7-label">MRR</div><div class="g7-mono font-bold text-gray-900 text-4xl">₹4.2L</div><div class="mt-2 text-xs font-semibold text-teal-600">▲ +8.3%</div></div>
+      <div class="g7-card p-5"><div class="g7-label">API Calls / Day</div><div class="g7-mono font-bold text-gray-900 text-4xl">841K</div><div class="mt-2 text-xs font-semibold text-teal-600">▲ +12%</div></div>
+      <div class="g7-card p-5"><div class="g7-label">SLA Uptime</div><div class="g7-mono font-bold text-gray-900 text-4xl">99.9%</div><div class="mt-2 text-xs font-semibold text-gray-400">— 30 days</div></div>
+      {% endfor %}
     </div>
-    {% empty %}
-    <p class="text-sm text-gray-400 text-center py-4">No client institutions configured</p>
-    {% endfor %}
-  </div>
-</div>
 
-<!-- Integration health + quick actions -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <div class="bg-white rounded-xl border border-gray-200 p-5">
-    <h2 class="font-semibold text-gray-800 mb-4">API & Integration Health</h2>
-    {% for api in api_health|default:'' %}
-    <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
-      <span class="text-gray-700">{{ api.name }}</span>
-      <div class="flex items-center gap-2">
-        <span class="text-gray-500 text-xs">{{ api.latency_ms }}ms</span>
-        <span class="w-2 h-2 rounded-full {% if api.status == 'ok' %}bg-green-400{% else %}bg-red-400{% endif %}"></span>
+    <!-- ── CLIENT PORTFOLIO + API USAGE ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+      <!-- Client Portfolio -->
+      <div class="g7-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wider">Client Portfolio</h2>
+          <a href="#" class="text-teal-600 text-sm font-semibold hover:underline">All clients →</a>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          {% for section in sections %}
+          <div class="g7-card p-3 flex items-center gap-3">
+            <div class="g7-client-initial" style="background:#f0fdfa;color:#0d9488;">{{ section.title|slice:":2"|upper }}</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-gray-800 text-sm font-semibold truncate">{{ section.title }}</div>
+              {% for item in section.items|slice:":1" %}
+              <div class="text-xs text-gray-500 truncate">{{ item.label }}: {{ item.value }}</div>
+              {% endfor %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="g7-card p-3 flex items-center gap-3"><div class="g7-client-initial" style="background:#eff6ff;color:#2563eb;">AM</div><div class="flex-1 min-w-0"><div class="text-gray-800 text-sm font-semibold">Alpha Mentors</div><div class="mt-0.5"><span class="g7-plan-badge g7-plan-growth">Growth</span></div></div></div>
+          <div class="g7-card p-3 flex items-center gap-3"><div class="g7-client-initial" style="background:#fdf4ff;color:#9333ea;">SE</div><div class="flex-1 min-w-0"><div class="text-gray-800 text-sm font-semibold">Sigma EdTech</div><div class="mt-0.5"><span class="g7-plan-badge g7-plan-enterprise">Enterprise</span></div></div></div>
+          <div class="g7-card p-3 flex items-center gap-3"><div class="g7-client-initial" style="background:#f0fdf4;color:#16a34a;">BL</div><div class="flex-1 min-w-0"><div class="text-gray-800 text-sm font-semibold">BrightLearn</div><div class="mt-0.5"><span class="g7-plan-badge g7-plan-starter">Starter</span></div></div></div>
+          <div class="g7-card p-3 flex items-center gap-3"><div class="g7-client-initial" style="background:#f0fdfa;color:#0d9488;">TP</div><div class="flex-1 min-w-0"><div class="text-gray-800 text-sm font-semibold">TopPrep</div><div class="mt-0.5"><span class="g7-plan-badge g7-plan-growth">Growth</span></div></div></div>
+          <div class="g7-card p-3 flex items-center gap-3"><div class="g7-client-initial" style="background:#fdf4ff;color:#9333ea;">VE</div><div class="flex-1 min-w-0"><div class="text-gray-800 text-sm font-semibold">Vertex Edu</div><div class="mt-0.5"><span class="g7-plan-badge g7-plan-enterprise">Enterprise</span></div></div></div>
+          <div class="g7-card p-3 flex items-center gap-3"><div class="g7-client-initial" style="background:#eff6ff;color:#2563eb;">NC</div><div class="flex-1 min-w-0"><div class="text-gray-800 text-sm font-semibold">Nova Coaching</div><div class="mt-0.5"><span class="g7-plan-badge g7-plan-growth">Growth</span></div></div></div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- API Usage Chart -->
+      <div class="g7-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wider">API Usage — 14 Days</h2>
+          <span class="g7-mono text-teal-600 font-bold text-sm">841K today</span>
+        </div>
+        <div class="g7-spark mb-3" id="g7-spark">
+          <div class="g7-spark-bar" style="height:48px;" title="Day 1"></div>
+          <div class="g7-spark-bar" style="height:32px;"></div>
+          <div class="g7-spark-bar" style="height:40px;"></div>
+          <div class="g7-spark-bar" style="height:36px;"></div>
+          <div class="g7-spark-bar" style="height:44px;"></div>
+          <div class="g7-spark-bar" style="height:28px;"></div>
+          <div class="g7-spark-bar" style="height:20px;"></div>
+          <div class="g7-spark-bar" style="height:38px;"></div>
+          <div class="g7-spark-bar" style="height:42px;"></div>
+          <div class="g7-spark-bar" style="height:35px;"></div>
+          <div class="g7-spark-bar" style="height:47px;"></div>
+          <div class="g7-spark-bar" style="height:44px;"></div>
+          <div class="g7-spark-bar" style="height:46px;"></div>
+          <div class="g7-spark-bar" style="height:48px;background:#0d9488;"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-400 g7-mono">
+          <span>6 Mar</span><span>10 Mar</span><span>14 Mar</span><span>19 Mar</span>
+        </div>
+        <div class="mt-4 grid grid-cols-3 gap-3">
+          <div class="text-center p-3 rounded-lg bg-gray-50 border border-gray-100">
+            <div class="g7-mono font-bold text-gray-900 text-lg">99.9%</div>
+            <div class="text-gray-500 text-xs">Uptime</div>
+          </div>
+          <div class="text-center p-3 rounded-lg bg-gray-50 border border-gray-100">
+            <div class="g7-mono font-bold text-gray-900 text-lg">84ms</div>
+            <div class="text-gray-500 text-xs">Avg Latency</div>
+          </div>
+          <div class="text-center p-3 rounded-lg bg-gray-50 border border-gray-100">
+            <div class="g7-mono font-bold text-gray-900 text-lg">0.02%</div>
+            <div class="text-gray-500 text-xs">Error Rate</div>
+          </div>
+        </div>
       </div>
     </div>
-    {% empty %}
-    <p class="text-sm text-gray-400">No API health data</p>
-    {% endfor %}
-  </div>
 
-  <div class="bg-white rounded-xl border border-gray-200 p-5">
-    <h2 class="font-semibold text-gray-800 mb-4">Quick Actions</h2>
-    <div class="grid grid-cols-2 gap-3">
-      <a href="/clients/onboard/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-        <span>🏛️</span> Onboard Client
-      </a>
-      <a href="/white-label/configure/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-        <span>🎨</span> Branding Config
-      </a>
-      <a href="/api/keys/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-        <span>🔑</span> API Keys
-      </a>
-      <a href="/billing/tsp/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-        <span>💳</span> TSP Billing
-      </a>
+    <!-- ── RECENT INVOICES ── -->
+    <div class="g7-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wider">Recent Invoices</h2>
+        <a href="#" class="text-teal-600 text-sm font-semibold hover:underline">All invoices →</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="g7-table">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Invoice</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="font-medium">Alpha Mentors</td><td class="g7-mono text-gray-400 text-xs">INV-2026-0312</td><td class="text-gray-500">1 Mar 2026</td><td class="g7-mono font-bold text-green-600">₹42,000</td><td><span class="g7-pill g7-pill-green">Paid</span></td></tr>
+            <tr><td class="font-medium">Sigma EdTech</td><td class="g7-mono text-gray-400 text-xs">INV-2026-0298</td><td class="text-gray-500">1 Mar 2026</td><td class="g7-mono font-bold text-green-600">₹1,18,000</td><td><span class="g7-pill g7-pill-green">Paid</span></td></tr>
+            <tr><td class="font-medium">BrightLearn</td><td class="g7-mono text-gray-400 text-xs">INV-2026-0318</td><td class="text-gray-500">5 Mar 2026</td><td class="g7-mono font-bold text-amber-600">₹18,000</td><td><span class="g7-pill g7-pill-amber">Pending</span></td></tr>
+            <tr><td class="font-medium">Nova Coaching</td><td class="g7-mono text-gray-400 text-xs">INV-2026-0284</td><td class="text-gray-500">15 Feb 2026</td><td class="g7-mono font-bold text-red-600">₹24,000</td><td><span class="g7-pill g7-pill-red">Overdue</span></td></tr>
+            <tr><td class="font-medium">TopPrep</td><td class="g7-mono text-gray-400 text-xs">INV-2026-0325</td><td class="text-gray-500">10 Mar 2026</td><td class="g7-mono font-bold text-green-600">₹36,000</td><td><span class="g7-pill g7-pill-green">Paid</span></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- ── ACTIONS ── -->
+    <div class="flex flex-wrap gap-3">
+      <button class="g7-btn">＋ New Client</button>
+      <button class="g7-btn-outline">📊 Usage Report</button>
+      <button class="g7-btn-outline">💳 Generate Invoice</button>
+      <button class="g7-btn-outline">🔑 API Keys</button>
+    </div>
+
   </div>
 </div>

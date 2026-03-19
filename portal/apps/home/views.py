@@ -1,4 +1,5 @@
 """Home views — shell page + HTMX data loader."""
+
 import httpx
 from datetime import datetime
 from django.conf import settings
@@ -11,14 +12,14 @@ from django.http import HttpResponse
 # Group 10 is only for student.eduforge.in — multi-institution aggregation.
 # Group 8 does NOT have a standalone home; parents login through their child's institution portal.
 GROUP_TEMPLATES = {
-    1:  "home/partials/group1_platform_admin.html",
-    2:  "home/partials/group2_chain_admin.html",
-    3:  "home/partials/group3_school.html",
-    4:  "home/partials/group4_college.html",
-    5:  "home/partials/group5_coaching.html",
-    6:  "home/partials/group6_exam_domain.html",
-    7:  "home/partials/group7_tsp.html",
-    9:  "home/partials/group9_b2b_partner.html",
+    1: "home/partials/group1_platform_admin.html",
+    2: "home/partials/group2_chain_admin.html",
+    3: "home/partials/group3_school.html",
+    4: "home/partials/group4_college.html",
+    5: "home/partials/group5_coaching.html",
+    6: "home/partials/group6_exam_domain.html",
+    7: "home/partials/group7_tsp.html",
+    9: "home/partials/group9_b2b_partner.html",
     10: "home/partials/group10_student.html",
 }
 
@@ -191,3 +192,14 @@ def _get_nav_items(portal_group: int, role: str) -> list:
         {"label": "Reports", "url": "/reports/", "icon": "📊"},
         {"label": "Settings", "url": "/settings/", "icon": "⚙️"},
     ]
+
+
+def profile_menu(request):
+    """HTMX: return profile dropdown content."""
+    user = getattr(request, "user_data", {}) or {}
+    return render(request, "partials/profile_menu.html", {"user": user})
+
+
+def notifications(request):
+    """HTMX: return notifications dropdown content."""
+    return render(request, "partials/notifications.html", {"notifications": []})

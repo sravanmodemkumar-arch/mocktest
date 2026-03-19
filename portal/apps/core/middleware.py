@@ -1,34 +1,59 @@
 """Core middleware — tenant resolution + JWT auth check."""
+
+import os
 import httpx
 from django.conf import settings
 from django.shortcuts import redirect
 from django.utils.deprecation import MiddlewareMixin
 
+# When set, overrides the portal_group returned by the tenant service.
+# Used by scripts/run_portals.py to run one Django instance per group.
+_DEV_PORTAL_GROUP = (
+    int(os.environ["DEV_PORTAL_GROUP"]) if os.environ.get("DEV_PORTAL_GROUP") else None
+)
+
 # Routes that don't require authentication
 PUBLIC_PATHS = {
-    "/login/", "/login/password/",
-    "/otp/send/", "/otp/verify/", "/otp/verify/submit/",
-    "/forgot-password/", "/forgot-password/request/", "/forgot-password/verify/",
+    "/login/",
+    "/login/password/",
+    "/otp/send/",
+    "/otp/verify/",
+    "/otp/verify/submit/",
+    "/forgot-password/",
+    "/forgot-password/request/",
+    "/forgot-password/verify/",
     "/reset-password/",
-    "/register/", "/register/submit/",
+    "/register/",
+    "/register/submit/",
     "/account-blocked/",
-    "/static/", "/favicon.ico", "/health/",
+    "/static/",
+    "/favicon.ico",
+    "/health/",
 }
 
 # Roles that require 2FA after OTP
 TWO_FA_ROLES = {
     # Group 1 — Platform
-    "platform_admin", "platform_owner", "platform_ops",
+    "platform_admin",
+    "platform_owner",
+    "platform_ops",
     # Group 2 — Chain
-    "chain_owner", "chain_ceo", "chain_cto",
+    "chain_owner",
+    "chain_ceo",
+    "chain_cto",
     # Group 3 — School
-    "principal", "school_admin", "school_owner",
+    "principal",
+    "school_admin",
+    "school_owner",
     # Group 4 — College
-    "college_principal", "college_admin",
+    "college_principal",
+    "college_admin",
     # Group 5 — Coaching
-    "coaching_director", "center_head",
+    "coaching_director",
+    "center_head",
     # Group 7 — TSP
-    "tsp_owner", "tsp_admin",
+    "tsp_owner",
+    "tsp_admin",
 }
 
 
@@ -65,6 +90,10 @@ class TenantMiddleware(MiddlewareMixin):
                     "name": "EduForge",
                     "branding": {"primary": "#1A237E"},
                 }
+
+        if _DEV_PORTAL_GROUP is not None:
+            tenant = dict(tenant)
+            tenant["portal_group"] = _DEV_PORTAL_GROUP
 
         request.tenant = tenant
 

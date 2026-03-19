@@ -1,0 +1,7 @@
+{% if notifications %}
+  {% for n in notifications %}
+  <div class="px-4 py-3 border-b border-gray-100 text-sm text-gray-700">{{ n.message }}</div>
+  {% endfor %}
+{% else %}
+  <div class="px-4 py-4 text-sm text-gray-400 text-center">No new notifications</div>
+{% endif %}
