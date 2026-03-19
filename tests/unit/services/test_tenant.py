@@ -14,21 +14,24 @@ pytestmark = pytest.mark.unit
 
 
 class TestFirstPartyDomains:
-    @pytest.mark.parametrize("domain,expected_group,expected_slug", [
-        ("admin.eduforge.in",    1,  "platform-admin"),
-        ("app.eduforge.in",      2,  "chain-admin"),
-        ("ssc.eduforge.in",      6,  "ssc-domain"),
-        ("rrb.eduforge.in",      6,  "rrb-domain"),
-        ("upsc.eduforge.in",     6,  "upsc-domain"),
-        ("banking.eduforge.in",  6,  "banking-domain"),
-        ("ap.eduforge.in",       6,  "ap-board"),
-        ("ts.eduforge.in",       6,  "ts-board"),
-        ("partners.eduforge.in", 9,  "partner-portal"),
-        ("student.eduforge.in",  10, "student-unified"),
-        ("parent.eduforge.in",   8,  "parent-portal"),
-        ("localhost",            1,  "default"),
-        ("127.0.0.1",            1,  "default"),
-    ])
+    @pytest.mark.parametrize(
+        "domain,expected_group,expected_slug",
+        [
+            ("admin.eduforge.in", 1, "platform-admin"),
+            ("app.eduforge.in", 2, "chain-admin"),
+            ("ssc.eduforge.in", 6, "ssc-domain"),
+            ("rrb.eduforge.in", 6, "rrb-domain"),
+            ("upsc.eduforge.in", 6, "upsc-domain"),
+            ("banking.eduforge.in", 6, "banking-domain"),
+            ("ap.eduforge.in", 6, "ap-board"),
+            ("ts.eduforge.in", 6, "ts-board"),
+            ("partners.eduforge.in", 9, "partner-portal"),
+            ("student.eduforge.in", 10, "student-unified"),
+            ("parent.eduforge.in", 8, "parent-portal"),
+            ("localhost", 1, "default"),
+            ("127.0.0.1", 1, "default"),
+        ],
+    )
     def test_first_party_domain_resolves(self, domain, expected_group, expected_slug):
         from tenant.main import FIRST_PARTY_DOMAINS
         assert domain in FIRST_PARTY_DOMAINS
@@ -117,8 +120,12 @@ class TestTenantCacheHeaders:
         from tenant.main import app
         from httpx import AsyncClient, ASGITransport
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.get("/api/v1/tenant/config", params={"domain": "ssc.eduforge.in"})
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(
+                "/api/v1/tenant/config", params={"domain": "ssc.eduforge.in"}
+            )
 
         assert resp.status_code == 200
         data = resp.json()
@@ -130,8 +137,12 @@ class TestTenantCacheHeaders:
         from tenant.main import app
         from httpx import AsyncClient, ASGITransport
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.get("/api/v1/tenant/config", params={"domain": "ssc.eduforge.in"})
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(
+                "/api/v1/tenant/config", params={"domain": "ssc.eduforge.in"}
+            )
 
         cc = resp.headers.get("Cache-Control", "")
         assert "s-maxage=3600" in cc
@@ -171,8 +182,12 @@ class TestTenantCacheHeaders:
         from tenant.main import app
         from httpx import AsyncClient, ASGITransport
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.get("/api/v1/tenant/config", params={"domain": "localhost"})
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(
+                "/api/v1/tenant/config", params={"domain": "localhost"}
+            )
 
         data = resp.json()
         assert "branding" in data
@@ -184,7 +199,9 @@ class TestTenantCacheHeaders:
         from tenant.main import app
         from httpx import AsyncClient, ASGITransport
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             resp = await client.get("/health")
 
         assert resp.status_code == 200

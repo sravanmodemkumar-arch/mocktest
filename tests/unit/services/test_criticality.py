@@ -49,24 +49,27 @@ class TestCriticalityLevels:
 
 
 class TestSectionCriticality:
-    @pytest.mark.parametrize("section,expected_level", [
-        ("live_tests",         Criticality.CRITICAL),
-        ("alerts",             Criticality.CRITICAL),
-        ("fee_status",         Criticality.CRITICAL),
-        ("fee_centre",         Criticality.CRITICAL),
-        ("attendance_entry",   Criticality.REALTIME),
-        ("api_health",         Criticality.REALTIME),
-        ("attendance",         Criticality.HIGH),
-        ("today_schedule",     Criticality.HIGH),
-        ("kpi_bar",            Criticality.MEDIUM),
-        ("marks",              Criticality.MEDIUM),
-        ("upcoming_tests",     Criticality.MEDIUM),
-        ("leaderboard",        Criticality.OFFPEAK),
-        ("ai_study_plan",      Criticality.OFFPEAK),
-        ("weak_topics",        Criticality.OFFPEAK),
-        ("upgrade_banner",     Criticality.STATIC),
-        ("greeting",           Criticality.STATIC),
-    ])
+    @pytest.mark.parametrize(
+        "section,expected_level",
+        [
+            ("live_tests", Criticality.CRITICAL),
+            ("alerts", Criticality.CRITICAL),
+            ("fee_status", Criticality.CRITICAL),
+            ("fee_centre", Criticality.CRITICAL),
+            ("attendance_entry", Criticality.REALTIME),
+            ("api_health", Criticality.REALTIME),
+            ("attendance", Criticality.HIGH),
+            ("today_schedule", Criticality.HIGH),
+            ("kpi_bar", Criticality.MEDIUM),
+            ("marks", Criticality.MEDIUM),
+            ("upcoming_tests", Criticality.MEDIUM),
+            ("leaderboard", Criticality.OFFPEAK),
+            ("ai_study_plan", Criticality.OFFPEAK),
+            ("weak_topics", Criticality.OFFPEAK),
+            ("upgrade_banner", Criticality.STATIC),
+            ("greeting", Criticality.STATIC),
+        ],
+    )
     def test_section_criticality_level(self, section, expected_level):
         assert SECTION_CRITICALITY[section] == expected_level
 
@@ -153,7 +156,9 @@ class TestCacheHeaders:
         assert "immutable" in headers["Cache-Control"]
 
     def test_static_mobile_has_app_version(self):
-        headers = make_cache_headers(86400, Criticality.STATIC, ClientType.MOBILE_IOS, app_version="2.1")
+        headers = make_cache_headers(
+            86400, Criticality.STATIC, ClientType.MOBILE_IOS, app_version="2.1"
+        )
         assert headers.get("X-App-Version-Required") == "2.1"
 
     def test_high_web_stale_while_revalidate(self):

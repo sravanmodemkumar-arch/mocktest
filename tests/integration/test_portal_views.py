@@ -13,7 +13,12 @@ class TestLoginView:
         with patch("apps.core.middleware.httpx.get") as mock_tenant:
             mock_tenant.return_value = MagicMock(
                 status_code=200,
-                json=lambda: {"slug": "test", "portal_group": 3, "name": "Test", "branding": {"primary": "#1565C0"}},
+                json=lambda: {
+                    "slug": "test",
+                    "portal_group": 3,
+                    "name": "Test",
+                    "branding": {"primary": "#1565C0"},
+                },
             )
             resp = client.get("/login/", SERVER_NAME="school.test.com")
         assert resp.status_code == 200
@@ -21,9 +26,15 @@ class TestLoginView:
 
     def test_login_page_has_mobile_input(self, client):
         with patch("apps.core.middleware.httpx.get") as mock_tenant:
-            mock_tenant.return_value = MagicMock(status_code=200, json=lambda: {
-                "slug": "test", "portal_group": 3, "name": "Test", "branding": {}
-            })
+            mock_tenant.return_value = MagicMock(
+                status_code=200,
+                json=lambda: {
+                    "slug": "test",
+                    "portal_group": 3,
+                    "name": "Test",
+                    "branding": {},
+                },
+            )
             resp = client.get("/login/")
         assert b'name="login_id"' in resp.content
 
@@ -35,12 +46,18 @@ class TestLoginView:
 
     def test_login_page_shows_brand_logo(self, client):
         with patch("apps.core.middleware.httpx.get") as mock_tenant:
-            mock_tenant.return_value = MagicMock(status_code=200, json=lambda: {
-                "slug": "xyz-school",
-                "portal_group": 3,
-                "name": "XYZ School",
-                "branding": {"primary": "#1565C0", "logo": "https://cdn.eduforge.in/logos/xyz.svg"},
-            })
+            mock_tenant.return_value = MagicMock(
+                status_code=200,
+                json=lambda: {
+                    "slug": "xyz-school",
+                    "portal_group": 3,
+                    "name": "XYZ School",
+                    "branding": {
+                        "primary": "#1565C0",
+                        "logo": "https://cdn.eduforge.in/logos/xyz.svg",
+                    },
+                },
+            )
             resp = client.get("/login/", SERVER_NAME="www.xyzschool.com")
         assert b"XYZ School" in resp.content
 
