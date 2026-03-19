@@ -6,18 +6,18 @@ forgot-password, and session reauth flows.
 
 import pytest
 from unittest.mock import patch, MagicMock
+from django.urls import reverse
 
 pytestmark = [pytest.mark.integration, pytest.mark.django_db]
 
 _ME_OK = {"id": 1, "role": "student", "is_active": True}
+_ME_MOCK = MagicMock(status_code=200, json=lambda: _ME_OK)
 
 
-def _mock_auth_middleware():
-    """Patch the middleware httpx.get (auth/me) to return a valid user."""
-    return patch(
-        "apps.core.middleware.httpx.get",
-        return_value=MagicMock(status_code=200, json=lambda: _ME_OK),
-    )
+def _authed(client, token):
+    """Set up authenticated client: set cookie + patch httpx.get for middleware."""
+    client.cookies["ef_token"] = token
+    return patch("httpx.get", return_value=_ME_MOCK)
 
 
 # ── password_login ──────────────────────────────────────────────────────────
@@ -336,32 +336,31 @@ class TestSelectRole:
 
 class TestProfileSetup:
     def test_setup_profile_renders(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware():
+        with _authed(client, student_token):
             resp = client.get("/setup-profile/")
         assert resp.status_code == 200
 
     def test_profile_save(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware(), patch(
-            "apps.auth_views.views.httpx.post"
-        ) as mock_post:
-            mock_post.return_value = MagicMock(status_code=200)
-            resp = client.post(
-                "/profile/save/",
-                data={"full_name": "Test User", "language": "en"},
-            )
+        with _authed(client, student_token):
+            with patch("apps.auth_views.views.httpx.post") as mock_post:
+                mock_post.return_value = MagicMock(status_code=200)
+                resp = client.post(
+                    "/profile/save/",
+                    data={"full_name": "Test User", "language": "en"},
+                )
         assert resp.status_code == 204
         assert resp["HX-Redirect"] == "/home/"
 
     def test_profile_save_service_down(self, client, student_token):
-        import httpx
+        import httpx as _httpx
 
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware(), patch(
-            "apps.auth_views.views.httpx.post",
-            side_effect=httpx.ConnectError("down"),
+        def _get_ok(url, **kw):
+            return _ME_MOCK
+
+        with patch("httpx.get", side_effect=_get_ok), patch(
+            "httpx.post", side_effect=_httpx.ConnectError("down")
         ):
+            client.cookies["ef_token"] = student_token
             resp = client.post(
                 "/profile/save/",
                 data={"full_name": "Test"},
@@ -375,39 +374,36 @@ class TestProfileSetup:
 
 class TestTwoFA:
     def test_2fa_page_renders(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware():
+        with _authed(client, student_token):
             resp = client.get("/2fa/")
         assert resp.status_code == 200
 
     def test_2fa_verify_success(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware(), patch(
-            "apps.auth_views.views.httpx.post"
-        ) as mock_post:
-            mock_post.return_value = MagicMock(status_code=200)
-            resp = client.post("/2fa/verify/", data={"totp": "123456"})
+        with _authed(client, student_token):
+            with patch("apps.auth_views.views.httpx.post") as mock_post:
+                mock_post.return_value = MagicMock(status_code=200)
+                resp = client.post("/2fa/verify/", data={"totp": "123456"})
         assert resp.status_code == 204
         assert resp["HX-Redirect"] == "/home/"
 
     def test_2fa_verify_wrong_code(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware(), patch(
-            "apps.auth_views.views.httpx.post"
-        ) as mock_post:
-            mock_post.return_value = MagicMock(status_code=401)
-            resp = client.post("/2fa/verify/", data={"totp": "000000"})
+        with _authed(client, student_token):
+            with patch("apps.auth_views.views.httpx.post") as mock_post:
+                mock_post.return_value = MagicMock(status_code=401)
+                resp = client.post("/2fa/verify/", data={"totp": "000000"})
         assert resp.status_code == 401
         assert b"Invalid code" in resp.content
 
     def test_2fa_verify_service_down(self, client, student_token):
-        import httpx
+        import httpx as _httpx
 
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware(), patch(
-            "apps.auth_views.views.httpx.post",
-            side_effect=httpx.ConnectError("down"),
+        def _get_ok(url, **kw):
+            return _ME_MOCK
+
+        with patch("httpx.get", side_effect=_get_ok), patch(
+            "httpx.post", side_effect=_httpx.ConnectError("down")
         ):
+            client.cookies["ef_token"] = student_token
             resp = client.post("/2fa/verify/", data={"totp": "123456"})
         assert resp.status_code == 503
 
@@ -484,12 +480,10 @@ class TestRegister:
 
 class TestLogout:
     def test_logout_clears_cookies(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware(), patch(
-            "apps.auth_views.views.httpx.post"
-        ) as mock_post:
-            mock_post.return_value = MagicMock(status_code=200)
-            resp = client.get("/logout/")
+        with _authed(client, student_token):
+            with patch("apps.auth_views.views.httpx.post") as mock_post:
+                mock_post.return_value = MagicMock(status_code=200)
+                resp = client.get("/logout/")
         assert resp.status_code == 302
         assert "/login/" in resp["Location"]
 
@@ -500,13 +494,15 @@ class TestLogout:
         assert "/login/" in resp["Location"]
 
     def test_logout_service_down(self, client, student_token):
-        import httpx
+        import httpx as _httpx
 
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware(), patch(
-            "apps.auth_views.views.httpx.post",
-            side_effect=httpx.ConnectError("down"),
+        def _get_ok(url, **kw):
+            return _ME_MOCK
+
+        with patch("httpx.get", side_effect=_get_ok), patch(
+            "httpx.post", side_effect=_httpx.ConnectError("down")
         ):
+            client.cookies["ef_token"] = student_token
             resp = client.get("/logout/")
         assert resp.status_code == 302
 
@@ -516,14 +512,12 @@ class TestLogout:
 
 class TestSessionReauth:
     def test_reauth_get_renders(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware():
+        with _authed(client, student_token):
             resp = client.get("/session/reauth/")
         assert resp.status_code == 200
 
     def test_reauth_post_delegates_to_password_login(self, client, student_token):
-        client.cookies["ef_token"] = student_token
-        with _mock_auth_middleware():
+        with _authed(client, student_token):
             resp = client.post(
                 "/session/reauth/", data={"login_id": "", "password": ""}
             )
@@ -566,6 +560,7 @@ class TestForgotPassword:
         assert resp.status_code == 200
 
     def test_verify_reset_otp_success(self, client):
+        url = reverse("forgot_password_verify")
         session = client.session
         session["reset_email"] = "user@test.com"
         session.save()
@@ -575,35 +570,32 @@ class TestForgotPassword:
                 status_code=200,
                 json=lambda: {"reset_token": "rst-tok"},
             )
-            resp = client.post(
-                "/forgot-password/verify/",
-                data={"otp": "123456"},
-            )
+            resp = client.post(url, data={"otp": "123456"})
 
         assert resp.status_code == 204
         assert resp["HX-Redirect"] == "/reset-password/"
 
     def test_verify_reset_otp_wrong(self, client):
+        url = reverse("forgot_password_verify")
         session = client.session
         session["reset_email"] = "user@test.com"
         session.save()
 
         with patch("apps.auth_views.views.httpx.post") as mock_post:
             mock_post.return_value = MagicMock(status_code=401)
-            resp = client.post(
-                "/forgot-password/verify/",
-                data={"otp": "000000"},
-            )
+            resp = client.post(url, data={"otp": "000000"})
 
         assert resp.status_code == 401
 
     def test_verify_reset_otp_missing_email(self, client):
-        resp = client.post("/forgot-password/verify/", data={"otp": "123456"})
+        url = reverse("forgot_password_verify")
+        resp = client.post(url, data={"otp": "123456"})
         assert resp.status_code == 400
 
     def test_verify_reset_otp_service_down(self, client):
         import httpx
 
+        url = reverse("forgot_password_verify")
         session = client.session
         session["reset_email"] = "user@test.com"
         session.save()
@@ -612,10 +604,7 @@ class TestForgotPassword:
             "apps.auth_views.views.httpx.post",
             side_effect=httpx.ConnectError("down"),
         ):
-            resp = client.post(
-                "/forgot-password/verify/",
-                data={"otp": "123456"},
-            )
+            resp = client.post(url, data={"otp": "123456"})
 
         assert resp.status_code == 503
 
