@@ -44,6 +44,10 @@ safety==3.2.11
 # Assertions
 dirty-equals==0.8.0
 
+# Local dev server (scripts/dev_server.py)
+uvicorn==0.32.0
+aiosqlite==0.20.0
+
 # Code quality
 black==24.3.0
 flake8==7.0.0
