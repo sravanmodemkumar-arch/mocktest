@@ -15,8 +15,12 @@ class TestLoginCriticalPath:
         with patch("apps.core.middleware.httpx.get") as mock:
             mock.return_value = MagicMock(
                 status_code=200,
-                json=lambda: {"slug": "default", "portal_group": 3,
-                              "name": "Test School", "branding": {"primary": "#1565C0"}},
+                json=lambda: {
+                    "slug": "default",
+                    "portal_group": 3,
+                    "name": "Test School",
+                    "branding": {"primary": "#1565C0"},
+                },
             )
             resp = client.get("/login/")
         assert resp.status_code == 200
@@ -36,8 +40,10 @@ class TestLoginCriticalPath:
     def test_password_login_handles_identity_service_down(self, client):
         """Identity service failure must return a user-friendly error, not 500."""
         import httpx
-        with patch("apps.auth_views.views.httpx.post",
-                   side_effect=httpx.ConnectError("down")):
+        with patch(
+            "apps.auth_views.views.httpx.post",
+            side_effect=httpx.ConnectError("down"),
+        ):
             resp = client.post(
                 "/login/password/",
                 data={"login_id": "9876543210", "password": "Test@1234"},
@@ -58,8 +64,12 @@ class TestLoginCriticalPath:
         with patch("apps.core.middleware.httpx.get") as mock:
             mock.return_value = MagicMock(
                 status_code=200,
-                json=lambda: {"slug": "ssc", "portal_group": 6,
-                              "name": "SSC Domain", "branding": {}},
+                json=lambda: {
+                    "slug": "ssc",
+                    "portal_group": 6,
+                    "name": "SSC Domain",
+                    "branding": {},
+                },
             )
             resp = client.get("/register/")
         assert resp.status_code == 200

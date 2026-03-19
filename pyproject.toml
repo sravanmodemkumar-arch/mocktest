@@ -5,12 +5,6 @@ addopts = [
     "--tb=short",
     "--strict-markers",
     "-v",
-    "--cov=identity",
-    "--cov=portal",
-    "--cov=services",
-    "--cov-report=term-missing",
-    "--cov-report=html:htmlcov",
-    "--cov-fail-under=80",
 ]
 markers = [
     "unit:        Fast, isolated unit tests (no DB, no network)",

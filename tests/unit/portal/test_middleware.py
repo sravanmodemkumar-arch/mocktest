@@ -67,7 +67,10 @@ class TestTenantMiddleware:
         request = factory.get("/home/", SERVER_NAME="custom.school.com")
         request.session = {}
 
-        with patch("apps.core.middleware.httpx.get", side_effect=httpx.TimeoutException("timeout")):
+        with patch(
+            "apps.core.middleware.httpx.get",
+            side_effect=httpx.TimeoutException("timeout"),
+        ):
             middleware = TenantMiddleware(get_response=lambda r: None)
             middleware.process_request(request)
 

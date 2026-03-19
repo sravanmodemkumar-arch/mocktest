@@ -53,8 +53,10 @@ class TestCrossTenantIsolation:
     def test_no_tenant_data_in_error_responses(self, client):
         """Error pages must not leak tenant configuration details."""
         import httpx
-        with patch("apps.core.middleware.httpx.get",
-                   side_effect=httpx.TimeoutException("timeout")):
+        with patch(
+            "apps.core.middleware.httpx.get",
+            side_effect=httpx.TimeoutException("timeout"),
+        ):
             resp = client.get("/login/")
         # Response must not contain internal service URLs or config
         assert b"TENANT_SERVICE_URL" not in resp.content
@@ -116,8 +118,12 @@ class TestPublicRouteAccess:
         with patch("apps.core.middleware.httpx.get") as mock:
             mock.return_value = MagicMock(
                 status_code=200,
-                json=lambda: {"slug": "default", "portal_group": 3,
-                              "name": "Test", "branding": {}},
+                json=lambda: {
+                    "slug": "default",
+                    "portal_group": 3,
+                    "name": "Test",
+                    "branding": {},
+                },
             )
             resp = client.get(path)
         assert resp.status_code in (200, 302)  # 302 is ok for register on non-group-6
