@@ -176,11 +176,6 @@
       </div>
     </div>
     <div class="flex items-center justify-between gap-2">
-      {% for day_letter in "M,T,W,T,F,S,S"|split:"," %}
-      <div class="flex flex-col items-center gap-1.5">
-        <div class="g10-streak-dot {% cycle 'g10-streak-filled' 'g10-streak-filled' 'g10-streak-filled' 'g10-streak-filled' 'g10-streak-filled' 'g10-streak-empty' 'g10-streak-empty' %}">{{ day_letter }}</div>
-      </div>
-      {% empty %}
       <div class="flex flex-col items-center gap-1.5"><div class="g10-streak-dot g10-streak-filled">M</div></div>
       <div class="flex flex-col items-center gap-1.5"><div class="g10-streak-dot g10-streak-filled">T</div></div>
       <div class="flex flex-col items-center gap-1.5"><div class="g10-streak-dot g10-streak-filled">W</div></div>
@@ -188,7 +183,6 @@
       <div class="flex flex-col items-center gap-1.5"><div class="g10-streak-dot g10-streak-filled">F</div></div>
       <div class="flex flex-col items-center gap-1.5"><div class="g10-streak-dot g10-streak-empty">S</div></div>
       <div class="flex flex-col items-center gap-1.5"><div class="g10-streak-dot g10-streak-empty">S</div></div>
-      {% endfor %}
     </div>
     <!-- Fallback: always render the week dots -->
     <div id="g10-streak-fallback" class="flex items-center justify-between gap-2 mt-2">

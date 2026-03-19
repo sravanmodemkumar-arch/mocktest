@@ -127,7 +127,6 @@
             </div>
           </div>
           {% endfor %}{% empty %}
-          {% for pair in "Monday|78,Tuesday|85,Wednesday|91,Thursday|88,Friday|72,Saturday|45,Sunday|30"|split:"," %}
           <div>
             <div class="flex justify-between mb-1">
               <span class="g1-mono text-xs text-slate-400">Monday</span>
@@ -135,16 +134,14 @@
             </div>
             <div style="background:#0f172a;border-radius:3px;height:18px;overflow:hidden;"><div class="g1-bar-fill" style="--bw:78%;width:78%;"></div></div>
           </div>
-          {% endfor %}
           <!-- Fallback static bars -->
-          {% if not sections %}
           <div><div class="flex justify-between mb-1"><span class="g1-mono text-xs text-slate-400">Monday</span><span class="g1-mono text-xs" style="color:#00ff88;">78%</span></div><div style="background:#0f172a;border-radius:3px;height:18px;overflow:hidden;"><div class="g1-bar-fill" style="--bw:78%;width:78%;"></div></div></div>
           <div><div class="flex justify-between mb-1"><span class="g1-mono text-xs text-slate-400">Tuesday</span><span class="g1-mono text-xs" style="color:#00ff88;">85%</span></div><div style="background:#0f172a;border-radius:3px;height:18px;overflow:hidden;"><div class="g1-bar-fill" style="--bw:85%;width:85%;"></div></div></div>
           <div><div class="flex justify-between mb-1"><span class="g1-mono text-xs text-slate-400">Wednesday</span><span class="g1-mono text-xs" style="color:#00ff88;">91%</span></div><div style="background:#0f172a;border-radius:3px;height:18px;overflow:hidden;"><div class="g1-bar-fill" style="--bw:91%;width:91%;"></div></div></div>
           <div><div class="flex justify-between mb-1"><span class="g1-mono text-xs text-slate-400">Thursday</span><span class="g1-mono text-xs" style="color:#00ff88;">88%</span></div><div style="background:#0f172a;border-radius:3px;height:18px;overflow:hidden;"><div class="g1-bar-fill" style="--bw:88%;width:88%;"></div></div></div>
           <div><div class="flex justify-between mb-1"><span class="g1-mono text-xs text-slate-400">Friday</span><span class="g1-mono text-xs" style="color:#00ff88;">72%</span></div><div style="background:#0f172a;border-radius:3px;height:18px;overflow:hidden;"><div class="g1-bar-fill" style="--bw:72%;width:72%;"></div></div></div>
           <div><div class="flex justify-between mb-1"><span class="g1-mono text-xs text-slate-400">Saturday</span><span class="g1-mono text-xs" style="color:#00ff88;">45%</span></div><div style="background:#0f172a;border-radius:3px;height:18px;overflow:hidden;"><div class="g1-bar-fill" style="--bw:45%;width:45%;"></div></div></div>
-          {% endif %}
+          {% endfor %}
         </div>
       </div>
 
@@ -155,9 +152,6 @@
           <span class="g1-mono text-xs px-3 py-1 rounded-full" style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:#00ff88;">5/6 Nominal</span>
         </div>
         <div class="space-y-0">
-          {% for row in "API Gateway|green|99.99%,Database Cluster|green|100.0%,Auth Service|green|99.97%,CDN / Media|yellow|97.3%,Background Jobs|green|100.0%,Email Delivery|red|Degraded"|split:"," %}
-          <!-- static fallback rendered below -->
-          {% endfor %}
           <div class="flex items-center justify-between py-2 border-b border-slate-800"><span class="text-sm text-slate-300">API Gateway</span><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#4ade80;box-shadow:0 0 7px #4ade80;"></span><span class="g1-mono text-sm font-semibold" style="color:#00ff88;">99.99%</span></div></div>
           <div class="flex items-center justify-between py-2 border-b border-slate-800"><span class="text-sm text-slate-300">Database Cluster</span><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#4ade80;box-shadow:0 0 7px #4ade80;"></span><span class="g1-mono text-sm font-semibold" style="color:#00ff88;">100%</span></div></div>
           <div class="flex items-center justify-between py-2 border-b border-slate-800"><span class="text-sm text-slate-300">Auth Service</span><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#4ade80;box-shadow:0 0 7px #4ade80;"></span><span class="g1-mono text-sm font-semibold" style="color:#00ff88;">99.97%</span></div></div>

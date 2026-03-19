@@ -54,6 +54,10 @@ ASGI_APPLICATION = "portal.asgi.application"
 
 import sys as _sys
 
+# During testing allow any host — tests use arbitrary domains (school.test.com etc.)
+if "pytest" in _sys.modules:
+    ALLOWED_HOSTS = ["*"]
+
 # Signed cookies in production (stateless). DB-backed only during testing so
 # Django's test client can set session data via client.session.
 SESSION_ENGINE = (

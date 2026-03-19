@@ -547,9 +547,6 @@
           </div>
         </div>
         <div class="mt-4 flex justify-center gap-2">
-          {% for d in "M,T,W,T,F,S,S"|split:"," %}
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {% cycle '' '' '' '' '' 'opacity-40' 'opacity-40' %}" style="background:{% cycle 'rgba(245,158,11,.8)' 'rgba(245,158,11,.8)' 'rgba(245,158,11,.8)' 'rgba(245,158,11,.8)' 'rgba(245,158,11,.8)' 'rgba(255,255,255,.15)' 'rgba(255,255,255,.15)' %};color:#fff;">{{ d }}</div>
-          {% empty %}
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:rgba(245,158,11,.8);">M</div>
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:rgba(245,158,11,.8);">T</div>
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:rgba(245,158,11,.8);">W</div>
@@ -557,7 +554,6 @@
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:rgba(245,158,11,.8);">F</div>
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white opacity-40" style="background:rgba(255,255,255,.15);">S</div>
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white opacity-40" style="background:rgba(255,255,255,.15);">S</div>
-          {% endfor %}
         </div>
       </div>
     </div>
