@@ -3,6 +3,11 @@ from . import views
 
 urlpatterns = [
     path("login/",               views.login_view,         name="login"),
+    path("login/password/",      views.password_login,     name="password_login"),
+    path("forgot-password/",          views.forgot_password_view,        name="forgot_password"),
+    path("forgot-password/request/",  views.forgot_password_request,     name="forgot_password_request"),
+    path("forgot-password/verify/",   views.forgot_password_verify_otp,  name="forgot_password_verify"),
+    path("reset-password/",           views.reset_password_view,         name="reset_password"),
     path("otp/send/",            views.otp_send,           name="otp_send"),
     path("otp/verify/",          views.otp_verify_view,    name="otp_verify"),
     path("otp/verify/submit/",   views.otp_verify_submit,  name="otp_verify_submit"),

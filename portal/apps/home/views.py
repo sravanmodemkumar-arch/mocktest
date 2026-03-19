@@ -6,7 +6,10 @@ from django.shortcuts import render
 from django.http import HttpResponse
 
 
-# Map portal group → template partial
+# Map portal group → template partial.
+# Parents (role=parent) and students (role=student) access via institution portals (groups 3/4/5).
+# Group 10 is only for student.eduforge.in — multi-institution aggregation.
+# Group 8 does NOT have a standalone home; parents login through their child's institution portal.
 GROUP_TEMPLATES = {
     1:  "home/partials/group1_platform_admin.html",
     2:  "home/partials/group2_chain_admin.html",
@@ -15,7 +18,6 @@ GROUP_TEMPLATES = {
     5:  "home/partials/group5_coaching.html",
     6:  "home/partials/group6_exam_domain.html",
     7:  "home/partials/group7_tsp.html",
-    8:  "home/partials/group8_parent.html",
     9:  "home/partials/group9_b2b_partner.html",
     10: "home/partials/group10_student.html",
 }
@@ -52,8 +54,8 @@ def home_data(request):
     except Exception:
         pass
 
-    # Determine template
-    template = GROUP_TEMPLATES.get(portal_group, GROUP_TEMPLATES[10])
+    # Determine template — group 8 (parent) has no standalone home; fallback to group 3 (school)
+    template = GROUP_TEMPLATES.get(portal_group, GROUP_TEMPLATES[3])
 
     # Build time-of-day greeting
     hour = datetime.now().hour
@@ -95,8 +97,27 @@ def _get_nav_items(portal_group: int, role: str) -> list:
     """Return nav items for a given portal group + role."""
     base = [{"label": "Home", "url": "/home/", "icon": "🏠"}]
 
-    if portal_group == 3:  # School
-        if "principal" in role or "admin" in role:
+    if portal_group == 1:  # Platform Admin
+        return base + [
+            {"label": "Institutions", "url": "/institutions/", "icon": "🏛️"},
+            {"label": "Chain Admins", "url": "/chain-admins/", "icon": "🔗"},
+            {"label": "Billing", "url": "/billing/", "icon": "💳"},
+            {"label": "Audit Logs", "url": "/audit-logs/", "icon": "📋"},
+            {"label": "Settings", "url": "/settings/", "icon": "⚙️"},
+        ]
+
+    if portal_group == 2:  # Chain Admin
+        return base + [
+            {"label": "Branches", "url": "/branches/", "icon": "🏫"},
+            {"label": "Fee Collection", "url": "/fee-collection/", "icon": "💰"},
+            {"label": "Staff Transfer", "url": "/staff-transfer/", "icon": "🔄"},
+            {"label": "Exam Schedule", "url": "/exam-schedule/", "icon": "📝"},
+            {"label": "Reports", "url": "/reports/", "icon": "📊"},
+            {"label": "Settings", "url": "/settings/", "icon": "⚙️"},
+        ]
+
+    if portal_group in (3, 4, 5):  # School / College / Coaching — role matters
+        if role in ("principal", "director", "admin", "vice_principal"):
             return base + [
                 {"label": "Students", "url": "/students/", "icon": "👨‍🎓"},
                 {"label": "Staff", "url": "/staff/", "icon": "👩‍🏫"},
@@ -106,22 +127,31 @@ def _get_nav_items(portal_group: int, role: str) -> list:
                 {"label": "Reports", "url": "/reports/", "icon": "📊"},
                 {"label": "Settings", "url": "/settings/", "icon": "⚙️"},
             ]
-        elif "teacher" in role:
+        if role in ("teacher", "faculty", "hod"):
             return base + [
                 {"label": "My Classes", "url": "/classes/", "icon": "🏫"},
                 {"label": "Attendance", "url": "/attendance/", "icon": "📅"},
                 {"label": "Marks", "url": "/marks/", "icon": "📝"},
                 {"label": "Students", "url": "/students/", "icon": "👨‍🎓"},
             ]
-        else:  # student
+        if role == "parent":
+            # Parents access via institution portal — no standalone portal
             return base + [
-                {"label": "My Tests", "url": "/tests/", "icon": "📝"},
-                {"label": "Results", "url": "/results/", "icon": "📊"},
-                {"label": "Notes", "url": "/notes/", "icon": "📚"},
-                {"label": "Fee", "url": "/fees/", "icon": "💰"},
+                {"label": "My Ward", "url": "/ward/", "icon": "👧"},
+                {"label": "Attendance", "url": "/attendance/ward/", "icon": "📅"},
+                {"label": "Results", "url": "/results/ward/", "icon": "📊"},
+                {"label": "Fees", "url": "/fees/pay/", "icon": "💰"},
+                {"label": "Messages", "url": "/messages/", "icon": "💬"},
             ]
+        # student role within institution portal
+        return base + [
+            {"label": "My Schedule", "url": "/schedule/", "icon": "📅"},
+            {"label": "Results", "url": "/results/", "icon": "📊"},
+            {"label": "Attendance", "url": "/attendance/", "icon": "📅"},
+            {"label": "Fee", "url": "/fees/", "icon": "💰"},
+        ]
 
-    elif portal_group == 6:  # Exam domain
+    if portal_group == 6:  # Exam Domain
         return base + [
             {"label": "Test Series", "url": "/tests/", "icon": "📝"},
             {"label": "My Performance", "url": "/performance/", "icon": "📊"},
@@ -131,16 +161,32 @@ def _get_nav_items(portal_group: int, role: str) -> list:
             {"label": "Subscription", "url": "/subscription/", "icon": "💳"},
         ]
 
-    elif portal_group == 8:  # Parent
+    if portal_group == 7:  # TSP
         return base + [
-            {"label": "My Children", "url": "/children/", "icon": "👧"},
-            {"label": "Attendance", "url": "/attendance/", "icon": "📅"},
-            {"label": "Results", "url": "/results/", "icon": "📊"},
-            {"label": "Fees", "url": "/fees/", "icon": "💰"},
-            {"label": "Messages", "url": "/messages/", "icon": "💬"},
+            {"label": "Clients", "url": "/clients/", "icon": "🏛️"},
+            {"label": "Branding", "url": "/white-label/configure/", "icon": "🎨"},
+            {"label": "API Keys", "url": "/api/keys/", "icon": "🔑"},
+            {"label": "Billing", "url": "/billing/tsp/", "icon": "💳"},
+            {"label": "Analytics", "url": "/analytics/", "icon": "📊"},
         ]
 
-    # Default
+    if portal_group == 9:  # B2B Partner
+        return base + [
+            {"label": "Content", "url": "/content/", "icon": "📚"},
+            {"label": "Analytics", "url": "/analytics/", "icon": "📊"},
+            {"label": "Payouts", "url": "/payouts/", "icon": "💰"},
+            {"label": "Settings", "url": "/settings/", "icon": "⚙️"},
+        ]
+
+    if portal_group == 10:  # Student Unified
+        return base + [
+            {"label": "My Institutions", "url": "/institutions/", "icon": "🏛️"},
+            {"label": "Schedule", "url": "/schedule/", "icon": "📅"},
+            {"label": "Results", "url": "/results/", "icon": "📊"},
+            {"label": "Deadlines", "url": "/deadlines/", "icon": "⏰"},
+        ]
+
+    # Default fallback
     return base + [
         {"label": "Reports", "url": "/reports/", "icon": "📊"},
         {"label": "Settings", "url": "/settings/", "icon": "⚙️"},

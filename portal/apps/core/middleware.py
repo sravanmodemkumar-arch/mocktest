@@ -6,7 +6,12 @@ from django.utils.deprecation import MiddlewareMixin
 
 # Routes that don't require authentication
 PUBLIC_PATHS = {
-    "/login/", "/otp/verify/", "/register/", "/account-blocked/",
+    "/login/", "/login/password/",
+    "/otp/send/", "/otp/verify/", "/otp/verify/submit/",
+    "/forgot-password/", "/forgot-password/request/", "/forgot-password/verify/",
+    "/reset-password/",
+    "/register/", "/register/submit/",
+    "/account-blocked/",
     "/static/", "/favicon.ico", "/health/",
 }
 

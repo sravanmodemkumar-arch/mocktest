@@ -1,0 +1,108 @@
+<!-- Group 7: TSP White-Label Portal (Technology Service Provider) -->
+
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">
+      Good {{ greeting_time }}, {{ user.name|default:"there" }}!
+    </h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
+  </div>
+  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
+        style="background-color: {{ primary_color }};">
+    {{ user.role_display|default:"TSP Admin" }}
+  </span>
+</div>
+
+{% if alerts %}
+<div class="space-y-2 mb-6">
+  {% for alert in alerts %}
+  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
+              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
+              {% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
+    <span>{% if alert.level == 'critical' %}🔴{% else %}🟡{% endif %}</span>
+    <span>{{ alert.message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if kpis %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {% for kpi in kpis %}
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
+    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
+    {% if kpi.trend %}
+    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">{{ kpi.trend }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Client Institutions -->
+<div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-semibold text-gray-800">Client Institutions</h2>
+    <a href="/clients/" class="text-sm text-indigo-600 hover:underline">View all</a>
+  </div>
+  <div class="space-y-3">
+    {% for client in client_institutions|default:'' %}
+    <div class="flex items-center gap-4 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition"
+         onclick="location.href='/clients/{{ client.id }}/'">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+           style="background-color: {{ primary_color }};">
+        {{ client.name|slice:":2"|upper }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-medium text-gray-900 text-sm truncate">{{ client.name }}</p>
+        <p class="text-xs text-gray-500">{{ client.type }} · {{ client.student_count }} students</p>
+      </div>
+      <span class="px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0
+                   {% if client.status == 'active' %}bg-green-100 text-green-700
+                   {% elif client.status == 'trial' %}bg-amber-100 text-amber-700
+                   {% else %}bg-gray-100 text-gray-600{% endif %}">
+        {{ client.status|title }}
+      </span>
+    </div>
+    {% empty %}
+    <p class="text-sm text-gray-400 text-center py-4">No client institutions configured</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Integration health + quick actions -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-800 mb-4">API & Integration Health</h2>
+    {% for api in api_health|default:'' %}
+    <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
+      <span class="text-gray-700">{{ api.name }}</span>
+      <div class="flex items-center gap-2">
+        <span class="text-gray-500 text-xs">{{ api.latency_ms }}ms</span>
+        <span class="w-2 h-2 rounded-full {% if api.status == 'ok' %}bg-green-400{% else %}bg-red-400{% endif %}"></span>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-sm text-gray-400">No API health data</p>
+    {% endfor %}
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-800 mb-4">Quick Actions</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <a href="/clients/onboard/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+        <span>🏛️</span> Onboard Client
+      </a>
+      <a href="/white-label/configure/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+        <span>🎨</span> Branding Config
+      </a>
+      <a href="/api/keys/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+        <span>🔑</span> API Keys
+      </a>
+      <a href="/billing/tsp/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+        <span>💳</span> TSP Billing
+      </a>
+    </div>
+  </div>
+</div>

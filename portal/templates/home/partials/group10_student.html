@@ -1,0 +1,110 @@
+<!-- Group 10: Student Unified Portal (student.eduforge.in — multi-institution aggregation) -->
+<!-- Students who study at multiple institutions see a unified view here -->
+
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">
+      Good {{ greeting_time }}, {{ user.name|default:"there" }}!
+    </h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }}</p>
+  </div>
+  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
+        style="background-color: {{ primary_color }};">
+    Student
+  </span>
+</div>
+
+{% if alerts %}
+<div class="space-y-2 mb-6">
+  {% for alert in alerts %}
+  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
+              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
+              {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+    <span>{% if alert.level == 'critical' %}🔴{% else %}ℹ️{% endif %}</span>
+    <span>{{ alert.message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Today snapshot -->
+{% if kpis %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {% for kpi in kpis %}
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
+    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
+    {% if kpi.trend %}
+    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">{{ kpi.trend }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- My Institutions (multi-institution aggregation) -->
+<div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-semibold text-gray-800">My Institutions</h2>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    {% for inst in my_institutions|default:'' %}
+    <a href="{{ inst.portal_url }}" class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+           style="background-color: {{ inst.primary_color|default:'#4F46E5' }};">
+        {{ inst.name|slice:":2"|upper }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-medium text-gray-900 text-sm truncate">{{ inst.name }}</p>
+        <p class="text-xs text-gray-500">{{ inst.type }} · {{ inst.role }}</p>
+      </div>
+      <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </a>
+    {% empty %}
+    <div class="col-span-2 py-8 text-center">
+      <p class="text-gray-400 text-sm">You are not enrolled in any institution yet.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Unified today's schedule across institutions -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-800 mb-3">Today's Schedule</h2>
+    {% for event in today_schedule|default:'' %}
+    <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+      <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ event.time }}</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900">{{ event.title }}</p>
+        <p class="text-xs text-gray-500">{{ event.institution }}</p>
+      </div>
+      <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 flex-shrink-0">
+        {{ event.type }}
+      </span>
+    </div>
+    {% empty %}
+    <p class="text-sm text-gray-400">Nothing scheduled for today</p>
+    {% endfor %}
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-800 mb-3">Upcoming Deadlines</h2>
+    {% for task in upcoming_tasks|default:'' %}
+    <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0
+                  {% if task.urgent %}bg-red-100 text-red-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+        {{ task.days_left }}d
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900 truncate">{{ task.title }}</p>
+        <p class="text-xs text-gray-500">{{ task.institution }}</p>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-sm text-gray-400">No upcoming deadlines</p>
+    {% endfor %}
+  </div>
+</div>
