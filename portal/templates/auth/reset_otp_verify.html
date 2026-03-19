@@ -1,0 +1,94 @@
+<!-- HTMX partial: email OTP verification for password reset -->
+<!-- Replaces #step-email in forgot_password.html -->
+<div id="step-email">
+  <div class="space-y-6">
+    <div>
+      <div class="w-12 h-12 rounded-full flex items-center justify-center mb-4"
+           style="background-color: {{ primary_color }}20;">
+        <svg class="w-6 h-6" style="color: {{ primary_color }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <h3 class="text-xl font-bold text-gray-900">Check your email</h3>
+      <p class="text-sm text-gray-500 mt-1">
+        We sent a 6-digit OTP to <strong>{{ email }}</strong>.
+        It expires in 10 minutes.
+      </p>
+    </div>
+
+    <form hx-post="/forgot-password/verify/"
+          hx-target="#form-response"
+          hx-swap="innerHTML"
+          hx-indicator="#verify-btn"
+          class="space-y-5">
+      {% csrf_token %}
+
+      <!-- 6-box OTP input -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">Enter 6-digit OTP</label>
+        <div class="flex gap-2 justify-between" id="otp-boxes">
+          {% for i in "123456" %}
+          <input type="text"
+                 maxlength="1"
+                 inputmode="numeric"
+                 pattern="[0-9]"
+                 class="otp-box w-12 h-14 text-center text-xl font-bold border border-gray-300 rounded-xl
+                        focus:outline-none focus:ring-2 focus:border-transparent"
+                 style="--tw-ring-color: {{ primary_color }};"
+                 autocomplete="off" />
+          {% endfor %}
+          <input type="hidden" id="otp-value" name="otp" />
+        </div>
+      </div>
+
+      <button type="submit"
+              id="verify-btn"
+              class="w-full py-3 rounded-lg font-semibold text-base text-white
+                     flex items-center justify-center gap-2"
+              style="background-color: {{ primary_color }};">
+        <span class="htmx-indicator">
+          <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+        </span>
+        <span>Verify OTP</span>
+      </button>
+
+      <div id="form-response"></div>
+    </form>
+
+    <p class="text-center text-sm text-gray-500">
+      Didn't receive it?
+      <button type="button"
+              hx-post="/forgot-password/request/"
+              hx-vals='{"email": "{{ email }}"}'
+              hx-target="#step-email"
+              hx-swap="outerHTML"
+              class="font-medium hover:underline ml-1"
+              style="color: {{ primary_color }};">
+        Resend OTP
+      </button>
+    </p>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const boxes = document.querySelectorAll('.otp-box');
+    const hidden = document.getElementById('otp-value');
+
+    boxes.forEach((box, i) => {
+      box.addEventListener('input', e => {
+        const val = e.target.value.replace(/\D/g, '');
+        e.target.value = val;
+        if (val && i < boxes.length - 1) boxes[i + 1].focus();
+        hidden.value = Array.from(boxes).map(b => b.value).join('');
+      });
+      box.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
+      });
+    });
+  })();
+</script>

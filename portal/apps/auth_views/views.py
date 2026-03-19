@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_protect
 
 
 def login_view(request):
-    """GET: render login page. POST: handled by /otp/send/ HTMX endpoint."""
+    """GET: render login page. Auth is password-based; OTP is institution-configurable."""
     if request.COOKIES.get(settings.AUTH_COOKIE_NAME):
         return redirect("/home/")
     return render(request, "auth/login.html")
@@ -16,8 +16,94 @@ def login_view(request):
 
 @require_http_methods(["POST"])
 @csrf_protect
+def password_login(request):
+    """Primary login: mobile/email/username + password.
+    On success: staff/admin roles are redirected to /2fa/, others go to /home/.
+    OTP is a separate configurable flow, not part of primary login.
+    """
+    login_id = request.POST.get("login_id", "").strip()
+    password = request.POST.get("password", "")
+
+    if not login_id or not password:
+        return HttpResponse(
+            '<p class="text-red-600 text-sm">Please enter your mobile/email and password.</p>'
+        )
+
+    try:
+        resp = httpx.post(
+            f"{settings.IDENTITY_SERVICE_URL}/api/v1/auth/login",
+            json={"login_id": login_id, "password": password},
+            timeout=5.0,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            access = data["access_token"]
+            refresh = data["refresh_token"]
+
+            me_resp = httpx.get(
+                f"{settings.IDENTITY_SERVICE_URL}/api/v1/auth/me",
+                headers={"Authorization": f"Bearer {access}"},
+                timeout=3.0,
+            )
+            user = me_resp.json() if me_resp.status_code == 200 else {}
+
+            # Staff/admin roles require 2FA; students/parents go directly home
+            staff_roles = {"principal", "vice_principal", "director", "admin",
+                           "teacher", "faculty", "hod", "chain_admin", "platform_admin"}
+            role = user.get("role", "")
+
+            if role in staff_roles and user.get("requires_2fa", False):
+                next_url = "/2fa/"
+            elif user.get("profile_complete") is False:
+                next_url = "/setup-profile/"
+            elif user.get("has_multiple_roles"):
+                next_url = "/select-role/"
+            else:
+                next_url = request.session.get("login_next", "/home/")
+
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = next_url
+            response.set_cookie(
+                settings.AUTH_COOKIE_NAME, access,
+                httponly=True, samesite="Lax",
+                secure=not settings.DEBUG, max_age=60 * 30,
+            )
+            response.set_cookie(
+                settings.AUTH_COOKIE_REFRESH, refresh,
+                httponly=True, samesite="Lax",
+                secure=not settings.DEBUG, max_age=60 * 60 * 24 * 7,
+            )
+            return response
+
+        elif resp.status_code == 401:
+            return HttpResponse(
+                '<p class="text-red-600 text-sm">Incorrect mobile number or password.</p>'
+            )
+        elif resp.status_code == 423:
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = "/account-blocked/"
+            return response
+        else:
+            return HttpResponse(
+                '<p class="text-red-600 text-sm">Login failed. Please try again.</p>'
+            )
+    except Exception:
+        return HttpResponse(
+            '<p class="text-red-600 text-sm">Service unavailable. Please try again shortly.</p>'
+        )
+
+
+# ---------------------------------------------------------------------------
+# OTP send/verify — institution-configurable, OFF by default.
+# Enabled per-institution from admin panel (tenant.otp_login_enabled flag).
+# Used for critical actions (password reset confirmation, suspicious login, etc.)
+# when the institution enables it. Not part of standard daily login flow.
+# ---------------------------------------------------------------------------
+
+@require_http_methods(["POST"])
+@csrf_protect
 def otp_send(request):
-    """HTMX endpoint: forward OTP send to identity service."""
+    """HTMX: send OTP — only active when institution has otp_login_enabled."""
     mobile = request.POST.get("mobile", "").strip()
     channel = request.POST.get("channel", "whatsapp")
 
@@ -298,5 +384,110 @@ def logout_view(request):
 def session_reauth(request):
     """HTMX: re-authenticate without full page reload."""
     if request.method == "POST":
-        return otp_verify_submit(request)
+        return password_login(request)
     return render(request, "partials/session_expired.html")
+
+
+def forgot_password_view(request):
+    """Render forgot password page (step 1: enter email)."""
+    return render(request, "auth/forgot_password.html")
+
+
+@require_http_methods(["POST"])
+@csrf_protect
+def forgot_password_request(request):
+    """HTMX: send email OTP for password reset.
+    Email OTP is always available regardless of institution's otp_login_enabled setting.
+    """
+    email = request.POST.get("email", "").strip().lower()
+    if not email or "@" not in email:
+        return HttpResponse(
+            '<div id="step-email" hx-swap-oob="true">'
+            '<p class="text-red-600 text-sm">Please enter a valid email address.</p>'
+            "</div>"
+        )
+    try:
+        httpx.post(
+            f"{settings.IDENTITY_SERVICE_URL}/api/v1/auth/password/reset-otp",
+            json={"email": email},
+            timeout=5.0,
+        )
+    except Exception:
+        pass
+
+    # Always show OTP entry screen to prevent email enumeration
+    request.session["reset_email"] = email
+    return render(request, "auth/reset_otp_verify.html", {"email": email})
+
+
+@require_http_methods(["POST"])
+@csrf_protect
+def forgot_password_verify_otp(request):
+    """HTMX: verify email OTP for password reset, then show new password form."""
+    email = request.session.get("reset_email", "")
+    otp = request.POST.get("otp", "").strip()
+
+    if not email or len(otp) != 6:
+        return HttpResponse(
+            '<p class="text-red-600 text-sm">Invalid code. Please enter all 6 digits.</p>',
+            status=400,
+        )
+    try:
+        resp = httpx.post(
+            f"{settings.IDENTITY_SERVICE_URL}/api/v1/auth/password/reset-otp-verify",
+            json={"email": email, "otp": otp},
+            timeout=5.0,
+        )
+        if resp.status_code == 200:
+            reset_token = resp.json().get("reset_token", "")
+            request.session["reset_token"] = reset_token
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = "/reset-password/"
+            return response
+        return HttpResponse(
+            '<p class="text-red-600 text-sm">Incorrect OTP. Please try again.</p>',
+            status=401,
+        )
+    except Exception:
+        return HttpResponse(
+            '<p class="text-red-600 text-sm">Service unavailable. Please try again.</p>',
+            status=503,
+        )
+
+
+def reset_password_view(request):
+    """GET: show new password form. POST: submit new password."""
+    reset_token = request.session.get("reset_token", "")
+    if not reset_token:
+        return redirect("/forgot-password/")
+
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        confirm = request.POST.get("confirm_password", "")
+        if password != confirm or len(password) < 8:
+            return HttpResponse(
+                '<p class="text-red-600 text-sm">'
+                "Passwords must match and be at least 8 characters."
+                "</p>"
+            )
+        try:
+            resp = httpx.post(
+                f"{settings.IDENTITY_SERVICE_URL}/api/v1/auth/password/reset",
+                json={"reset_token": reset_token, "new_password": password},
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                request.session.pop("reset_token", None)
+                request.session.pop("reset_email", None)
+                response = HttpResponse(status=204)
+                response["HX-Redirect"] = "/login/?reset=success"
+                return response
+            return HttpResponse(
+                '<p class="text-red-600 text-sm">Reset failed. Please start again.</p>'
+            )
+        except Exception:
+            return HttpResponse(
+                '<p class="text-red-600 text-sm">Service unavailable.</p>', status=503
+            )
+
+    return render(request, "auth/reset_password.html")

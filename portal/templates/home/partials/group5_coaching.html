@@ -1,0 +1,195 @@
+<!-- Group 5: Coaching Institute Portal — role-aware (director / faculty / student / parent) -->
+
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">
+      Good {{ greeting_time }}, {{ user.name|default:"there" }}!
+    </h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ today_date }} · {{ institution_name }}</p>
+  </div>
+  <span class="hidden sm:block text-sm px-3 py-1 rounded-full font-medium text-white"
+        style="background-color: {{ primary_color }};">
+    {{ user.role_display|default:"Member" }}
+  </span>
+</div>
+
+{% if alerts %}
+<div class="space-y-2 mb-6">
+  {% for alert in alerts %}
+  <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium
+              {% if alert.level == 'critical' %}bg-red-50 text-red-800 border border-red-200
+              {% elif alert.level == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
+              {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+    <span class="flex-shrink-0">
+      {% if alert.level == 'critical' %}🔴{% elif alert.level == 'warning' %}🟡{% else %}ℹ️{% endif %}
+    </span>
+    <span>{{ alert.message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if kpis %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {% for kpi in kpis %}
+  <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-1">
+    <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
+    <p class="text-2xl font-bold text-gray-900">{{ kpi.value }}</p>
+    {% if kpi.trend %}
+    <p class="text-xs {% if '+' in kpi.trend %}text-green-600{% else %}text-red-500{% endif %}">{{ kpi.trend }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if user.role == 'director' or user.role == 'admin' %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-gray-800">Batch Performance</h2>
+        <a href="/batches/" class="text-sm text-indigo-600 hover:underline">All batches</a>
+      </div>
+      {% for batch in batch_performance|default:'' %}
+      <div class="flex items-center gap-4 py-2.5 border-b border-gray-50 last:border-0">
+        <div class="flex-1">
+          <div class="flex justify-between mb-1">
+            <span class="text-sm font-medium text-gray-800">{{ batch.name }}</span>
+            <span class="text-xs text-gray-500">{{ batch.student_count }} students</span>
+          </div>
+          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:{{ batch.avg_score }}%; background-color:{{ primary_color }};"></div>
+          </div>
+        </div>
+        <span class="text-sm font-semibold text-gray-700 w-12 text-right">{{ batch.avg_score }}%</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No batch data available</p>
+      {% endfor %}
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-4">Quick Actions</h2>
+      <div class="space-y-2">
+        <a href="/students/enroll/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>➕</span> Enroll Student
+        </a>
+        <a href="/batches/create/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>📚</span> New Batch
+        </a>
+        <a href="/tests/schedule/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>📝</span> Schedule Test
+        </a>
+        <a href="/fees/pending/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>💰</span> Pending Fees
+        </a>
+        <a href="/reports/monthly/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>📊</span> Monthly Report
+        </a>
+      </div>
+    </div>
+  </div>
+
+{% elif user.role == 'faculty' %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Today's Classes</h2>
+      {% for cls in today_classes|default:'' %}
+      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-900">{{ cls.batch }}</p>
+          <p class="text-xs text-gray-500">{{ cls.subject }} · {{ cls.room }}</p>
+        </div>
+        <a href="/attendance/mark/{{ cls.id }}/"
+           class="text-xs px-2 py-1 rounded-lg text-white font-medium"
+           style="background-color: {{ primary_color }};">Mark</a>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No classes today</p>
+      {% endfor %}
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">My Batches</h2>
+      {% for batch in my_batches|default:'' %}
+      <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
+        <span class="font-medium text-gray-800">{{ batch.name }}</span>
+        <span class="text-gray-500">{{ batch.student_count }} students</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No batches assigned</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% elif user.role == 'student' %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Today's Schedule</h2>
+      {% for cls in today_schedule|default:'' %}
+      <div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+        <span class="text-xs text-gray-500 w-14 flex-shrink-0">{{ cls.time }}</span>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-gray-900">{{ cls.subject }}</p>
+          <p class="text-xs text-gray-500">{{ cls.faculty }}</p>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No classes today</p>
+      {% endfor %}
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Recent Performance</h2>
+      {% for test in recent_tests|default:'' %}
+      <div class="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
+        <div>
+          <p class="text-sm font-medium text-gray-900">{{ test.name }}</p>
+          <p class="text-xs text-gray-500">{{ test.date }}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-sm font-semibold text-gray-900">{{ test.score }}/{{ test.total }}</p>
+          <p class="text-xs text-gray-500">Rank {{ test.rank }}</p>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-400">No test data yet</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% elif user.role == 'parent' %}
+  <!-- Parent view within coaching portal -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-4">Ward Overview — {{ ward.name|default:"Your Child" }}</h2>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-gray-500">Batch</span><span class="font-medium">{{ ward.batch|default:"—" }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Attendance</span>
+          <span class="font-medium {% if ward.attendance_pct < 75 %}text-red-600{% endif %}">
+            {{ ward.attendance_pct|default:"—" }}%
+          </span>
+        </div>
+        <div class="flex justify-between"><span class="text-gray-500">Last Test Rank</span><span class="font-medium">{{ ward.last_rank|default:"—" }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Fee Due</span>
+          <span class="font-medium {% if ward.fee_due %}text-red-600{% endif %}">
+            {% if ward.fee_due %}₹{{ ward.fee_due }}{% else %}Nil{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 class="font-semibold text-gray-800 mb-3">Quick Actions</h2>
+      <div class="space-y-2">
+        <a href="/fees/pay/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>💳</span> Pay Fees
+        </a>
+        <a href="/attendance/ward/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>📅</span> Attendance Details
+        </a>
+        <a href="/results/ward/" class="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
+          <span>📊</span> Test Results
+        </a>
+      </div>
+    </div>
+  </div>
+{% endif %}
