@@ -1,0 +1,45 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Home — {{ tenant_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="flex items-center gap-1">
+  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+  </svg>
+  <span class="text-gray-900 font-medium">Dashboard</span>
+</li>
+{% endblock %}
+
+{% block content %}
+<!-- Home page content loaded dynamically via HTMX based on portal_group + role -->
+<div id="home-content"
+     hx-get="/home/data/"
+     hx-trigger="load"
+     hx-swap="innerHTML"
+     hx-indicator="#home-loader">
+
+  <!-- Loading skeleton -->
+  <div id="home-loader" class="space-y-6 animate-pulse">
+    <!-- Greeting skeleton -->
+    <div class="space-y-2">
+      <div class="h-7 bg-gray-200 rounded w-64"></div>
+      <div class="h-4 bg-gray-100 rounded w-48"></div>
+    </div>
+    <!-- Alert skeleton -->
+    <div class="h-14 bg-gray-100 rounded-xl"></div>
+    <!-- KPI bar skeleton -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for i in "1234" %}
+      <div class="h-24 bg-gray-100 rounded-xl"></div>
+      {% endfor %}
+    </div>
+    <!-- Cards skeleton -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="h-48 bg-gray-100 rounded-xl"></div>
+      <div class="h-48 bg-gray-100 rounded-xl"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -20,8 +20,14 @@ Multi-tenant educational software platform for schools, colleges, coaching insti
 ```
 eduforge/
 ├── identity/       # Auth service — FastAPI (JWT + OTP login)
-├── portal/         # Staff portals — Django + HTMX  [next branch]
-├── exam/           # Exam engine — FastAPI + IndexedDB [next branch]
+├── portal/         # Staff + student portals — Django 4.2 + HTMX 1.9 + Tailwind CDN
+├── services/
+│   ├── auth/       # Auth Lambda — FastAPI + Mangum (CDN bypass)
+│   ├── home/       # Home Lambda — aggregated page data (CDN cached)
+│   └── tenant/     # Tenant Lambda — domain → config (1hr CDN cache)
+├── static/
+│   └── tenants/    # Per-tenant logos, brand.json → Cloudflare R2
+├── infrastructure/ # Serverless deploy config
 ├── scripts/        # DB init scripts
 └── docker-compose.yml
 ```

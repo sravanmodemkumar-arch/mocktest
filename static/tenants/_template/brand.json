@@ -1,0 +1,34 @@
+{
+  "name": "Institution Name",
+  "tagline": "Your Institution Tagline",
+  "portal_group": 3,
+  "colors": {
+    "primary":      "#1A237E",
+    "primary_dark": "#0D1B6E",
+    "accent":       "#FF6F00",
+    "background":   "#FFFFFF",
+    "surface":      "#F5F7FA",
+    "text":         "#1A1A2E",
+    "text_muted":   "#6B7280",
+    "success":      "#2E7D32",
+    "warning":      "#F57F17",
+    "error":        "#C62828"
+  },
+  "font": {
+    "family": "Inter",
+    "heading_weight": 700,
+    "body_weight": 400
+  },
+  "logo": {
+    "light":  "/static/tenants/_template/logo.svg",
+    "dark":   "/static/tenants/_template/logo-dark.svg",
+    "width":  140,
+    "height": 40
+  },
+  "favicon":  "/static/tenants/_template/favicon.ico",
+  "og_image": "/static/tenants/_template/og-image.png",
+  "contact": {
+    "support_email": "support@institution.com",
+    "support_phone": "+91-XXXXXXXXXX"
+  }
+}

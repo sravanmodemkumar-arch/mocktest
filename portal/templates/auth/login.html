@@ -1,0 +1,99 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Login — {{ tenant_name }}{% endblock %}
+
+{% block auth_content %}
+<div class="space-y-8">
+
+  <!-- Header -->
+  <div>
+    <h2 class="text-3xl font-bold text-gray-900">Welcome back</h2>
+    <p class="mt-2 text-gray-500">
+      Enter your mobile number to receive an OTP
+    </p>
+  </div>
+
+  <!-- Login form -->
+  <form id="login-form"
+        hx-post="/otp/send/"
+        hx-target="#form-response"
+        hx-swap="innerHTML"
+        hx-indicator="#send-btn"
+        class="space-y-5">
+    {% csrf_token %}
+
+    <!-- Mobile number input -->
+    <div class="space-y-1">
+      <label for="mobile" class="block text-sm font-medium text-gray-700">
+        Mobile Number
+      </label>
+      <div class="flex rounded-lg border border-gray-300 overflow-hidden
+                  focus-within:ring-2 focus-within:border-brand"
+           style="--tw-ring-color: {{ primary_color }};">
+        <!-- Country code -->
+        <div class="flex items-center px-4 bg-gray-50 border-r border-gray-300 text-gray-600 text-sm font-medium select-none">
+          🇮🇳 +91
+        </div>
+        <!-- Number field -->
+        <input type="tel"
+               id="mobile"
+               name="mobile"
+               placeholder="98765 43210"
+               maxlength="10"
+               pattern="[6-9][0-9]{9}"
+               required
+               autocomplete="tel"
+               class="flex-1 px-4 py-3 text-gray-900 text-base outline-none bg-white placeholder-gray-400"
+               oninput="this.value=this.value.replace(/\D/g,'')" />
+      </div>
+      <p class="text-xs text-gray-400">OTP sent via WhatsApp · SMS fallback available</p>
+    </div>
+
+    <!-- OTP channel toggle (shown after first failed WhatsApp) -->
+    <div id="channel-toggle" class="hidden">
+      <div class="flex gap-3">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input type="radio" name="channel" value="whatsapp" checked class="accent-brand" /> WhatsApp
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input type="radio" name="channel" value="sms" class="accent-brand" /> SMS
+        </label>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit"
+            id="send-btn"
+            class="btn-brand w-full py-3 px-6 rounded-lg font-semibold text-base
+                   flex items-center justify-center gap-2">
+      <span class="htmx-indicator">
+        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </span>
+      <span>Send OTP</span>
+    </button>
+
+    <!-- Form response area (HTMX swaps here) -->
+    <div id="form-response"></div>
+  </form>
+
+  <!-- Self-registration link (shown only for exam domains / self-reg portals) -->
+  {% if portal_group == 6 or portal_group == 10 %}
+  <p class="text-center text-sm text-gray-500">
+    New here?
+    <a href="/register/" class="font-medium text-brand hover:underline">Create account</a>
+  </p>
+  {% endif %}
+
+  <!-- Footer links -->
+  <div class="text-center text-xs text-gray-400 space-y-1">
+    <p>By logging in you agree to our
+      <a href="#" class="underline hover:text-gray-600">Terms of Service</a> and
+      <a href="#" class="underline hover:text-gray-600">Privacy Policy</a>
+    </p>
+  </div>
+
+</div>
+{% endblock %}

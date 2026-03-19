@@ -1,0 +1,34 @@
+{
+  "name": "EduForge",
+  "tagline": "India's Unified Education Platform",
+  "portal_group": 1,
+  "colors": {
+    "primary":      "#1A237E",
+    "primary_dark": "#0D1B6E",
+    "accent":       "#FF6F00",
+    "background":   "#FFFFFF",
+    "surface":      "#F5F7FA",
+    "text":         "#1A1A2E",
+    "text_muted":   "#6B7280",
+    "success":      "#2E7D32",
+    "warning":      "#F57F17",
+    "error":        "#C62828"
+  },
+  "font": {
+    "family": "Inter",
+    "heading_weight": 700,
+    "body_weight": 400
+  },
+  "logo": {
+    "light":  "/static/tenants/default/logo.svg",
+    "dark":   "/static/tenants/default/logo-dark.svg",
+    "width":  140,
+    "height": 40
+  },
+  "favicon":  "/static/tenants/default/favicon.ico",
+  "og_image": "/static/tenants/default/og-image.png",
+  "contact": {
+    "support_email": "support@eduforge.in",
+    "support_phone": "+91-XXXXXXXXXX"
+  }
+}

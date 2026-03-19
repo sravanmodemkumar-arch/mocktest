@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="min-h-screen flex bg-gray-50">
+
+  <!-- Sidebar -->
+  <aside id="sidebar"
+         class="fixed inset-y-0 left-0 z-30 w-60 flex flex-col bg-white border-r border-gray-200
+                transition-all duration-300 lg:relative lg:translate-x-0 -translate-x-full"
+         aria-label="Sidebar navigation">
+
+    <!-- Logo -->
+    <div class="flex items-center gap-3 h-16 px-5 border-b border-gray-200 flex-shrink-0">
+      <img src="{{ logo_url }}" alt="{{ tenant_name }}" class="h-8 w-auto object-contain max-w-[120px]"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+      <span class="hidden text-lg font-bold text-gray-900">{{ tenant_name }}</span>
+    </div>
+
+    <!-- Nav links (HTMX loads per role) -->
+    <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1"
+         hx-get="/nav/links/"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <!-- Loading placeholder -->
+      <div class="space-y-2 animate-pulse px-2">
+        {% for i in "12345" %}
+        <div class="h-9 bg-gray-100 rounded-lg"></div>
+        {% endfor %}
+      </div>
+    </nav>
+
+    <!-- User card at bottom -->
+    <div class="border-t border-gray-200 p-3">
+      <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+           hx-get="/nav/profile-menu/" hx-target="#profile-dropdown" hx-swap="innerHTML">
+        <!-- Avatar -->
+        <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center
+                    text-sm font-bold text-white"
+             style="background-color: {{ primary_color }};">
+          {{ user.name|first|upper|default:"U" }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium text-gray-900 truncate">{{ user.name|default:"User" }}</div>
+          <div class="text-xs text-gray-500 truncate">{{ user.role|default:"" }}</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/>
+        </svg>
+      </div>
+      <div id="profile-dropdown"></div>
+    </div>
+  </aside>
+
+  <!-- Sidebar overlay (mobile) -->
+  <div id="sidebar-overlay"
+       class="fixed inset-0 z-20 bg-black/50 lg:hidden hidden"
+       onclick="closeSidebar()"></div>
+
+  <!-- Main content area -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top nav bar -->
+    <header class="sticky top-0 z-20 flex items-center h-16 bg-white border-b border-gray-200 px-4 gap-4">
+
+      <!-- Mobile hamburger -->
+      <button onclick="openSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+        <svg class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+
+      <!-- Breadcrumb -->
+      <nav class="flex-1 hidden sm:block" aria-label="Breadcrumb">
+        <ol class="flex items-center gap-1 text-sm text-gray-500">
+          <li><a href="/home/" class="hover:text-brand">Home</a></li>
+          {% block breadcrumb %}{% endblock %}
+        </ol>
+      </nav>
+
+      <!-- Right actions -->
+      <div class="flex items-center gap-2 ml-auto">
+
+        <!-- Search -->
+        <button class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                title="Search">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+          </svg>
+        </button>
+
+        <!-- Notifications -->
+        <div class="relative">
+          <button class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                  hx-get="/nav/notifications/"
+                  hx-target="#notif-dropdown"
+                  hx-swap="innerHTML"
+                  title="Notifications">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            {% if notification_count %}
+            <span class="absolute top-1 right-1 w-4 h-4 text-xs font-bold text-white rounded-full flex items-center justify-center"
+                  style="background-color: {{ primary_color }};">
+              {{ notification_count }}
+            </span>
+            {% endif %}
+          </button>
+          <div id="notif-dropdown"
+               class="absolute right-0 mt-1 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="flex-1 overflow-auto p-6" id="main-content">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <!-- Session expired modal container (HTMX injects here when 401) -->
+  <div id="session-modal-container"></div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openSidebar() {
+    document.getElementById('sidebar').classList.remove('-translate-x-full');
+    document.getElementById('sidebar-overlay').classList.remove('hidden');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.add('-translate-x-full');
+    document.getElementById('sidebar-overlay').classList.add('hidden');
+  }
+
+  // Intercept 401 responses globally → show session expired modal
+  document.addEventListener('htmx:responseError', function(e) {
+    if (e.detail.xhr.status === 401) {
+      fetch('/partials/session-expired/')
+        .then(r => r.text())
+        .then(html => {
+          document.getElementById('session-modal-container').innerHTML = html;
+        });
+    }
+  });
+</script>
+{% endblock %}
