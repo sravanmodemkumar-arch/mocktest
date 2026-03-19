@@ -15,6 +15,7 @@ addopts = [
 markers = [
     "unit:        Fast, isolated unit tests (no DB, no network)",
     "integration: Tests that call real services or DB",
+    "requires_db: Tests that need a live PostgreSQL database (skipped when unavailable)",
     "e2e:         End-to-end browser tests via Playwright",
     "regression:  Critical path regression tests",
     "performance: Load and stress tests (Locust)",

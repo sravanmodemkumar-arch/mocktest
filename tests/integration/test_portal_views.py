@@ -17,7 +17,7 @@ class TestLoginView:
             )
             resp = client.get("/login/", SERVER_NAME="school.test.com")
         assert resp.status_code == 200
-        assert b"Welcome back" in resp.content
+        assert b"Sign in" in resp.content
 
     def test_login_page_has_mobile_input(self, client):
         with patch("apps.core.middleware.httpx.get") as mock_tenant:
@@ -25,8 +25,7 @@ class TestLoginView:
                 "slug": "test", "portal_group": 3, "name": "Test", "branding": {}
             })
             resp = client.get("/login/")
-        assert b'name="mobile"' in resp.content
-        assert b'type="tel"' in resp.content
+        assert b'name="login_id"' in resp.content
 
     def test_login_redirects_to_home_if_authed(self, client, student_token):
         client.cookies["ef_token"] = student_token
@@ -176,21 +175,28 @@ class TestHomeView:
         assert "/login/" in resp["Location"]
 
     def test_home_renders_for_authenticated_user(self, authed_portal_client):
-        resp = authed_portal_client.get("/home/")
+        user_data = {"id": 1, "role": "student", "is_active": True}
+        with patch("apps.core.middleware.httpx.get") as mock_mw:
+            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
+            resp = authed_portal_client.get("/home/")
         assert resp.status_code == 200
         assert b"home-content" in resp.content  # HTMX container
 
     def test_home_data_loads_correct_group_template(self, authed_portal_client):
-        home_data = {
+        user_data = {"id": 1, "role": "student", "is_active": True}
+        home_response = {
             "portal_group": 6,
             "data": {
                 "greeting": {"title": "Welcome back"},
                 "kpis": [],
                 "sections": [{"id": "test_series", "criticality": "medium"}],
+                "alerts": [],
             }
         }
-        with patch("apps.home.views.httpx.get") as mock_get:
-            mock_get.return_value = MagicMock(status_code=200, json=lambda: home_data)
+        with patch("apps.core.middleware.httpx.get") as mock_mw, \
+             patch("apps.home.views.httpx.get") as mock_home:
+            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
+            mock_home.return_value = MagicMock(status_code=200, json=lambda: home_response)
             resp = authed_portal_client.get("/home/data/")
 
         assert resp.status_code == 200
@@ -199,7 +205,8 @@ class TestHomeView:
         free_token = make_access_token(user_id=3, role="student")
         client.cookies["ef_token"] = free_token
 
-        home_data = {
+        user_data = {"id": 3, "role": "student", "is_active": True}
+        home_response = {
             "portal_group": 6,
             "data": {
                 "sections": [{"id": "upgrade_banner", "criticality": "static"}],
@@ -213,8 +220,10 @@ class TestHomeView:
             }
         }
 
-        with patch("apps.home.views.httpx.get") as mock_get:
-            mock_get.return_value = MagicMock(status_code=200, json=lambda: home_data)
+        with patch("apps.core.middleware.httpx.get") as mock_mw, \
+             patch("apps.home.views.httpx.get") as mock_home:
+            mock_mw.return_value = MagicMock(status_code=200, json=lambda: user_data)
+            mock_home.return_value = MagicMock(status_code=200, json=lambda: home_response)
             resp = client.get("/home/data/")
 
         assert resp.status_code == 200

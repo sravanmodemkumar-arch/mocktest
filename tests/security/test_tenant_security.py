@@ -37,7 +37,7 @@ class TestCrossTenantIsolation:
         user_data = {"id": 1, "role": "teacher", "is_active": True}
         captured_headers = {}
 
-        def capture_call(**kwargs):
+        def capture_call(*args, **kwargs):
             captured_headers.update(kwargs.get("headers", {}))
             return MagicMock(status_code=200, json=lambda: {
                 "portal_group": 3, "data": {"kpis": [], "sections": [], "alerts": []}
