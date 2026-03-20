@@ -214,6 +214,147 @@ PAGE CONTENT (dimmed)          │  DRAWER (slides in from right)
 
 ---
 
+## Theme Support (Dark + Light)
+
+> Modals, drawers, and bottom sheets use CSS tokens for backgrounds, borders, and shadows. They adapt automatically between dark and light themes.
+
+```css
+/* ── Backdrop ── */
+.modal-backdrop,
+.drawer-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+[data-theme="light"] .modal-backdrop,
+[data-theme="light"] .drawer-backdrop {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+/* ── Modal box ── */
+.modal {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+}
+
+/* Dark */
+:root .modal {
+  background: var(--bg-surface-1);         /* #0D1526 */
+  border-color: var(--border-default);     /* #334155 */
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+
+/* Light */
+[data-theme="light"] .modal {
+  background: var(--bg-surface-1);         /* #FFFFFF */
+  border-color: var(--border-subtle);      /* #E2E8F0 */
+  box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+}
+
+/* ── Modal header ── */
+.modal__title {
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.modal__subtitle { color: var(--text-secondary); }
+
+.modal__header-divider,
+.modal__footer-divider {
+  border-color: var(--border-subtle);
+}
+
+/* ── Modal footer buttons ── */
+.modal__btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+}
+.modal__btn-cancel:hover { border-color: var(--primary); color: var(--primary); }
+
+.modal__btn-primary {
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-md);
+}
+.modal__btn-primary:hover { background: color-mix(in srgb, var(--primary) 85%, white); }
+
+.modal__btn-destructive {
+  background: var(--error);
+  color: white;
+  border-radius: var(--radius-md);
+}
+
+/* ── Side drawer ── */
+.drawer {
+  background: var(--bg-surface-1);
+  border-left: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-xl);
+}
+
+:root .drawer {
+  background: var(--bg-surface-1);         /* #0D1526 */
+  border-left-color: var(--border-default);
+}
+
+[data-theme="light"] .drawer {
+  background: var(--bg-surface-1);         /* #FFFFFF */
+  border-left-color: var(--border-subtle); /* #E2E8F0 */
+  box-shadow: -8px 0 40px rgba(0,0,0,0.12);
+}
+
+/* ── Drawer tabs ── */
+.drawer__tab {
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  padding-bottom: var(--space-2);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.drawer__tab--active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.drawer__tab:hover:not(.drawer__tab--active) {
+  color: var(--text-secondary);
+}
+
+/* ── Confirm dialog (typed) ── */
+.confirm-input {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  width: 100%;
+}
+.confirm-input:focus {
+  border-color: var(--error);
+  outline: none;
+}
+```
+
+### Token Quick Reference
+
+| Property | Dark | Light |
+|---|---|---|
+| Modal/Drawer bg | `--bg-surface-1` → `#0D1526` | `--bg-surface-1` → `#FFFFFF` |
+| Modal border | `--border-default` → `#334155` | `--border-subtle` → `#E2E8F0` |
+| Title text | `--text-primary` → `#F1F5F9` | `--text-primary` → `#0F172A` |
+| Divider line | `--border-subtle` | `--border-subtle` |
+| Backdrop | `rgba(0,0,0,0.6)` | `rgba(15,23,42,0.35)` |
+| Primary button | `--primary` → `#6366F1` | `--primary` → `#4F46E5` |
+| Destructive button | `--error` → `#EF4444` | `--error` → `#DC2626` |
+| Active tab | `--primary` border | `--primary` border |
+
+---
+
 ## Usage in Page Specs
 
 ```markdown

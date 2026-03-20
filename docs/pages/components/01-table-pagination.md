@@ -182,6 +182,150 @@
 
 ---
 
+## Theme Support (Dark + Light)
+
+> All table and pagination elements use CSS custom property tokens from `00-global-layout.md`. The table automatically adapts to dark and light themes — no logic changes required.
+
+### Dark Theme (Default)
+
+```css
+/* ── Table container ── */
+.data-table-wrap {
+  background: var(--bg-surface-1);          /* #0D1526 */
+  border: 1px solid var(--border-subtle);   /* #1E293B */
+  border-radius: var(--radius-lg);
+}
+
+/* ── Header row ── */
+.data-table thead th {
+  background: var(--bg-surface-2);          /* #131F38 */
+  color: var(--text-muted);                 /* #64748B */
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Body rows ── */
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);               /* #F1F5F9 */
+}
+
+.data-table tbody tr:hover {
+  background: var(--bg-surface-2);          /* #131F38 */
+}
+
+.data-table tbody tr.selected {
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg-surface-1));
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* Striped rows */
+.data-table--striped tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--bg-surface-2) 50%, transparent);
+}
+
+/* ── Bulk actions bar ── */
+.bulk-actions-bar {
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Pagination ── */
+.pagination__btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.pagination__btn--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.pagination__btn:hover:not(.pagination__btn--active):not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pagination__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Loading skeleton ── */
+.data-table--loading tbody tr td {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface-2) 25%,
+    color-mix(in srgb, var(--text-muted) 15%, var(--bg-surface-2)) 50%,
+    var(--bg-surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  color: transparent;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+```
+
+### Light Theme Overrides
+
+```css
+[data-theme="light"] .data-table-wrap {
+  background: var(--bg-surface-1);          /* #FFFFFF */
+  border-color: var(--border-subtle);       /* #E2E8F0 */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+[data-theme="light"] .data-table thead th {
+  background: var(--bg-surface-2);          /* #F1F5F9 */
+  color: var(--text-muted);                 /* #64748B */
+  border-bottom-color: var(--border-subtle);
+}
+
+[data-theme="light"] .data-table tbody tr {
+  color: var(--text-primary);               /* #0F172A */
+  border-bottom-color: var(--border-subtle);
+}
+
+[data-theme="light"] .data-table tbody tr:hover {
+  background: var(--bg-surface-2);          /* #F1F5F9 */
+}
+
+[data-theme="light"] .data-table tbody tr.selected {
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-surface-1));
+}
+
+[data-theme="light"] .data-table--loading tbody tr td {
+  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+```
+
+### Token Quick Reference
+
+| Property | Dark | Light |
+|---|---|---|
+| Table bg | `--bg-surface-1` → `#0D1526` | `--bg-surface-1` → `#FFFFFF` |
+| Header bg | `--bg-surface-2` → `#131F38` | `--bg-surface-2` → `#F1F5F9` |
+| Row hover | `--bg-surface-2` | `--bg-surface-2` |
+| Row selected | primary 10% tint | primary 8% tint |
+| Cell text | `--text-primary` → `#F1F5F9` | `--text-primary` → `#0F172A` |
+| Header text | `--text-muted` → `#64748B` | `--text-muted` → `#64748B` |
+| Row divider | `--border-subtle` → `#1E293B` | `--border-subtle` → `#E2E8F0` |
+| Active page btn | `--primary` → `#6366F1` | `--primary` → `#4F46E5` |
+
+---
+
 ## Usage in Page Specs
 
 ```markdown

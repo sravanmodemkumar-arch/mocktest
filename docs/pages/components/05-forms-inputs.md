@@ -275,6 +275,160 @@ Mobile *                  Email (optional)
 
 ---
 
+## Theme Support (Dark + Light)
+
+```css
+/* ── Text input ── */
+.input {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  transition: border-color 150ms, box-shadow 150ms;
+  width: 100%;
+}
+.input::placeholder { color: var(--text-muted); }
+
+.input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+  outline: none;
+}
+
+.input--error {
+  border-color: var(--error);
+}
+.input--error:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 20%, transparent);
+}
+
+.input:disabled {
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Dark */
+:root .input {
+  background: var(--bg-surface-2);      /* #131F38 */
+  border-color: var(--border-default);  /* #334155 */
+  color: var(--text-primary);           /* #F1F5F9 */
+}
+
+/* Light */
+[data-theme="light"] .input {
+  background: var(--bg-surface-1);      /* #FFFFFF */
+  border-color: var(--border-default);  /* #CBD5E1 */
+  color: var(--text-primary);           /* #0F172A */
+}
+
+/* ── Label ── */
+.input-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+  display: block;
+}
+.input-label--required::after { content: ' *'; color: var(--error); }
+
+/* ── Helper / error text ── */
+.input-helper { font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1); }
+.input-error  { font-size: var(--text-xs); color: var(--error); margin-top: var(--space-1); }
+
+/* ── Select / dropdown ── */
+.select-trigger {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+}
+
+.select-dropdown {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.select-option:hover,
+.select-option--highlighted {
+  background: var(--bg-surface-2);
+}
+.select-option--selected { color: var(--primary); }
+
+[data-theme="light"] .select-trigger { background: #FFFFFF; }
+[data-theme="light"] .select-dropdown { background: #FFFFFF; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+[data-theme="light"] .select-option:hover { background: var(--bg-surface-2); }
+
+/* ── Checkbox ── */
+.checkbox {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  cursor: pointer;
+  transition: all 120ms;
+}
+.checkbox:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ── Toggle switch ── */
+.toggle-track {
+  width: 40px; height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-default);
+  transition: background 200ms;
+  cursor: pointer;
+}
+.toggle-track--on { background: var(--primary); border-color: var(--primary); }
+
+/* ── File upload drop zone ── */
+.file-drop {
+  background: var(--bg-surface-2);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-8);
+  transition: border-color 150ms;
+}
+.file-drop:hover,
+.file-drop--dragover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg-surface-2));
+}
+
+[data-theme="light"] .file-drop {
+  background: var(--bg-surface-2);    /* #F1F5F9 */
+  border-color: var(--border-default);
+}
+```
+
+### Token Quick Reference
+
+| Property | Dark | Light |
+|---|---|---|
+| Input bg | `--bg-surface-2` → `#131F38` | `#FFFFFF` |
+| Input border | `--border-default` → `#334155` | `--border-default` → `#CBD5E1` |
+| Input text | `--text-primary` → `#F1F5F9` | `--text-primary` → `#0F172A` |
+| Input focus ring | `--primary` 20% glow | `--primary` 20% glow |
+| Error border | `--error` → `#EF4444` | `--error` → `#DC2626` |
+| Label | `--text-secondary` → `#94A3B8` | `--text-secondary` → `#475569` |
+| Toggle on | `--primary` | `--primary` |
+| Checkbox checked | `--primary` | `--primary` |
+| Dropdown bg | `--bg-surface-1` | `#FFFFFF` |
+
+---
+
 ## Validation Rules (Standard)
 
 | Field | Validation |

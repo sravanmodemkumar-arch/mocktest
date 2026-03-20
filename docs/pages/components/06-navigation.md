@@ -137,10 +137,10 @@
 
 | State | Background | Text | Icon |
 |---|---|---|---|
-| Default | Transparent | `--on-surface` dark | Default color |
-| Hover | `--surface-variant` | Same | Same |
-| Active (current page) | `--primary-container` | `--primary` | `--primary` |
-| Active (parent of current) | Light tint | `--primary` | `--primary` |
+| Default | Transparent | `--text-secondary` | `--text-muted` |
+| Hover | `--bg-surface-2` | `--text-primary` | `--primary` |
+| Active (current page) | primary 12% tint | `--primary` | `--primary` |
+| Active (parent of current) | primary 6% tint | `--primary` | `--primary` |
 | Disabled | Transparent | 40% opacity | 40% opacity |
 
 ### Sub-menu (Nested nav)
@@ -209,6 +209,136 @@ Dashboard  /  Institutions  /  XYZ School  /  Students  /  Ravi Kumar
 | Page tabs | Major sections of a page — always visible |
 | Drawer tabs | Sections within a detail drawer |
 | Pill tabs | Compact filter-like tabs in cards |
+
+---
+
+## Theme Support (Dark + Light)
+
+> The full App Shell (top bar + sidebar) is documented in `00-global-layout.md`. This section covers the token mappings for navigation elements on pages: tabs, breadcrumbs, and step indicators.
+
+```css
+/* ── Top navigation bar ── */
+.top-nav {
+  background: var(--bg-surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+  height: 56px;
+}
+
+:root .top-nav { background: var(--bg-surface-1); }        /* #0D1526 */
+[data-theme="light"] .top-nav { background: var(--bg-surface-1); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }  /* #FFFFFF */
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--bg-surface-1);
+  border-right: 1px solid var(--border-subtle);
+}
+
+:root .sidebar { background: var(--bg-surface-1); }       /* #0D1526 */
+[data-theme="light"] .sidebar { background: var(--bg-surface-1); border-right-color: var(--border-subtle); }  /* #FFFFFF */
+
+/* ── Sidebar nav items ── */
+.nav-item {
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex; align-items: center; gap: var(--space-3);
+  font-size: var(--text-sm); font-weight: 500;
+  transition: background 120ms, color 120ms;
+  cursor: pointer;
+}
+.nav-item:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+.nav-item--active {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+.nav-item--active .nav-item__icon { color: var(--primary); }
+
+.nav-item__icon { color: var(--text-muted); width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ── Section divider in sidebar ── */
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: var(--space-4) var(--space-3) var(--space-1);
+}
+
+/* ── Page tabs ── */
+.page-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.page-tab {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm); font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer; transition: color 120ms, border-color 120ms;
+}
+.page-tab:hover { color: var(--text-primary); }
+.page-tab--active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ── Breadcrumb ── */
+.breadcrumb { display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); }
+.breadcrumb__item { color: var(--text-muted); }
+.breadcrumb__item--link { color: var(--text-secondary); text-decoration: none; }
+.breadcrumb__item--link:hover { color: var(--primary); }
+.breadcrumb__item--current { color: var(--text-primary); font-weight: 500; }
+.breadcrumb__sep { color: var(--border-default); }
+
+/* ── Step progress ── */
+.step-circle--done    { background: var(--primary); border-color: var(--primary); color: white; }
+.step-circle--active  { background: var(--primary); border-color: var(--primary); color: white; }
+.step-circle--todo    { background: transparent; border: 2px solid var(--border-default); color: var(--text-muted); }
+.step-circle--error   { background: var(--error); border-color: var(--error); color: white; }
+.step-line--done      { background: var(--primary); }
+.step-line--todo      { background: var(--border-subtle); }
+
+/* ── Profile dropdown ── */
+.profile-dropdown {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+:root .profile-dropdown { background: var(--bg-surface-1); }    /* #0D1526 */
+[data-theme="light"] .profile-dropdown { background: #FFFFFF; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+
+.profile-dropdown__item {
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  display: flex; align-items: center; gap: var(--space-3);
+}
+.profile-dropdown__item:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+```
+
+### Token Quick Reference
+
+| Property | Dark | Light |
+|---|---|---|
+| Topbar bg | `--bg-surface-1` → `#0D1526` | `--bg-surface-1` → `#FFFFFF` |
+| Sidebar bg | `--bg-surface-1` → `#0D1526` | `--bg-surface-1` → `#FFFFFF` |
+| Nav item text | `--text-secondary` → `#94A3B8` | `--text-secondary` → `#475569` |
+| Nav item hover bg | `--bg-surface-2` → `#131F38` | `--bg-surface-2` → `#F1F5F9` |
+| Active nav bg | primary 12% tint | primary 12% tint |
+| Active nav text | `--primary` → `#6366F1` | `--primary` → `#4F46E5` |
+| Active tab border | `--primary` | `--primary` |
+| Breadcrumb link | `--text-secondary` | `--text-secondary` |
+| Step done | `--primary` fill | `--primary` fill |
 
 ---
 

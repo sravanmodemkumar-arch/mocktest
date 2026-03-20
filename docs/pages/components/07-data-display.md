@@ -32,13 +32,13 @@
 
 ### Trend Indicator
 
-| Trend | Icon | Color | Text |
+| Trend | Icon | Token | Text |
 |---|---|---|---|
-| Up (positive) | ↑ | Green `#2E7D32` | `+12%` |
-| Down (negative) | ↓ | Red `#C62828` | `-3%` |
-| Down (positive — for bad metrics) | ↓ | Green | `-5% absences` |
-| No change | → | Gray | `No change` |
-| Not enough data | — | Gray | `—` |
+| Up (positive) | ↑ | `--success` | `+12%` |
+| Down (negative) | ↓ | `--error` | `-3%` |
+| Down (positive — for bad metrics) | ↓ | `--success` | `-5% absences` |
+| No change | → | `--text-muted` | `No change` |
+| Not enough data | — | `--text-muted` | `—` |
 
 ### Skeleton Loading
 - Card shape maintained
@@ -57,18 +57,20 @@
 
 ### Status Colors
 
-| Status | Color | Background | Use Case |
-|---|---|---|---|
-| Active | `#2E7D32` | `#E8F5E9` | User active, subscription active |
-| Inactive | `#455A64` | `#ECEFF1` | Archived, not enrolled |
-| Pending | `#E65100` | `#FFF3E0` | Awaiting action (BGV, fee, approval) |
-| Suspended | `#C62828` | `#FFEBEE` | Account suspended |
-| Trial | `#7B1FA2` | `#F3E5F5` | Free trial user |
-| Premium | `#F57F17` | `#FFF8E1` | Paid subscriber |
-| Expired | `#BF360C` | `#FBE9E7` | Subscription expired |
-| Verified | `#1565C0` | `#E3F2FD` | BGV verified, email verified |
-| Draft | `#546E7A` | `#ECEFF1` | Content draft, unpublished |
-| Published | `#2E7D32` | `#E8F5E9` | Content live |
+> All status badges use CSS token-based colors. The system automatically applies the correct shade for dark vs. light themes.
+
+| Status | Text token | Dark hex | Light hex | Use Case |
+|---|---|---|---|---|
+| Active | `--success` | `#10B981` | `#059669` | User active, subscription active |
+| Inactive | `--text-muted` | `#64748B` | `#64748B` | Archived, not enrolled |
+| Pending | `--warning` | `#F59E0B` | `#D97706` | Awaiting action (BGV, fee, approval) |
+| Suspended | `--error` | `#EF4444` | `#DC2626` | Account suspended |
+| Trial | `#A78BFA` | `#A78BFA` | `#7C3AED` | Free trial user |
+| Premium | `#FCD34D` | `#FCD34D` | `#D97706` | Paid subscriber |
+| Expired | `--error` muted | `#EF4444` | `#DC2626` | Subscription expired |
+| Verified | `--primary` | `#6366F1` | `#4F46E5` | BGV verified, email verified |
+| Draft | `--text-muted` | `#64748B` | `#64748B` | Content draft, unpublished |
+| Published | `--success` | `#10B981` | `#059669` | Content live |
 
 ### Size Variants
 
@@ -243,6 +245,112 @@ Maths: 87 | Physics: 76 | Chem: 92
 ```
 [Edit]  [View]  [⋯]
 ```
+
+---
+
+## Theme Support (Dark + Light)
+
+```css
+/* ── Status badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Dark and light both use token-based colors */
+.badge--active      { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.badge--pending     { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); }
+.badge--suspended   { color: var(--error);   background: color-mix(in srgb, var(--error)   12%, transparent); }
+.badge--inactive    { color: var(--text-muted); background: var(--bg-surface-2); }
+.badge--verified    { color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.badge--published   { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.badge--draft       { color: var(--text-muted); background: var(--bg-surface-2); }
+
+/* Light theme — status colors are slightly darker (defined in --success/--error tokens) */
+/* No additional overrides needed — tokens handle the contrast shift */
+
+/* ── Progress bar ── */
+.progress-bar-track {
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-full);
+  height: 6px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 400ms ease-out;
+}
+/* Color coding by value — same tokens in both themes */
+.progress-bar-fill[data-range="critical"]  { background: var(--error); }
+.progress-bar-fill[data-range="warning"]   { background: var(--warning); }
+.progress-bar-fill[data-range="average"]   { background: #FCD34D; }
+.progress-bar-fill[data-range="good"]      { background: #34D399; }
+.progress-bar-fill[data-range="excellent"] { background: var(--success); }
+
+[data-theme="light"] .progress-bar-track { background: #E2E8F0; }
+
+/* ── Avatar ── */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.avatar--initials {
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--primary) 20%, var(--bg-surface-2));
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.4em; /* scales with width/height */
+}
+
+/* Status ring on avatar */
+.avatar-wrap--online  { outline: 2px solid var(--success); }
+.avatar-wrap--offline { outline: 2px solid var(--border-default); }
+.avatar-wrap--busy    { outline: 2px solid var(--warning); }
+
+/* ── Stat card (basic — use Component 10 for full spec) ── */
+.kpi-card {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+:root .kpi-card      { background: var(--bg-surface-1); }   /* #0D1526 */
+[data-theme="light"] .kpi-card { background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+.kpi-card__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-card__label { font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.kpi-card__trend--up   { color: var(--success); }
+.kpi-card__trend--down { color: var(--error); }
+```
+
+### Token Quick Reference
+
+| Property | Dark | Light |
+|---|---|---|
+| Badge bg (active/success) | `success` 12% tint | `success` 12% tint |
+| Badge bg (pending/warn) | `warning` 12% tint | `warning` 12% tint |
+| Badge bg (error) | `error` 12% tint | `error` 12% tint |
+| Progress track | `--bg-surface-2` → `#131F38` | `#E2E8F0` |
+| Avatar initials bg | primary 20% tint | primary 20% tint |
+| KPI card bg | `--bg-surface-1` → `#0D1526` | `#FFFFFF` |
+| KPI value font | `var(--font-mono)` JetBrains Mono | same |
+| Trend up | `--success` → `#10B981` | `--success` → `#059669` |
+| Trend down | `--error` → `#EF4444` | `--error` → `#DC2626` |
 
 ---
 
