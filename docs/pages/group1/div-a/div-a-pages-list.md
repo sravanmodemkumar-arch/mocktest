@@ -141,7 +141,7 @@ P3 — Backlog
 
 ## Page Spec Template
 
-Each page spec lives at `docs/pages/group1/div-a/div-a-XX.md` and must include:
+Each page spec lives at `docs/pages/group1/div-a/XX-page-name.md` and must include:
 
 1. **Page Header** — title, URL, role access, polling/refresh rules
 2. **Layout** — shell + HTMX partials list
