@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 91 roles across 15 divisions.
+> Total: 81 roles across 14 divisions.
 
 ---
 
@@ -144,7 +144,7 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division F — Exam Day Operations (7 roles)
+## Division F — Exam Day Operations (5 roles)
 
 > Most critical division on exam day.
 > 74,000 students submit simultaneously — this team runs the war room.
@@ -156,21 +156,21 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | 36 | Results Coordinator | 3 | Trigger rank computation, review before publish | Approve result publish |
 | 37 | Notification Manager | 3 | WhatsApp/SMS/Email templates, result broadcasts, OTP routing | Send bulk 74K notifications |
 | 38 | Incident Manager — Exam Day | 4 | Escalate infra issues to DevOps, coordinate war room | Emergency Lambda scale-up |
-| 90 | Exam Configuration Specialist | 3 | Pre-exam setup: timing windows, question paper assignment, negative marking, section configs, batch eligibility across 2,050 institutions | Lock exam config before go-live |
-| 91 | Exam Integrity Officer | 3 | Statistical malpractice analysis, proctor flag triage, institution malpractice coordination, NCPCR/Legal escalation | Open malpractice case; trigger result withhold |
 
 ---
 
-## Division G — Background Verification (3 roles)
+## Division G — Background Verification (4 roles)
 
 > POCSO Act 2012 — mandatory BGV for all staff with minor access.
 > Any unverified staff found = legal liability for EduForge.
+> 1,900+ institutions · ~28,000 staff requiring BGV · NCPCR mandatory reporting.
 
 | # | Role | Level | Owns |
 |---|---|---|---|
-| 39 | BGV Manager | 3 | BGV policy, vendor management, escalation to institutions |
-| 40 | BGV Executive | 3 | Process BGV requests, update verification status per staff |
-| 41 | POCSO Compliance Officer | 1 | Audit BGV coverage across all institutions, mandatory reporting |
+| 39 | BGV Manager | 3 | BGV policy, vendor management, escalation to institutions, POCSO oversight |
+| 40 | BGV Executive | 3 | Process BGV requests, document review, vendor submission, status updates |
+| 41 | POCSO Compliance Officer | 1 | Audit BGV coverage across all institutions, NCPCR mandatory reporting |
+| 92 | BGV Operations Supervisor | 3 | Approve FLAGGED verification decisions; queue assignment; BGV Executive oversight |
 
 ---
 
@@ -285,8 +285,8 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | C — Engineering | 8 |
 | D — Content & Academics | 13 |
 | E — Video & Learning | 11 (3 Phase 1 + 8 Phase 2) |
-| F — Exam Day Operations | 7 |
-| G — Background Verification | 3 |
+| F — Exam Day Operations | 5 |
+| G — Background Verification | 4 |
 | H — Data & Analytics | 5 |
 | I — Customer Support | 6 |
 | J — Customer Success | 4 |
@@ -295,7 +295,7 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | M — Finance & Billing | 6 |
 | N — Legal & Compliance | 4 |
 | O — HR & Administration | 3 |
-| **Total** | **91** |
+| **Total** | **90** |
 
 ---
 
