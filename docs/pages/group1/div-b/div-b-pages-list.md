@@ -44,7 +44,7 @@
 
 ---
 
-## PM Platform — Pages (Role 5) · 9 pages
+## PM Platform — Pages (Role 5) · 11 pages
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
@@ -57,10 +57,12 @@
 | 07 | Announcement Manager | `/product/announcements/` | `07-announcement-manager.md` | P2 | ✅ | Product comms to 2,050 institutions: in-app banners · email digests · targeting by type/plan · schedule · delivery reports |
 | 08 | Mobile App Config | `/product/mobile-config/` | `08-mobile-app-config.md` | P2 | ✅ | Flutter app: minimum version enforcement · force update policy · iOS vs Android feature flags · FCM topic config · Hive key rotation schedule |
 | 28 | Revenue & Billing Dashboard | `/product/revenue/` | `28-revenue-billing-dashboard.md` | P1 | ✅ | MRR/ARR · churn & expansion · plan distribution · collections · GST compliance · cohort analysis · NRR tracking · revenue forecast (P10/P50/P90) |
+| 29 | Promo Code & Discount Manager | `/product/promos/` | `29-promo-code-manager.md` | P2 | ✅ | Promotional codes · partner discounts · seasonal offers · referral programs · per-institution overrides · usage analytics · expiry enforcement |
+| 32 | Integration Hub | `/product/integrations/` | `32-integration-hub.md` | P2 | ✅ | Third-party integrations catalog: Google Classroom · Microsoft Teams · Zapier · partner content APIs · per-plan availability · credential management · sync health monitor |
 
 ---
 
-## PM Exam Domains — Pages (Role 6) · 6 pages
+## PM Exam Domains — Pages (Role 6) · 7 pages
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
@@ -70,10 +72,11 @@
 | 12 | Exam Pattern Builder | `/product/exam-patterns/` | `12-exam-pattern-builder.md` | P1 | ✅ | Section config · Q per section · marks/negative marking · time limits · normalization formulas (RRB multi-shift) · exam integrity controls · pattern versioning |
 | 13 | Domain Analytics | `/product/domain-analytics/` | `13-domain-analytics.md` | P2 | ✅ | Per-domain: enrollment trends · question coverage · test series usage · institution adoption · dropout points · competitive benchmarks |
 | 27 | Question Bank Manager | `/product/question-bank/` | `27-question-bank-manager.md` | P1 | ✅ | 2M+ questions: browse by domain tree · review queue · coverage gaps · duplicate detection · quality analytics · bulk import (CSV/PDF OCR/Partner API) · copyright management |
+| 30 | Result Processing & Rank Config | `/product/result-config/` | `30-result-processing-config.md` | P1 | ✅ | RRB multi-shift normalization parameters · JEE/NEET percentile calc formulas · rank band definitions · cutoff config per exam type · result release schedule · tie-breaking rules |
 
 ---
 
-## PM Institution Portal — Pages (Role 7) · 5 pages
+## PM Institution Portal — Pages (Role 7) · 6 pages
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
@@ -82,6 +85,7 @@
 | 16 | Portal Templates | `/product/portal-templates/` | `16-portal-templates.md` | P2 | ✅ | Layout templates per institution type · nav order · module visibility · white-label rules · branding config · A/B testing · live preview |
 | 17 | Onboarding Workflow | `/product/onboarding/` | `17-onboarding-workflow.md` | P2 | ✅ | Step builder for 30–50 new institutions/month · mandatory vs skippable steps · per-institution-type flows · group onboarding · re-onboarding · completion tracking |
 | 18 | Notification Template Manager | `/product/notification-templates/` | `18-notification-template-manager.md` | P2 | ✅ | Email/SMS/WhatsApp templates institutions use for student comms · variable substitution · per-plan availability · preview · A/B variant · DPDPA 2023 compliance |
+| 31 | White-Label & Branding Manager | `/product/white-label/` | `31-white-label-branding.md` | P2 | ✅ | Enterprise institution custom subdomains · brand kit (logo/colors/fonts) · white-label rules per plan tier · subdomain provisioning workflow · brand asset CDN management |
 
 ---
 
@@ -96,7 +100,7 @@
 
 ---
 
-## QA Engineer — Pages (Role 9) · 6 pages
+## QA Engineer — Pages (Role 9) · 7 pages
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
@@ -106,6 +110,7 @@
 | 24 | Performance Test Dashboard | `/product/performance/` | `24-performance-test-dashboard.md` | P1 | ✅ | 74K concurrent exam load scenarios · latency profiles · throughput charts · Lambda scaling graphs · pre-release pass/fail gate · k6 integration · incident response panel |
 | 25 | Defect Tracker | `/product/defects/` | `25-defect-tracker.md` | P1 | ✅ | Full defect lifecycle: Open→In Progress→In Review→Resolved→Closed · aging · severity triage · regression flags · module heatmap · institution-reported defects · SLA breach calculator |
 | 26 | Automation Monitor | `/product/automation/` | `26-automation-monitor.md` | P2 | ✅ | CI/CD pipeline status · flaky test & flaky step detection · build time regression tracking · execution time trends · GitHub Actions integration · test suite health by module |
+| 33 | API Testing Dashboard | `/product/api-testing/` | `33-api-testing-dashboard.md` | P2 | ✅ | Functional API test suites: endpoint validation · response schema · contract testing · Postman/Newman CI integration · API changelog diff · regression on every deploy |
 
 ---
 
@@ -139,6 +144,11 @@
 | G4 | **API Rate Limits per Plan Tier** — API throttle values per tier (Starter: 100 req/min, Enterprise: 2,000 req/min) not configurable anywhere in Division B | Medium | Add "Rate Limits" tab to Plan Config edit drawer (page 04) — per-tier rate limit config for API calls, bulk exports, report generation, and exam submission endpoints |
 | G5 | **Cross-Page Critical Alert Bus** — When a P0 defect opens, production flag kill-switch fires, or peak concurrent users spike, no page describes how alert banners cascade across all div-b pages | Medium | Add "Critical Alert Banner" as a shared component to pages 01, 02, 03, 21, 24, 25: server-side SSE or 60s poll checks a `platform_alerts` Redis key; if any P0-level alert exists, a red dismissible banner appears at the top of all div-b pages until the alert is cleared |
 | G6 | **Pages 27 & 28 missing from master index** — Question Bank Manager and Revenue & Billing Dashboard existed as spec files but were not registered in this index | Critical | ✅ Fixed in this update — both pages added to their respective role groups above |
+| G7 | **Student Portal Feature Entitlements missing** — Page 14 (Portal Feature Config) covers institution admin features only. Student-facing features per plan (Download results PDF: Standard+; Compare with toppers: Professional+; Offline exam: Enterprise) have no configuration page | High | Add "Student Features" tab to Portal Feature Config (page 14) — per-plan student-facing feature matrix, distinct from institution-staff feature matrix |
+| G8 | **Parent Portal Config missing** — Parent access module (view child's performance, receive exam notifications, fee status, attendance) is plan-gated and institution-type-specific but not configurable anywhere in Division B | High | Add "Parent Access" section to Portal Feature Config (page 14) — per-institution-type parent portal toggle, per-plan feature set, notification preferences |
+| G9 | **Content Flag & Error Report Manager missing** — Students and institutions report question errors (wrong answer, ambiguous wording, copyright violation). No workflow exists in Division B for PM Exam Domains to receive, review, and action these flags | High | Add "Content Flags" tab to Question Bank Manager (page 27) — flagged question queue, severity classification, review → confirm error → pull from bank → update workflow, reporter notification |
+| G10 | **Advanced Test Data Management missing** — Test Tenant Manager (page 22) has basic data reset and scenario presets. Structured test data management (anonymized production snapshots, repeatable data fixtures per scenario, institution-type data generators) is not covered | Medium | Add "Test Data" tab to Test Tenant Manager (page 22) — named data fixtures, anonymized prod snapshot import, data generator config per institution type, fixture version history |
+| G11 | **Competitive Benchmarking missing from Domain Analytics** — Page 13 (Domain Analytics) shows platform-internal metrics only. PM Exam Domains needs competitive context: how does EduForge's SSC question coverage compare to industry benchmarks? What % of actual exam questions appear in the bank? | Medium | Add "Benchmarking" section to Domain Analytics (page 13) — question bank coverage vs official syllabus %, difficulty distribution vs past paper analysis, topic gap identification |
 
 ---
 
@@ -220,9 +230,19 @@ P3 — Backlog
 | 26 | Run 74K concurrent load tests and gate releases | QA Engineer | 24 |
 | 27 | Track full defect lifecycle and triage severity | QA Engineer | 25 |
 | 28 | Monitor CI/CD pipeline health and flaky tests | QA Engineer | 26 |
+| 29 | Create and manage promotional codes / partner discounts | PM Platform | 29 |
+| 30 | Configure result processing, rank formulas, normalization params | PM Exam Domains | 30 |
+| 31 | Manage white-label brand kits and subdomain provisioning | PM Institution Portal | 31 |
+| 32 | Manage third-party integrations and sync health | PM Platform | 32 |
+| 33 | Run functional API test suites and CI contract tests | QA Engineer | 33 |
+| 34 | Configure student-facing per-plan features | PM Institution Portal | 14 (G7) |
+| 35 | Configure parent portal access and capabilities | PM Institution Portal | 14 (G8) |
+| 36 | Review and action user-reported question content flags | PM Exam Domains | 27 (G9) |
+| 37 | Manage structured test data fixtures and prod snapshots | QA Engineer | 22 (G10) |
+| 38 | Benchmark question bank vs official syllabus and past papers | PM Exam Domains | 13 (G11) |
 
 ---
 
 *Last updated: 2026-03-20*
-*Total pages: 28 (26 original + 2 new: pages 27, 28)*
-*Functional gaps identified: 6 · Resolved: 6 (G6 fixed in index; G1–G5 assigned as amendments to existing pages)*
+*Total pages: 33 (26 original + 7 new: pages 27, 28, 29, 30, 31, 32, 33)*
+*Functional gaps identified: 11 · All 11 resolved: G6 fixed in index · G1–G5 assigned as amendments to existing pages · G7–G11 fully implemented as amendments to pages 14, 14, 27, 22, 13*

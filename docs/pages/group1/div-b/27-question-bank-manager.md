@@ -586,3 +586,203 @@ Every question has a mandatory source field:
 | Bloom's taxonomy cognitive level | Additional classification | Competitive exam prep needs all levels; tracking ensures balance between recall and application questions |
 | Content team performance metrics | Visible to PM, not used punitively | Identifies training needs, not for HR evaluation; team lead insight only |
 | Institution-contributed questions | Moderated before publishing | Institutions may contribute low-quality or copyrighted content; moderation gate is essential |
+
+---
+
+## Amendment G9 — Content Flags Tab
+
+**Gap:** No workflow for user-reported question errors. Students and teachers flag questions with typos, incorrect answers, misleading distractors, or broken images — but there is no PM-facing interface to review, act on, or close these flags. Flagged questions accumulate without resolution.
+
+### New Tab: "Content Flags"
+
+Added to the Tab Bar after `Review Queue`.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ CONTENT FLAGS                       Filter: [All ▼] [Unresolved ▼] [Domain ▼] │
+│ User-reported question errors requiring PM review                               │
+│                                                                     [Export CSV]│
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ Summary: 47 Open · 12 In Review · 284 Resolved (last 30 days)                  │
+├───────────────────────────────────────────────────────────────────────────────────┤
+│ FLAG LIST                                                                        │
+│                                                                                 │
+│ ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│ │ #FL-2892  OPEN   ⚠️ Wrong Answer Key                         3 reports      │ │
+│ │ Question: "In SSC CGL 2023 Tier 1, Q47 — The correct answer..."             │ │
+│ │ Domain: SSC > CGL > Quantitative Aptitude > Time & Work                     │ │
+│ │ Reported by: 2 students, 1 teacher  |  First flagged: 2026-03-18            │ │
+│ │ Flag reason: "Answer key shows B but correct answer is C — verified in..."  │ │
+│ │ [View Question] [Assign to Reviewer] [Mark: Duplicate] [Dismiss]           │ │
+│ ├─────────────────────────────────────────────────────────────────────────────┤ │
+│ │ #FL-2891  IN REVIEW   🖼️ Broken Image                       1 report       │ │
+│ │ Question: "Identify the geometric figure shown in..."                        │ │
+│ │ Domain: NEET > Biology > Cell Biology                                        │ │
+│ │ Assigned to: Ravi (Content Team) since 2026-03-19                           │ │
+│ │ [View Question] [View Review Notes] [Escalate] [Close — Fixed]             │ │
+│ ├─────────────────────────────────────────────────────────────────────────────┤ │
+│ │ #FL-2889  OPEN   📝 Typo / Grammar                          1 report       │ │
+│ │ Question: "The treaty of Versalles was signed in..."                         │ │
+│ │ Domain: SSC > CGL > General Awareness > History                             │ │
+│ │ Reported by: 1 student  |  First flagged: 2026-03-20                        │ │
+│ │ [View Question] [Assign to Reviewer] [Dismiss]                             │ │
+│ └─────────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Flag Detail Drawer (560px right)
+
+Clicking `[View Question]` or any flag opens a detail drawer:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ Flag #FL-2892 — Wrong Answer Key           [×]            │
+├──────────────────────────────────────────────────────────┤
+│ QUESTION PREVIEW                                          │
+│ [Full question text with options A/B/C/D rendered]       │
+│ Answer key: B (stored) | Most-reported correct: C        │
+│                                                          │
+│ REPORTS (3)                                              │
+│  Student #1 (2026-03-18 14:22): "Answer is C, not B.    │
+│    Refer RRB RRB-NTPC 2022 official answer key."        │
+│  Student #2 (2026-03-19 09:10): "Confirmed wrong."      │
+│  Teacher (IIT Delhi Coaching) (2026-03-19 16:40):       │
+│    "This is a known error. Answer C is correct."        │
+│                                                          │
+│ REVIEW NOTES                                             │
+│  [Textarea — PM / Content team notes on this flag]      │
+│                                                          │
+│ ACTIONS                                                  │
+│  Assign to: [Content Team Member ▼]                     │
+│  Resolution:                                             │
+│  ○ Fix Answer Key → new correct option: [C ▼]          │
+│  ○ Edit Question Text → opens question editor           │
+│  ○ Replace Image → upload new image                     │
+│  ○ Retire Question → move to archive, replace in exams  │
+│  ○ Dismiss (Not a bug) → reason required                │
+│                                                          │
+│ [Save Review Notes] [Apply Resolution & Close Flag]      │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Flag Workflow States
+
+```
+Reported → Open → [Assign] → In Review → [Apply Fix] → Resolved
+                           ↘ [Duplicate] → Closed (linked to original)
+                           ↘ [Dismiss] → Closed (reason logged)
+```
+
+### Auto-escalation Rules
+
+- Flag with ≥ 5 reports and status still `Open` after 48h → auto-escalates to `High Priority` (amber badge)
+- Flag with ≥ 10 reports → auto-escalates to `Critical` (red badge), email sent to PM Platform lead
+- `Wrong Answer Key` flags with ≥ 3 reports → question auto-tagged `answer_disputed`; exam results using this question flagged for re-evaluation
+
+### Models Added
+
+```python
+class QuestionFlag(models.Model):
+    FLAG_TYPE = [
+        ('wrong_answer', 'Wrong Answer Key'),
+        ('broken_image', 'Broken Image'),
+        ('typo', 'Typo / Grammar'),
+        ('misleading_distractor', 'Misleading Distractor'),
+        ('outdated_content', 'Outdated Content'),
+        ('other', 'Other'),
+    ]
+    STATUS = [
+        ('open', 'Open'),
+        ('in_review', 'In Review'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+        ('duplicate', 'Duplicate'),
+    ]
+    PRIORITY = [
+        ('normal', 'Normal'),
+        ('high', 'High Priority'),
+        ('critical', 'Critical'),
+    ]
+
+    question = models.ForeignKey(
+        'questions.Question', on_delete=models.CASCADE, related_name='flags'
+    )
+    flag_type = models.CharField(max_length=30, choices=FLAG_TYPE)
+    status = models.CharField(max_length=15, choices=STATUS, default='open')
+    priority = models.CharField(max_length=10, choices=PRIORITY, default='normal')
+    report_count = models.PositiveIntegerField(default=1)
+    assigned_to = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='assigned_flags'
+    )
+    review_notes = models.TextField(blank=True)
+    resolution_type = models.CharField(max_length=30, blank=True)
+    dismiss_reason = models.TextField(blank=True)
+    duplicate_of = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True
+    )
+    resolved_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='resolved_flags'
+    )
+    first_reported_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-report_count', '-first_reported_at']
+        indexes = [
+            models.Index(fields=['status', 'priority', '-report_count']),
+            models.Index(fields=['question', 'status']),
+        ]
+
+
+class QuestionFlagReport(models.Model):
+    """Individual user report linked to a flag."""
+    REPORTER_TYPE = [('student', 'Student'), ('teacher', 'Teacher'), ('institution_admin', 'Institution Admin')]
+
+    flag = models.ForeignKey(QuestionFlag, on_delete=models.CASCADE, related_name='reports')
+    reporter_type = models.CharField(max_length=20, choices=REPORTER_TYPE)
+    reporter_id = models.IntegerField()  # ID in respective model
+    institution = models.ForeignKey(
+        'institutions.Institution', on_delete=models.SET_NULL, null=True
+    )
+    report_text = models.TextField()
+    reported_at = models.DateTimeField(auto_now_add=True)
+```
+
+### Celery Task for Auto-escalation
+
+```python
+@shared_task(queue='content')
+def auto_escalate_content_flags():
+    """Runs every hour via Celery beat."""
+    now = timezone.now()
+
+    # Escalate to high priority
+    QuestionFlag.objects.filter(
+        status='open',
+        priority='normal',
+        report_count__gte=5,
+        first_reported_at__lte=now - timedelta(hours=48),
+    ).update(priority='high')
+
+    # Escalate to critical + notify
+    critical_flags = QuestionFlag.objects.filter(
+        status__in=['open', 'in_review'],
+        priority__in=['normal', 'high'],
+        report_count__gte=10,
+    )
+    for flag in critical_flags:
+        flag.priority = 'critical'
+        flag.save(update_fields=['priority'])
+        notify_critical_flag.delay(flag.id)
+
+    # Mark answer_disputed on wrong-answer flags with 3+ reports
+    QuestionFlag.objects.filter(
+        flag_type='wrong_answer',
+        report_count__gte=3,
+        status__in=['open', 'in_review'],
+    ).select_related('question').update(
+        # tag applied to question model via signal
+    )
+```

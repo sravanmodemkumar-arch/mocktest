@@ -581,3 +581,149 @@ At max capacity (15,000 students, 500 exams, with results): provisioning can tak
 
 **Role-based visibility:** Only QA Engineers see the Impersonate tab. PM and Designer roles do not see this tab at all.
 
+---
+
+## Amendment G10 — Test Data Tab
+
+**Gap:** QA engineers have no systematic way to manage reusable test data. Currently, test tenants are created from scratch or with ad-hoc scripts. There are no named fixtures, no safe way to use anonymized production snapshots, and no data generators for edge cases (1M student tenant, multilingual content, zero-score boundary, etc.).
+
+### New Tab: "Test Data"
+
+Added to the Tab Bar after `Impersonate`.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ TEST DATA                                          [+ Create Fixture] [Generate]│
+│ Named data fixtures · anonymised prod snapshots · data generators               │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ Sub-tabs: [Fixtures] [Prod Snapshots] [Generators] [Data Catalog]              │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ FIXTURES TAB                                                                    │
+│                                                                                 │
+│ Named, reusable datasets that can be applied to any test tenant                │
+│                                                                                 │
+│ ┌────────────────────────────────────────────────────────────────────────────┐  │
+│ │ Fixture: "SSC Coaching — 500 Students, 3 Batches, 20 Exams"               │  │
+│ │ Size: 1.2 MB · Created: Deepa (QA) · 2026-03-10 · Used on: 3 tenants     │  │
+│ │ Contents: 500 student accounts, 3 teacher accounts, 20 exams,              │  │
+│ │           150 exam results, 2 promo codes, plan: Pro                       │  │
+│ │ [Apply to Tenant] [Download JSON] [Edit Metadata] [Delete]                │  │
+│ ├────────────────────────────────────────────────────────────────────────────┤  │
+│ │ Fixture: "Edge Case — Zero Score Boundary"                                 │  │
+│ │ Size: 45 KB · Created: Arjun (QA) · 2026-02-28 · Used on: 1 tenant       │  │
+│ │ Contents: 10 students with score=0, score=0.01, score=null results        │  │
+│ │ [Apply to Tenant] [Download JSON] [Edit Metadata] [Delete]                │  │
+│ ├────────────────────────────────────────────────────────────────────────────┤  │
+│ │ Fixture: "Enterprise — Multi-branch, 1200 Students"                        │  │
+│ │ Size: 4.8 MB · Created: Deepa (QA) · 2026-03-15 · Used on: 2 tenants     │  │
+│ │ Contents: 1 group institution, 4 branches, 1200 students, 50 teachers,    │  │
+│ │           100 exams, plan: Enterprise, custom domain configured            │  │
+│ │ [Apply to Tenant] [Download JSON] [Edit Metadata] [Delete]                │  │
+│ └────────────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Prod Snapshots Sub-tab
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ PROD SNAPSHOTS                                      [Request New Snapshot]      │
+│ Anonymised copies of real production data for realistic testing                 │
+│ All PII removed before storage — no raw names, emails, or mobile numbers        │
+├───────────────────────────────────────┬──────────┬──────────────┬───────────────┤
+│ Snapshot                              │ Size     │ Created      │ Actions       │
+├───────────────────────────────────────┼──────────┼──────────────┼───────────────┤
+│ SSC Coaching Anon (1,245 students)    │ 18.4 MB  │ 2026-03-01   │ [Apply] [DL] │
+│ NEET Institute Anon (880 students)    │ 12.1 MB  │ 2026-02-15   │ [Apply] [DL] │
+│ School District Anon (3,400 students) │ 52.7 MB  │ 2026-01-31   │ [Apply] [DL] │
+├───────────────────────────────────────┴──────────┴──────────────┴───────────────┤
+│ Request new snapshot: Select institution type → request sent to Platform Ops   │
+│ Platform Ops runs anonymisation pipeline before making snapshot available here  │
+│ Anonymisation: Names → Faker-generated, Emails → anon@test.srav.in,           │
+│                Mobiles → 9000000001 sequence, Aadhaar → 0000000000000          │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Generators Sub-tab
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ DATA GENERATORS                                                                  │
+│ Programmatic data generation for specific test scenarios                         │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│ Available Generators:                                                            │
+│                                                                                 │
+│ ○ Student Bulk Generator                                                        │
+│   Count: [____] · Plan: [Pro ▼] · Domain: [SSC ▼] · With results: [✅]        │
+│                                                                                 │
+│ ○ Exam Series Generator                                                         │
+│   Exams: [____] · Questions per exam: [____] · Domain: [All ▼]                 │
+│   Include: [Live exams ✅] [Draft exams ✅] [Upcoming ✅]                       │
+│                                                                                 │
+│ ○ Boundary / Edge Case Generator                                                │
+│   Scenario: [Max students per exam (50,000) ▼]                                 │
+│   Generates: tenant with single exam, 50,000 student slots, 0 results          │
+│                                                                                 │
+│ ○ Multilingual Content Generator                                                │
+│   Languages: [Hindi ✅] [Tamil ✅] [Telugu ✅] [English ✅]                    │
+│   Questions per language: [____]                                                │
+│                                                                                 │
+│ ○ Billing / Payment History Generator                                           │
+│   Months of history: [____] · Include failed payments: [✅]                    │
+│   Include promo redemptions: [✅]                                               │
+│                                                                                 │
+│ Target tenant: [Select test tenant ▼]    [Generate Data]                       │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Models Added
+
+```python
+class TestDataFixture(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    s3_key = models.CharField(max_length=500)
+    size_bytes = models.BigIntegerField()
+    contents_summary = models.JSONField(
+        default=dict,
+        help_text='e.g. {students: 500, exams: 20, results: 150}'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    times_applied = models.PositiveIntegerField(default=0)
+
+
+class TestDataFixtureApplication(models.Model):
+    """Audit log of which fixture was applied to which tenant."""
+    fixture = models.ForeignKey(
+        TestDataFixture, on_delete=models.CASCADE, related_name='applications'
+    )
+    tenant = models.ForeignKey(
+        'TestTenant', on_delete=models.CASCADE, related_name='fixture_applications'
+    )
+    applied_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    applied_at = models.DateTimeField(auto_now_add=True)
+    overwrite_existing = models.BooleanField(default=False)
+
+
+class ProdSnapshot(models.Model):
+    STATUS = [
+        ('requested', 'Requested'),
+        ('anonymising', 'Anonymising'),
+        ('ready', 'Ready'),
+        ('failed', 'Failed'),
+    ]
+    label = models.CharField(max_length=200)
+    source_institution_type = models.CharField(max_length=50)
+    student_count = models.IntegerField()
+    s3_key = models.CharField(max_length=500, blank=True)
+    size_bytes = models.BigIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS, default='requested')
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    ready_at = models.DateTimeField(null=True, blank=True)
+    anonymisation_log = models.TextField(blank=True)
+```
+
+**Security:** Prod snapshots require `qa.access_prod_snapshots` permission (separate from general test data). All snapshot download links are pre-signed S3 URLs expiring in 1 hour. Snapshots auto-deleted from S3 after 90 days. Snapshot data never applied to production tenants — validator checks `tenant.is_test == True` before applying.
+

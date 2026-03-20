@@ -654,3 +654,161 @@ Standard subdomain format: `{institution-slug}.eduforge.in`
 | Expiry dates on overrides | Optional date picker | Supports time-limited trial overrides without manual cleanup |
 | Concurrent edit protection | Conflict detection on publish | Prevents one PM silently overwriting another's changes |
 | Add-on column | Third state alongside enabled/disabled | Revenue vehicle: features that are not free but not plan-gated |
+
+---
+
+## Amendment G7 — Student Features Tab
+
+**Gap:** No per-plan control over student-facing features. The Feature Matrix only covers institution-admin-facing capabilities (dashboards, reports, bulk tools). Student-facing features (live leaderboard, adaptive recommendations, offline mode, parent sharing) are either always-on or ungated.
+
+### New Tab: "Student Features"
+
+Added to the Tab Bar between `Institution Overrides` and `Config History`.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ STUDENT FEATURES                                [Stage All Changes] [Export CSV]│
+│ Per-plan matrix for student-facing capabilities                                  │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ Filter: [All Categories ▼]                                                      │
+├─────────────────────────────────────────────────┬──────┬───────┬─────┬──────────┤
+│ Feature                                         │Start │Growth │ Pro │Enterprise│
+├─────────────────────────────────────────────────┼──────┼───────┼─────┼──────────┤
+│ EXAM EXPERIENCE                                 │      │       │     │          │
+│  Live Leaderboard (during exam)                 │  ❌  │   ✅  │ ✅  │    ✅    │
+│  Post-submit detailed solution PDF              │  ❌  │   ✅  │ ✅  │    ✅    │
+│  Pause & Resume (non-live exams)                │  ✅  │   ✅  │ ✅  │    ✅    │
+│  Night mode / Dark theme                        │  ✅  │   ✅  │ ✅  │    ✅    │
+│  Offline mode (downloaded practice tests)       │  ❌  │   ❌  │ ✅  │    ✅    │
+│  Text-to-speech for questions                   │  ❌  │   ❌  │ ✅  │    ✅    │
+│ ANALYTICS                                       │      │       │     │          │
+│  Personal score history dashboard               │  ✅  │   ✅  │ ✅  │    ✅    │
+│  Chapter-wise strength/weakness report          │  ❌  │   ✅  │ ✅  │    ✅    │
+│  Percentile tracking over time                  │  ❌  │   ✅  │ ✅  │    ✅    │
+│  Adaptive study plan (AI-powered)               │  ❌  │   ❌  │ ✅  │    ✅    │
+│  Peer comparison (anonymised batch rank)        │  ❌  │   ✅  │ ✅  │    ✅    │
+│ SOCIAL & SHARING                                │      │       │     │          │
+│  Share result card (image export)               │  ✅  │   ✅  │ ✅  │    ✅    │
+│  Achievement badges                             │  ❌  │   ✅  │ ✅  │    ✅    │
+│  Study streak tracker                           │  ❌  │   ✅  │ ✅  │    ✅    │
+│  Group study rooms (invite peers)               │  ❌  │   ❌  │ ❌  │    ✅    │
+│ COMMUNICATION                                   │      │       │     │          │
+│  In-app chat with teacher                       │  ❌  │   ❌  │ ✅  │    ✅    │
+│  Doubt submission (text/image)                  │  ❌  │   ✅  │ ✅  │    ✅    │
+│  Push notification for new exams                │  ✅  │   ✅  │ ✅  │    ✅    │
+│  WhatsApp result share                          │  ✅  │   ✅  │ ✅  │    ✅    │
+└─────────────────────────────────────────────────┴──────┴───────┴─────┴──────────┘
+```
+
+**Toggle behaviour:** Same staged-publish workflow as the main Feature Matrix. Student feature changes do NOT take effect until published. Active exam sessions unaffected until session ends.
+
+**Per-institution override:** Student features can be individually overridden in the `Institution Overrides` tab — same mechanism as portal features.
+
+**Models added:**
+
+```python
+class StudentFeature(models.Model):
+    """Registry of student-facing features."""
+    key = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=200)
+    category = models.CharField(max_length=50)  # exam_experience, analytics, social, communication
+    description = models.TextField()
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+
+class StudentFeaturePlanConfig(models.Model):
+    PLANS = [('starter','Starter'),('growth','Growth'),('pro','Pro'),('enterprise','Enterprise')]
+    STATE = [('enabled','Enabled'),('disabled','Disabled'),('addon','Add-on')]
+
+    feature = models.ForeignKey(StudentFeature, on_delete=models.CASCADE, related_name='plan_configs')
+    plan = models.CharField(max_length=20, choices=PLANS)
+    state = models.CharField(max_length=10, choices=STATE, default='disabled')
+    staged_state = models.CharField(max_length=10, choices=STATE, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('feature', 'plan')
+```
+
+---
+
+## Amendment G8 — Parent Access Section
+
+**Gap:** No configuration for parent-portal capabilities. Institutions on Pro/Enterprise plans have a parent-facing portal where parents track their child's exam scores, attendance, and receive reports. There is no PM control over what parents can see or whether the parent portal is enabled.
+
+### New Section: "Parent Access" (within Student Features tab)
+
+Positioned as a separate sub-section below the student feature matrix, accessible via anchor `#parent-access`.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ PARENT ACCESS CONFIGURATION                       Available: Pro / Enterprise   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ Parent Portal Enabled: [Toggle — ON for Pro, Enterprise / OFF for Starter, Growth]│
+│                                                                                 │
+│ PARENT PORTAL CAPABILITIES (per plan)                                          │
+├─────────────────────────────────────────────────────┬──────┬───────┬─────┬─────┤
+│ Capability                                          │Start │Growth │ Pro │Ent. │
+├─────────────────────────────────────────────────────┼──────┼───────┼─────┼─────┤
+│ View child's exam scores & rank                     │  ❌  │  ❌   │ ✅  │  ✅ │
+│ View chapter-wise performance report                │  ❌  │  ❌   │ ✅  │  ✅ │
+│ Receive automated SMS/WhatsApp result alerts        │  ❌  │  ❌   │ ✅  │  ✅ │
+│ View attendance record                              │  ❌  │  ❌   │ ✅  │  ✅ │
+│ Download consolidated progress report (PDF)         │  ❌  │  ❌   │ ❌  │  ✅ │
+│ View AI-generated study recommendations for child   │  ❌  │  ❌   │ ❌  │  ✅ │
+│ In-app messaging with teacher (parent-initiated)    │  ❌  │  ❌   │ ❌  │  ✅ │
+│ View fee payment history & receipts                 │  ❌  │  ❌   │ ✅  │  ✅ │
+├─────────────────────────────────────────────────────┴──────┴───────┴─────┴─────┤
+│ Parent Account Creation:                                                        │
+│  • Auto-invite: Institution admin links parent email to student account        │
+│  • Auth: OTP login only (no password) — parent email or mobile                │
+│  • Multi-child: One parent account can link up to 5 children                  │
+│  • Data scope: Parent sees ONLY their linked child's data — no cross-student   │
+│                                                                                 │
+│ Parent Notification Settings (institution-configurable):                        │
+│  • After every exam: [✅ SMS] [✅ WhatsApp] [❌ Email]                         │
+│  • Weekly summary: [✅ SMS] [✅ WhatsApp] [✅ Email]                           │
+│  • Low performance alert (score < institution threshold): [✅ All channels]    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Models added:**
+
+```python
+class ParentPortalPlanConfig(models.Model):
+    PLANS = [('starter','Starter'),('growth','Growth'),('pro','Pro'),('enterprise','Enterprise')]
+
+    plan = models.CharField(max_length=20, choices=PLANS, unique=True)
+    portal_enabled = models.BooleanField(default=False)
+    capabilities = models.JSONField(
+        default=dict,
+        help_text='Map of capability_key → enabled boolean'
+    )
+    staged_capabilities = models.JSONField(null=True, blank=True)
+
+
+class ParentAccount(models.Model):
+    """Parent portal user."""
+    email = models.EmailField(unique=True)
+    mobile = models.CharField(max_length=20, blank=True)
+    institution = models.ForeignKey('institutions.Institution', on_delete=models.CASCADE)
+    linked_students = models.ManyToManyField(
+        'students.Student',
+        through='ParentStudentLink',
+        related_name='parents'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(null=True)
+
+
+class ParentStudentLink(models.Model):
+    parent = models.ForeignKey(ParentAccount, on_delete=models.CASCADE)
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE)
+    linked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    linked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('parent', 'student')
+```
+
+**Security:** Parent auth is OTP-only. Parent session scoped to institution — cannot access another institution's data even if linked student transfers. Parent data is excluded from all PM-level reports; PMs see only aggregate "parent portal active sessions" count.

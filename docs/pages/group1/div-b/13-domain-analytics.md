@@ -637,3 +637,164 @@ Report is generated server-side using a background Celery task. User receives a 
 | Series/institution tables | No cache — live paginated query | Must be accurate; stale institution data misleads |
 | Compare chart max 6 | Prevents line chart from becoming unreadable | More than 6 overlapping lines are indistinguishable |
 | PDF export async | Celery background task | 2M+ record aggregation cannot block the web request |
+
+---
+
+## Amendment G11 — Benchmarking Section
+
+**Gap:** No comparison of platform content coverage against official syllabi or past exam papers. PM Exam Domains has no visibility into whether the question bank covers 60% or 95% of the syllabus, and no data on whether question difficulty distribution matches historical paper patterns. This leads to institution churn ("your question bank doesn't cover the full syllabus") that cannot be objectively addressed.
+
+### New Section: "Benchmarking" (per-domain tab, below Heatmap)
+
+Available in each domain tab (SSC, NEET, JEE, etc.) as a collapsible section triggered by `[Show Benchmarking ▼]`.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ BENCHMARKING — SSC CGL                               [Refresh] [Export PDF]    │
+│ Question bank coverage vs official syllabus · Difficulty vs past papers        │
+├───────────────────────────────────────────────────────────┬─────────────────────┤
+│ SYLLABUS COVERAGE                                         │ OVERALL COVERAGE    │
+│                                                           │                     │
+│ Tier 1 — General Intelligence & Reasoning                 │   ██████████░ 91%  │
+│  ├─ Analogies             ████████████ 100%               │                     │
+│  ├─ Coding-Decoding       ████████████ 100%               │ Tier 1:  94%       │
+│  ├─ Blood Relations       ██████████░░  84%               │ Tier 2:  88%       │
+│  ├─ Matrix               ████████░░░░  68%                │ Tier 3:  72%       │
+│  └─ [8 more topics...]                                    │ Tier 4:  91%       │
+│                                                           │                     │
+│ Tier 1 — General Awareness                               │ 🟡 2 gaps below 70% │
+│  ├─ Current Affairs (2024) ████████░░░  79%               │ [View all gaps]     │
+│  ├─ History               ████████████ 100%               │                     │
+│  ├─ Geography             ███████████░  92%               │                     │
+│  └─ [6 more topics...]                                    │                     │
+│                                                           │                     │
+│ Tier 1 — Quantitative Aptitude                           │                     │
+│  ├─ Simple Interest       ████████████ 100%               │                     │
+│  ├─ Data Interpretation   ██████░░░░░░  54%  ← ⚠️ GAP    │                     │
+│  └─ [10 more topics...]                                   │                     │
+├───────────────────────────────────────────────────────────┴─────────────────────┤
+│ DIFFICULTY DISTRIBUTION vs PAST PAPERS                                          │
+│                                                                                 │
+│ Compare platform question difficulty against SSC CGL papers:                   │
+│ Reference paper: [SSC CGL 2024 Tier 1 ▼] (latest available)                   │
+│                                                                                 │
+│ ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│ │ Difficulty │ Past Paper │ Platform Bank │ Gap        │                     │ │
+│ ├────────────┼────────────┼───────────────┼────────────┤                     │ │
+│ │ Easy       │    35%     │     48%       │ +13% ↑     │ Too many easy Qs    │ │
+│ │ Medium     │    45%     │     38%       │ -7%  ↓     │ Slight shortage     │ │
+│ │ Hard       │    20%     │     14%       │ -6%  ↓     │ Hard Qs deficit     │ │
+│ └─────────────────────────────────────────────────────────────────────────────┘ │
+│ Recommendation: Add ~800 Hard questions in Quant & Reasoning to match paper    │
+│                 distribution. Reduce Easy question proportion in GK section.   │
+│                                                                                 │
+│ QUESTION AGE vs PAST PAPERS                                                     │
+│  Questions updated after 2023: 78%  |  Pre-2020 questions: 8% (flag for review)│
+│  Past paper overlap (Q bank vs official papers): 2.3% duplication detected    │
+│  (Questions identical to official past papers — should be flagged/removed)     │
+│  [View Duplicate Matches] [Flag All for Review]                                │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Syllabus Coverage Data Model
+
+Benchmarking data is maintained as a structured syllabus imported from official sources and mapped to question topics:
+
+```python
+class OfficialSyllabus(models.Model):
+    """Master syllabus imported from official exam bodies."""
+    exam_domain = models.CharField(max_length=50)  # SSC, NEET, JEE, etc.
+    exam_name = models.CharField(max_length=200)   # SSC CGL, SSC CHSL, etc.
+    tier_or_paper = models.CharField(max_length=50, blank=True)  # Tier 1, Tier 2
+    version = models.CharField(max_length=20)      # 2024, 2025
+    source_url = models.URLField(blank=True)
+    is_current = models.BooleanField(default=True)
+    imported_at = models.DateTimeField(auto_now_add=True)
+    imported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+
+class SyllabusSection(models.Model):
+    """Hierarchical section of an official syllabus."""
+    syllabus = models.ForeignKey(
+        OfficialSyllabus, on_delete=models.CASCADE, related_name='sections'
+    )
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True, related_name='children'
+    )
+    name = models.CharField(max_length=200)
+    order = models.PositiveSmallIntegerField(default=0)
+    # Mapped to platform topic taxonomy
+    mapped_topic_ids = models.JSONField(default=list)
+
+
+class SyllabusCoverageSnapshot(models.Model):
+    """Nightly computed coverage metrics per syllabus section."""
+    syllabus = models.ForeignKey(OfficialSyllabus, on_delete=models.CASCADE)
+    section = models.ForeignKey(SyllabusSection, on_delete=models.CASCADE)
+    total_subtopics = models.IntegerField()
+    covered_subtopics = models.IntegerField()
+    coverage_pct = models.DecimalField(max_digits=5, decimal_places=2)
+    question_count = models.IntegerField()
+    computed_at = models.DateField()
+
+    class Meta:
+        unique_together = ('syllabus', 'section', 'computed_at')
+        ordering = ['-computed_at', 'section__order']
+
+
+class PastPaperDifficultyBenchmark(models.Model):
+    """Difficulty distribution from official past papers — manually entered."""
+    syllabus = models.ForeignKey(OfficialSyllabus, on_delete=models.CASCADE)
+    paper_year = models.PositiveSmallIntegerField()
+    easy_pct = models.DecimalField(max_digits=5, decimal_places=2)
+    medium_pct = models.DecimalField(max_digits=5, decimal_places=2)
+    hard_pct = models.DecimalField(max_digits=5, decimal_places=2)
+    source_notes = models.TextField(blank=True)
+    entered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    entered_at = models.DateTimeField(auto_now_add=True)
+```
+
+### Celery Task
+
+```python
+@shared_task(queue='analytics')
+def compute_syllabus_coverage():
+    """
+    Runs nightly at 03:00 IST.
+    For each active OfficialSyllabus, compute coverage_pct per section
+    by counting questions tagged with mapped_topic_ids.
+    """
+    today = date.today()
+    for syllabus in OfficialSyllabus.objects.filter(is_current=True):
+        for section in syllabus.sections.filter(parent__isnull=False):
+            topic_ids = section.mapped_topic_ids
+            q_count = Question.objects.filter(
+                topic_id__in=topic_ids,
+                status='published'
+            ).count()
+            subtopics = len(topic_ids) or 1
+            covered = min(subtopics, q_count // 5)  # heuristic: 5 Qs per subtopic = covered
+            coverage_pct = Decimal(covered) / Decimal(subtopics) * 100
+
+            SyllabusCoverageSnapshot.objects.update_or_create(
+                syllabus=syllabus,
+                section=section,
+                computed_at=today,
+                defaults={
+                    'total_subtopics': subtopics,
+                    'covered_subtopics': covered,
+                    'coverage_pct': coverage_pct,
+                    'question_count': q_count,
+                }
+            )
+```
+
+### Coverage Threshold Alerts
+
+- Section with `coverage_pct < 70%` → flagged as gap (amber in heatmap, listed in gap panel)
+- Section with `coverage_pct < 40%` → critical gap (red), email to PM Exam Domains lead
+- PM can set custom threshold per domain: `[Coverage alert threshold: 70% ▼]`
+
+### Past Paper Overlap Detection
+
+Nightly task compares `Question.text` (normalised, stopwords stripped) against stored past paper question text using MinHash LSH (locality-sensitive hashing). Matches above 85% similarity flagged as duplicates, surfaced in the "Question Age vs Past Papers" row. PM can review and remove or re-author flagged questions.
