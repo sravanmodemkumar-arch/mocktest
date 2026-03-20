@@ -115,6 +115,7 @@ Red background. Cannot be dismissed. Visible to all roles with page access.
 | Status | Yes | Action status pill |
 | Institution Notified | No | ✅ Yes / — No |
 | NCPCR Reported | No | ✅ Yes (with ref) / — No |
+| FIR Filed | No | ✅ Yes (with ref) / — No |
 | Opened | Yes | `created_at` date |
 | Days Open | Yes (default: DESC) | `today - created_at.date()` — red if > 1 day and not reported |
 | Handled By | No | Officer name |
@@ -188,12 +189,17 @@ Progress indicator shows which steps are complete vs pending.
 
 #### NCPCR Filing Tab
 
-The primary workflow for mandatory reporting.
+The primary workflow for mandatory reporting. This tab contains three sub-sections:
+1. **NCPCR Report** — always visible from case creation
+2. **Police Reporting (FIR)** — visible from case creation; shown in amber until completed
+3. **SCWC Notification** — visible from case creation; shown in amber until completed
+
+All three sections display simultaneously in sequence. Completed sections show a ✅ header. Incomplete sections show ⏳. This single tab gives POCSO Officer the full mandatory reporting workflow in one view.
 
 **Pre-report checklist** (must confirm before filing):
 - [ ] Offense details verified against vendor report
 - [ ] Institution has been notified (or note explaining why not yet)
-- [ ] Legal Officer (75) has been consulted (if offense type is contested)
+- [ ] Legal Officer (75) has been consulted (if offense type is contested) — [Notify Legal Officer] sends in-app message to Legal Officer (75) and Legal Officer (75) can add a read-only case note. Not a blocking step.
 - [ ] Staff's access to minors has been suspended or pending
 
 **NCPCR Report Form:**
@@ -339,14 +345,21 @@ Used when a POCSO offense is reported via anonymous tip or identified outside th
 
 Available when all required steps are complete.
 
-**Closure prerequisites:**
-- `ncpcr_reported = true`
-- `institution_notified = true`
-- Employment action confirmed (either suspension or institution takes action)
+**Closure prerequisites** — [Close Case] button is disabled until all are met:
+
+| Prerequisite | Field | Override |
+|---|---|---|
+| NCPCR report filed | `ncpcr_reported = true` | None — cannot close without NCPCR report |
+| FIR with local police | `police_reported = true` | Can override with documented justification: "FIR Not Applicable — {reason}" (min 50 chars). Requires BGV Manager confirmation. |
+| Institution notified | `institution_notified = true` | None |
+| Employment action confirmed | `action_status = EMPLOYMENT_SUSPENDED` OR closure reason documents institution's own action | Free text in closure modal |
+
+Each unmet prerequisite shown as a red ✗ checklist item above the [Close Case] button. Completed prerequisites shown as ✅.
 
 **[Close Case]** (POCSO Officer, BGV Manager):
 - Modal: Closure reason (required, min 50 chars)
 - Closure type: Select — RESOLVED_EMPLOYMENT_TERMINATED · RESOLVED_EMPLOYMENT_RETAINED_BY_INSTITUTION · FALSE_POSITIVE_CONFIRMED · INCONCLUSIVE_INSUFFICIENT_EVIDENCE · OTHER
+- If FIR override invoked: "Explain why police reporting is not applicable (min 50 chars):" — logged separately
 - [Confirm Closure]
 - Sets `action_status = CLOSED`, `closed_at`, `closure_reason`
 
@@ -366,8 +379,12 @@ Available when all required steps are complete.
 | Legal Officer (75) | Read-only across all tabs. Cannot take any action. |
 | [Edit Offense Details] | POCSO Officer (41), Reporting Officer (78), BGV Manager (39) — before NCPCR report only |
 | [Mark as NCPCR Reported] | POCSO Officer (41), Reporting Officer (78) |
+| [Mark FIR Filed] | POCSO Officer (41), Reporting Officer (78), BGV Manager (39) |
+| [Mark SCWC Notified] | POCSO Officer (41), Reporting Officer (78), BGV Manager (39) |
 | [Suspend Staff Access] | BGV Manager (39), Platform Admin (10) |
-| [Close Case] | POCSO Officer (41), Reporting Officer (78), BGV Manager (39) |
+| [Mark as False Positive] | Requires BOTH: (POCSO Officer (41) OR Reporting Officer (78)) AND BGV Manager (39) confirmation. Neither can do it alone — two-person rule enforced via two-step confirmation: first actor clicks [Initiate False Positive Override] → second actor sees pending override and [Confirm False Positive]. |
+| [Merge Duplicate Cases] | POCSO Officer (41), Reporting Officer (78), BGV Manager (39) |
+| [Close Case] | POCSO Officer (41), Reporting Officer (78), BGV Manager (39) — only when all prerequisites met |
 | [Export Case Audit CSV] | All with page access |
 
 ---

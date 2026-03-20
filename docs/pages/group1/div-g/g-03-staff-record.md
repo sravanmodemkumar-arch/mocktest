@@ -53,6 +53,7 @@ G-03 is the single source of truth for one staff member's entire BGV lifecycle �
 - [Edit Staff Details] — BGV Executive (40) or above only
 - [Create Re-Verification] — BGV Ops Supervisor (92), BGV Manager (39)
 - [Suspend Staff BGV] — BGV Manager (39) only (marks staff as SUSPENDED — blocks portal access if integrated)
+- [Cancel BGV Request] — BGV Ops Supervisor (92), BGV Manager (39) only. Available when `bgv_verification.status NOT IN (COMPLETE, CANCELLED)`. Confirmation modal: "Cancel verification for {staff_ref}? Verification will be marked CANCELLED. Institution admin will be notified. Reason (required, max 300 chars):" — sets `status = CANCELLED`, `final_result = CANCELLED`, logs to audit. `bgv_staff.bgv_status` reverts to previous value (NOT_INITIATED for first verification; CLEAR if prior CLEAR existed). Note: if POCSO flag was set before cancellation, POCSO case remains open — cancellation does not close POCSO cases.
 
 ---
 

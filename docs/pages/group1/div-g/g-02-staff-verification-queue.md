@@ -95,7 +95,9 @@ Stats bar is visible to all roles with queue access. BGV Executive sees counts m
 
 **BGV Executive (40)** sees only their assigned items in all tabs, plus unassigned items in "Docs Pending" and "Documents Received" tabs (so they can self-assign).
 
-**BGV Ops Supervisor (92)** and **BGV Manager (39)** see all items across all tabs.
+**BGV Ops Supervisor (92)** and **BGV Manager (39)** see all items across all tabs, including an **"Unassigned"** quick-filter button in the filter bar that shows only items where `assigned_to_id IS NULL`.
+
+**Search scope:** Text search queries `bgv_staff.staff_ref` (exact or partial, e.g. `BGV-SCH001`) and institution name. Full name is NOT searchable (DPDPA compliance — full names are encrypted and not indexed for search). BGV Executive search is additionally scoped to their own assigned items.
 
 ---
 
