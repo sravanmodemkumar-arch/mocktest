@@ -461,7 +461,108 @@ class ProductRoadmapView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 ---
 
-## 9. Keyboard Shortcuts
+## 9. Feature Dependency Tracking
+
+**Purpose:** Some roadmap features cannot be built until a prerequisite feature is complete. Without dependency tracking, Engineering starts a feature only to discover a blocker mid-sprint.
+
+**Dependency declaration:** In Feature Detail Drawer → Section A → "Depends on" field (multi-select from other features across all epics).
+
+**Dependency display in Kanban:**
+- Feature card shows a dependency chain icon `⛓` if it has unresolved dependencies
+- Tooltip: "Blocked by: [Feature A] (In Development)"
+- Cannot move a feature to "In Development" if any dependency is still in Backlog or Planned — warning modal: "Feature depends on [Feature A] which is not yet in review. Confirm move?"
+
+**Dependency display in Timeline:**
+- Dependency arrows drawn between feature bars: dashed `→` line from prerequisite end date to dependent start date
+- If dependent start date is before prerequisite end date: red overlap highlight + warning "Dependency conflict: this feature starts before [Feature A] is done"
+
+**Dependency chains surfaced in Backlog tab:**
+- Column "Blocked By": shows count of unresolved dependencies
+- Filter: [Show only unblocked] — hides features with pending dependencies
+
+---
+
+## 10. Capacity Planning Detail
+
+**Purpose:** The "Capacity Used" KPI at 82% hides the detail. PM needs to know *which* epics are consuming capacity and whether any sprint is overloaded.
+
+**Capacity View (sub-section of Timeline tab → [Capacity View] toggle):**
+
+**Sprint capacity table:**
+
+| Sprint | Dates | Total Story Points | Committed | Remaining | Risk |
+|---|---|---|---|---|---|
+| Sprint 1 | Mar 1–14 | 60 pts | 58 pts | 2 pts | ✅ OK |
+| Sprint 2 | Mar 15–28 | 60 pts | 63 pts | -3 pts | ⚠ Overloaded |
+| Sprint 3 | Mar 29–Apr 11 | 60 pts | 45 pts | 15 pts | ✅ OK |
+| Sprint 4 | Apr 12–25 | 60 pts | 28 pts | 32 pts | ✅ Under-committed |
+
+Sprint 2 row: `bg-[#451A03]` amber background · [View overloaded features →] opens filter to show features assigned to Sprint 2
+
+**Capacity source:** Story points per feature × sprint assignment from Feature Detail Drawer. Total sprint capacity (60 pts default) is configurable in Settings.
+
+**Domain breakdown** (stacked bar per sprint):
+- PM Platform features: `bg-[#6366F1]`
+- PM Exam Domains features: `bg-[#10B981]`
+- PM Institution Portal features: `bg-[#F59E0B]`
+
+---
+
+## 11. Stakeholder Read-Only View
+
+**Trigger:** [Share] button → generates a time-limited read-only URL (token valid 30 days, renewable)
+
+**What the stakeholder sees:**
+- Roadmap page with all tabs (Timeline, Kanban, OKRs, Institution Requests)
+- Sensitive fields hidden: story points, RICE scores, PM comments, internal backlog notes
+- Cannot see: Institution Requests with ARR values, internal PM discussion
+- Can see: Feature titles, statuses, target quarters, OKR progress %
+
+**Audience:** Division A executives, CSM team (Division J), external stakeholders in quarterly business reviews
+
+**Revoke link:** [Revoke Share Link] button invalidates the token immediately
+
+---
+
+## 12. Notification Rules
+
+| Event | Recipients | Channel | Trigger |
+|---|---|---|---|
+| Feature moved to "In Development" | Feature owner PM | In-app | Status change |
+| Sprint overloaded (capacity > 100%) | PM Platform + all PMs | In-app warning badge | Sprint planning recalculate |
+| Feature misses target release date (still not Done when release ships) | PM owner | Email | Release Manager marks release as shipped |
+| OKR Key Result drops below 50% with < 4 weeks left in quarter | PM owner + PM Platform | Email | Nightly OKR score recalculate |
+| Institution request linked to a shipped feature | PM owner | In-app | Feature moved to Done |
+| Feature dependency resolved (blocking feature moves to Done) | Dependent feature's PM owner | In-app | Status change on blocking feature |
+
+---
+
+## 13. Integration Points
+
+| Page | Direction | What flows |
+|---|---|---|
+| 03 — Release Manager | Both | Features are assigned to releases; release ship date becomes the "done by" deadline for features; missed features auto-flag in roadmap |
+| 06 — A/B Test Manager | Inbound | Experiment outcomes update the Reach field of linked roadmap features; "validated by experiment" tag added |
+| 25 — Defect Tracker | Inbound | P0/P1 defects can generate emergency roadmap features (linked to defect); these appear in Kanban as "Hotfix" type |
+| 28 — Revenue & Billing | Inbound | Institution request ARR at Stake column pulls live ARR from billing data |
+| Division A — Exec Dashboard | Outbound | OKR scores from this page feed into Division A executive OKR summary view |
+
+---
+
+## 14. Key Design Decisions
+
+| Decision | Chosen approach | Why |
+|---|---|---|
+| RICE scoring over MoSCoW | Quantitative RICE | MoSCoW produces ties ("everything is Must Have"); RICE forces numeric trade-offs which are auditable and defensible to stakeholders |
+| WIP limits per Kanban column | Configurable limits (In Dev: 10, In Review: 5) | Without WIP limits, Engineering context-switches across 20 features simultaneously; WIP limits enforce focus and reduce cycle time |
+| AI prioritisation via internal scoring model | Advisory (PM confirms) | Full AI control of priority is not trusted for strategic decisions involving institutional relationships; AI suggestion + PM confirmation preserves accountability |
+| OKRs linked to features (not just epics) | Feature-level OKR link | Epics span quarters; features ship within sprints. Linking at feature level gives real-time OKR progress from sprint completions |
+| Institution Request ARR at Stake | Always visible | Revenue impact quantifies the cost of delay; a ₹50L request sitting in backlog for 6 months is a leadership-level risk, not a PM-level decision |
+| Share link scoped to 30 days | Time-limited tokens | Roadmaps change weekly; a permanent share link that shows stale data to executives causes confusion and misaligned expectations |
+
+---
+
+## 15. Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|

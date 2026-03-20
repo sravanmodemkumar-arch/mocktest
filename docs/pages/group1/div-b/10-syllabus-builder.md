@@ -445,7 +445,91 @@ class SyllabusNode(models.Model):
 
 ---
 
-## 14. Keyboard Shortcuts
+## 14. Bulk Operations
+
+**Trigger:** Select multiple nodes in the tree (Ctrl+click or Shift+click) → bulk action toolbar appears at top of right panel.
+
+**Supported bulk operations:**
+
+| Action | Conditions | Behaviour |
+|---|---|---|
+| Bulk Retag | Select multiple topics | Opens modal: choose new tags to add/remove across all selected topics |
+| Bulk Set Target Q | Select multiple nodes | Set a new target question count for all selected nodes at once |
+| Bulk Move | Select multiple topics/chapters | Opens parent picker modal — moves all selected to chosen parent (same domain only) |
+| Bulk Status Change | Select multiple nodes | Set Active / Disabled / Draft for all selected |
+| Bulk Export | Any selection | Exports selected subtrees to CSV/JSON |
+| Bulk Map to Exam Type | Select multiple topics | Maps all selected topics to a chosen exam type in one action |
+
+**Selection indicator:** `"3 nodes selected"` badge in right panel header · [Clear Selection ×]
+
+**Bulk move validation:** System checks all selected nodes are compatible with destination parent (e.g., cannot move a Subject into another Subject). Incompatible nodes shown in a validation summary before confirming.
+
+---
+
+## 15. Syllabus Review Workflow
+
+**Purpose:** Syllabus changes (new topics, renames, restructuring) have downstream impact on question bank tagging, test series coverage, and student-facing content. Major changes must be reviewed before being marked active.
+
+**Who triggers review:** PM Exam Domains (manages) submits syllabus version for review.
+**Who reviews:** Senior PM Exam Domains or Head of Content (defined in Division A).
+
+**Review flow:**
+1. PM Exam Domains makes changes → syllabus is in "Draft (changes pending)" state
+2. PM clicks [Submit for Review] → status changes to "Under Review"
+3. Reviewer is notified (email + in-app alert)
+4. Reviewer opens Syllabus Builder → sees a diff view (current vs previous version) showing all additions, removals, renames
+5. Reviewer can [Approve] → syllabus becomes Active version, question bank re-tagging job queued in Celery
+6. Reviewer can [Request Changes] → comment required, status returns to "Draft"
+
+**Impact assessment shown to reviewer:**
+- New nodes: "3 new topics — these will appear in coverage gap report but have 0 questions"
+- Renamed nodes: "2 topics renamed — 8,420 question tags will be migrated automatically"
+- Deleted nodes: "1 topic deleted — 340 questions will become untagged (action required)"
+
+**2FA not required for syllabus changes** (low blast radius — question bank re-tagging is reversible via version restore).
+
+---
+
+## 16. Notification Rules
+
+| Event | Recipients | Channel | Trigger |
+|---|---|---|---|
+| Coverage drops below 75% for a topic | PM Exam Domains owner of that domain | Email + in-app | Nightly coverage recompute |
+| New content gap (topic with 0 questions) appears | PM Exam Domains | In-app badge on Coverage Dashboard | Question deleted/moved |
+| Syllabus review submitted | Reviewer (Senior PM / Head of Content) | Email | Submit for review action |
+| Syllabus review approved | PM Exam Domains (submitter) | Email | Approval action |
+| Syllabus review changes requested | PM Exam Domains (submitter) | Email | Request changes action |
+| Question re-tagging Celery job completes | PM Exam Domains | In-app toast | Celery task `syllabus_retag_complete` |
+| Bulk move affects > 1,000 questions | PM Exam Domains | Email confirmation required before proceeding | Move confirmation |
+
+---
+
+## 17. Integration Points
+
+| Page | Direction | What flows |
+|---|---|---|
+| 27 — Question Bank Manager | Both | Questions are tagged to syllabus nodes; coverage % shown in this page is derived from question count per node in page 27 |
+| 12 — Exam Pattern Builder | Inbound | Exam sections reference syllabus subjects; pattern builder uses the subject list from this page |
+| 13 — Domain Analytics | Outbound | Syllabus coverage metrics (% topics covered, gap count) appear in domain analytics dashboard |
+| 09 — Exam Domain Config | Inbound | Domain config controls which syllabus versions are active per domain |
+| 10 (self) | Self | Version history and comparison is internal to this page; restore version creates a new version entry |
+
+---
+
+## 18. Key Design Decisions
+
+| Decision | Chosen approach | Why |
+|---|---|---|
+| 3-level hierarchy (Subject → Chapter → Topic) | Fixed 3 levels, not arbitrary depth | Arbitrary depth trees become unmanageable at 12,000–18,000 nodes; 3 levels maps naturally to how exams are structured (section → unit → concept) |
+| Coverage % cached 5 minutes (Redis) | Not real-time | Computing coverage for 2M+ questions across 18,000 nodes in real-time would require sequential DB scans; 5-minute staleness is acceptable for PM planning |
+| Delete only allowed when Q count = 0 | Hard rule — no override | Deleting a topic with tagged questions orphans them in the question bank; orphaned questions disappear from coverage and test series — undetectable until exam content fails |
+| Name change triggers re-tagging confirmation if > 1,000 questions | Threshold-based confirmation | Below 1,000: quick operation. Above 1,000: takes 15–30 min in Celery; PM needs to be aware before clicking Save |
+| Cross-domain move not supported via drag | Duplicate → Delete only | A chapter in SSC Quantitative Aptitude and a chapter in RRB Quantitative Aptitude are different entities even if same name; moving implies the same content applies to both domains which requires explicit review |
+| Version restore creates a new version (not rollback-in-place) | Append-only version history | Rollback-in-place would destroy the history of the rolled-back version; creating a new "restored from v3" version preserves the full audit trail |
+
+---
+
+## 19. Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|

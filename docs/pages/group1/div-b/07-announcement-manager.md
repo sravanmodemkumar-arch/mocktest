@@ -474,7 +474,79 @@ def send_announcement_task(self, announcement_id):
 
 ---
 
-## 11. Error States
+## 11. Opt-Out and Unsubscribe Management
+
+**Purpose:** DPDPA 2023 and TRAI regulations require recipients to be able to opt out of non-transactional communications. Institution admins must be able to stop receiving non-critical announcements.
+
+**Opt-out categories:**
+- **Cannot opt out:** Maintenance window notices (operational necessity) · Plan change notices (contractual requirement) · Legal/policy notices
+- **Can opt out:** Feature update announcements · Survey requests · Product newsletters
+
+**Opt-out mechanism:**
+- Every email has a one-click "Unsubscribe" link in the footer (DPDPA-compliant)
+- WhatsApp: standard Meta Business API opt-out via "STOP" reply — handled automatically by gateway
+- In-App Banner: dismissing the banner is considered a preference signal; admins with 5+ consecutive dismissals are shown a preference panel: "You keep dismissing announcements. Would you like to reduce notifications?"
+
+**Opt-out registry table** (visible to PM in Targeting tab of Announcement Drawer — Sent):
+| Institution | Admin contact | Opted Out Channels | Opt-out Date |
+|---|---|---|---|
+| Delhi Public School | admin@dps.edu | Email | Mar 10, 2026 |
+| Narayana Coaching | mgr@narayana.in | Email + WhatsApp | Feb 28, 2026 |
+
+**Impact on audience count:** The Audience preview in Step 1 of New Announcement Modal shows:
+"Will reach: 2,048 institutions (2 excluded due to opt-out)"
+
+**Re-opt-in:** Institutions can re-enable communications from their institution settings portal. PM cannot manually override an opt-out.
+
+---
+
+## 12. Regulatory Compliance
+
+### TRAI DLT Registration (SMS)
+All SMS announcement templates must be pre-registered on the Distributed Ledger Technology (DLT) portal as mandated by TRAI. The Announcement Manager shows:
+- **Template DLT ID:** each SMS template must carry its registered DLT Template ID
+- If an SMS template has no DLT ID: it is blocked from sending with an error: "SMS template not DLT-registered. Submit to telecom operator before using."
+- New SMS templates go through a 2–7 day DLT approval process before they can be used.
+
+### Meta WhatsApp Business API Approval
+WhatsApp templates must be approved by Meta before use. Status per template:
+- Approved: `bg-[#064E3B] text-[#34D399]` — can send
+- Pending: `bg-[#451A03] text-[#FCD34D]` — cannot send yet
+- Rejected: `bg-[#450A0A] text-[#F87171]` — requires revision and resubmission
+
+### DPDPA 2023 Compliance
+- All announcement emails include the platform Data Fiduciary name and contact: "EduForge Technologies Pvt. Ltd. | Hyderabad | dpo@eduforge.in"
+- Student PII is never included in announcements to institution admins — only aggregate data (e.g., "your institution has 1,240 enrolled students") is allowed
+- Opt-out records are retained for 3 years (DPDPA audit requirement)
+
+---
+
+## 13. Integration Points
+
+| Page | Direction | What flows |
+|---|---|---|
+| 03 — Release Manager | Inbound | [Auto-generate from Release] pulls changelog text from the linked release record in page 03 |
+| 18 — Notification Template Manager | Sibling | Page 18 manages student-facing notification templates sent by institutions; this page manages platform-to-institution comms. Channels are shared (SES, WhatsApp Business API) but audiences and content are distinct |
+| 16 — Portal Templates | Inbound | In-app banners rendered on institution portals use the layout defined in portal templates (page 16) |
+| 04 — Plan Config | Inbound | Pricing change announcements (Type: Pricing) are triggered when plan pricing is published from page 04; the audience is auto-set to affected institutions |
+| 25 — Defect Tracker | Inbound | When a P0 incident is resolved, PM Platform uses this page to send a "Resolution Notice" announcement to all affected institutions |
+
+---
+
+## 14. Key Design Decisions
+
+| Decision | Chosen approach | Why |
+|---|---|---|
+| SMS off by default | Toggle must be explicitly enabled per announcement | SMS costs ₹0.12–0.15 per message; 8,000 admins × ₹0.13 = ₹1,040 per announcement. High-volume thoughtless sending would be wasteful. Default off forces PM to consciously choose SMS |
+| Separate from Notification Template Manager (page 18) | Two distinct systems | Page 18 is for institution-to-student transactional notifications; this page is for platform-to-institution broadcast comms. Merging them would create role confusion (PM Portal manages page 18; PM Platform manages page 07) |
+| [Auto-generate from Release] pulls from Release Manager | Cross-page data pull | Keeps release notes and announcement content in sync; prevents PM writing announcement that contradicts the actual shipped features |
+| 4-step wizard for new announcements | Step-by-step with preview | Announcements to 2,050 institutions cannot be reversed after sending. The 4-step wizard with a mandatory confirmation checklist reduces "accidental send" incidents |
+| Audience preview counter in Step 1 | Live, updates on filter change | PM needs to know if a filter misconfiguration results in 0 or wrong audience before spending time writing content in Step 2 |
+| Cost estimate for WhatsApp + SMS | Displayed in Step 3 | PM Platform has a comms budget; cost transparency prevents budget overruns and encourages using in-app banner (zero marginal cost) as primary channel |
+
+---
+
+## 15. Error States
 
 | Error | Display |
 |---|---|

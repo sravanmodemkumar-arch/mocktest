@@ -449,7 +449,95 @@ class MobileAppConfigView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 ---
 
-## 9. Keyboard Shortcuts
+## 9. App Store Release Notes Management
+
+**Purpose:** When a new mobile version is shipped, the App Store (iOS) and Google Play (Android) listing must include "What's New" text. PM Platform drafts this text here, synced to the engineering release checklist via Release Manager (page 03).
+
+**Release Notes Panel** (sub-section of Version Control tab, below Version Policy Table):
+
+| Field | iOS | Android |
+|---|---|---|
+| Version | v3.5.0 (upcoming) | v3.5.0 (upcoming) |
+| What's New | Textarea · max 4,000 chars (App Store limit) | Textarea · max 500 chars (Play Store short limit) |
+| Keywords | Text · max 100 chars (App Store only) | N/A |
+| Status | Draft · Submitted · Approved · Live | Draft · Submitted · Approved · Live |
+
+**[Auto-generate from Release Changelog]:** Pulls bullet points from the linked Release Manager entry and formats them for each store's length constraint. PM edits before submitting.
+
+**[Link to Release]:** Connects this version's release notes to a Release Manager record (page 03). When QA signs off on that release, the release notes status moves to "Submitted."
+
+---
+
+## 10. Crash Reporting Integration
+
+**Purpose:** Firebase Crashlytics crash data is surfaced here so PM Platform can correlate crashes with specific app versions and make informed force-update decisions. High crash rate on v3.4.1 = strong justification to block it.
+
+**Crash Rate Summary Panel** (visible at top of Version Control tab):
+
+| Version | iOS Crash-Free Rate | Android Crash-Free Rate | 7-day Trend | Action |
+|---|---|---|---|---|
+| v3.4.2 (latest) | 99.7% | 99.5% | → Stable | — |
+| v3.4.1 | 97.2% | 96.8% | ↓ Worsening | ⚠ Consider blocking |
+| v3.4.0 | 95.1% | 94.3% | → Stable | ❌ Block recommended |
+
+**Crash threshold alerts:**
+- Crash-free rate < 99%: amber warning badge on version row
+- Crash-free rate < 95%: red badge + auto-suggestion: "Block recommended — click to review"
+- Crash-free rate < 90%: critical alert bus notification (G5) to all div-b pages
+
+**[View Crash Details →]**: links to Firebase Crashlytics dashboard (external tab)
+
+---
+
+## 11. Deep Link Configuration
+
+**Purpose:** Notifications (FCM) and marketing links use deep links to open specific screens inside the app. PM Platform defines the mapping between link slugs and in-app destinations.
+
+**Deep Link Registry Table:**
+
+| Link Slug | In-App Destination | Used By | Active |
+|---|---|---|---|
+| `/exam/{exam_id}` | Exam detail screen | Result notifications | ✅ |
+| `/result/{attempt_id}` | Result screen | Result-published FCM | ✅ |
+| `/series/{series_id}` | Test series screen | Enrollment notifications | ✅ |
+| `/payment` | Payment screen | Payment due FCM | ✅ |
+| `/announcement/{id}` | Announcement detail | Feature update banners | ✅ |
+| `/profile` | Student profile | Account notifications | ✅ |
+| `/question-bank` | Question bank home | Study reminder FCM | ✅ |
+| `/offline-sync` | Offline sync screen | Connectivity warnings | ⬜ Draft |
+
+**[+ Add Deep Link]** modal: Link slug (text, must start with `/`) · Destination screen (select from app screen list) · Description
+
+**Minimum app version per deep link:** Ensures old app versions that don't support the destination screen silently fall back to home screen rather than crashing.
+
+---
+
+## 12. Integration Points
+
+| Page | Direction | What flows |
+|---|---|---|
+| 02 — Feature Flags | Inbound | Mobile-specific flags (this tab) are a scoped subset of the full flag registry in page 02; kill-switch on page 02 overrides mobile flag |
+| 03 — Release Manager | Both | Release notes drafted here link to Release Manager release records; QA sign-off on release triggers "Submitted" status on release notes |
+| 07 — Announcement Manager | Outbound | FCM topics configured here are the delivery mechanism for announcements sent via page 07 |
+| 18 — Notification Template Manager | Outbound | FCM delivery channels configured here are used by notification templates on page 18 |
+| 25 — Defect Tracker | Inbound | Mobile crashes (Crashlytics) that cross the 95% crash-free threshold auto-create a P1 defect in page 25 |
+
+---
+
+## 13. Key Design Decisions
+
+| Decision | Chosen approach | Why |
+|---|---|---|
+| Active Exam Guard on force update | Hard block in both UI and backend | 74K concurrent students in exam sessions cannot be force-restarted; a forced update would close the exam app and lose answers — unrecoverable data loss |
+| Separate mobile feature flags from web flags | Distinct flag namespace `domain=mobile` | Mobile flags require a minimum app version constraint that web flags don't have; merging them would require all 120+ web flags to carry unused mobile fields |
+| Hive key rotation overlap period (7 days) | Configurable overlap, default 7 | Rotation must not lock out users mid-exam; 7-day overlap allows all active users to upgrade and migrate before old key is revoked |
+| FCM topic auto-subscribe rules defined here (not in Django admin) | PM-managed rule builder | Engineering-managed Django admin subscriptions are slow to change and require a code deploy; PM needs to respond to domain launches (e.g., new IBPS domain) within hours |
+| Crash rate sourced from Crashlytics, not custom | Firebase integration (read-only display) | Crashlytics is already the engineering source of truth; duplicating crash tracking would create divergence; PM reads from the same source Engineering uses |
+| App Store release notes linked to Release Manager | Cross-page linkage | Prevents PM writing release notes that contradict the actual release changelog; single source of truth for what shipped |
+
+---
+
+## 14. Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|

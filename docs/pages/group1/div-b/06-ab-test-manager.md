@@ -443,7 +443,91 @@ def compute_significance(control_values, variant_values):
 
 ---
 
-## 9. Keyboard Shortcuts
+## 9. Multi-Variant Support (A/B/C Tests)
+
+The platform supports up to 3 variants per experiment (A/B/C split). This is used when PM wants to test two variants simultaneously against control — e.g., testing 3 different onboarding step orders at once.
+
+**Variant configuration (in New Experiment modal):**
+
+| Field | Single Variant (A/B) | Multi-Variant (A/B/C) |
+|---|---|---|
+| Variant count | 1 variant + control | 2 variants + control |
+| Split example | Control 90% / Variant A 10% | Control 80% / A 10% / B 10% |
+| Significance test | Two-sample t-test | ANOVA + pairwise post-hoc (Tukey HSD) |
+| Declare winner | Control vs Variant A | Control vs A vs B — best variant declared |
+| Minimum sample | 30 per group | 30 per group (90 total minimum) |
+
+**Multi-variant card UI:**
+```
+Control: 3.2/wk  (80%)
+Variant A: 4.1/wk (10%)  +28.1% ✓
+Variant B: 3.6/wk (10%)  +12.5% ✗ not significant
+Winner: Variant A (when significance reached for A, B, or both)
+```
+
+**Why max 3 variants:** At 2,050 institutions, splitting into more than 3 groups gives too few institutions per variant to reach statistical power in a reasonable timeframe. A 4-variant test would need 120 institutions minimum — restricting targeting to coaching centres only (100 institutions) would be underpowered.
+
+---
+
+## 10. Experiment Pause and Resume
+
+**Pause:** Temporarily stops collecting data without ending the experiment.
+- Use case: A related production incident distorts results (e.g., a bug disproportionately affects Variant A group). PM pauses until incident is resolved.
+- Pause adds a "DATA PAUSED" annotation on the Results timeline chart.
+- Experiment duration clock does NOT pause — only data collection pauses.
+- Maximum pause: 7 days. After 7 days, system auto-sends a reminder: "Experiment paused for 7 days — resume or stop."
+
+**Trigger:** [Pause Collection] in drawer footer (running experiments only)
+**Confirmation modal:** "Pause data collection for this experiment? The duration clock will continue running." Reason required (dropdown).
+
+**Resume:** [Resume Collection] in drawer footer (paused experiments only)
+Resumes data collection. Annotation added: "Collection resumed — [date]"
+
+**Peeking Warning:** A yellow banner shown in Tab B — Results if the PM opens results before 50% of the experiment duration has elapsed:
+> ⚠ **Early peeking inflates false positives.** Checking results on Day 3 of a 14-day experiment at p=0.04 does not mean significance. Wait until at least Day 7 before making decisions. Current power: ~42% (target: 80%).
+
+---
+
+## 11. Notification Rules
+
+| Event | Recipients | Channel | Trigger |
+|---|---|---|---|
+| Experiment reaches statistical significance | PM owner · PM Platform | In-app + email | p < 0.05 reached |
+| Experiment running > 60 days without significance | PM owner · PM Platform | Email + in-app warning | Day 61 |
+| Guardrail metric breach > 20% | PM owner | Email + in-app alert (amber) | Threshold crossed |
+| Experiment stopped early | PM Platform | In-app | Any early stop |
+| Winner declared + rollout complete | PM owner · QA Lead | Email | Rollout to 100% confirmed |
+| Underpowered experiment (sample < minimum after 7 days) | PM owner | Email | Day 7 check |
+
+---
+
+## 12. Integration Points
+
+| Page | Direction | What flows |
+|---|---|---|
+| 02 — Feature Flags | Both | Experiments link to feature flags; flag rollout % is controlled by experiment targeting |
+| 03 — Release Manager | Inbound | Experiment results feed into release notes as "validated by experiment EXP-XXX" |
+| 16 — Portal Templates | Inbound | UI variant experiments reference portal templates being tested |
+| 17 — Onboarding Workflow | Inbound | Onboarding flow experiments reference step sequences defined in page 17 |
+| 28 — Revenue & Billing | Inbound | Pricing display experiments (plan page variants) originate from revenue team input |
+| 13 — Domain Analytics | Outbound | Experiment results (enrollment lift, dropout reduction) appear in domain analytics as attributed changes |
+
+---
+
+## 13. Key Design Decisions
+
+| Decision | Chosen approach | Why |
+|---|---|---|
+| Maximum 3 variants | Hard limit enforced in UI | Statistical power at 2,050 institutions requires ≥ 30 per group; > 3 variants demand too many institutions for coaching-only or school-only experiments |
+| p < 0.05 threshold | Fixed — not configurable by PM | Configurable significance thresholds invite p-hacking (PM sets threshold after seeing data); fixed threshold prevents this |
+| Experiment configuration locked when running | Cannot edit targeting or split after start | Changing split mid-experiment invalidates all pre-change data and introduces selection bias |
+| Winner rollout uses feature flags (page 02) | Not a separate mechanism | DRY — flags already handle rollout %; reusing flags means audit trail, kill-switch, and dependency management come for free |
+| Peeking warning | Non-blocking (advisory only) | Blocking would frustrate PMs with legitimate reasons to check (e.g., guardrail monitoring); advisory preserves PM autonomy while surfacing the risk |
+| RICE scoring for backlog (integrated with page 05) | Shared scoring model | Keeps PM Platform and roadmap aligned on priority; experiment outcomes auto-update the Reach field of linked roadmap features |
+
+---
+
+## 14. Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
