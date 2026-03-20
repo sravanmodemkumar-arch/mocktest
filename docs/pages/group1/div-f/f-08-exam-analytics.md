@@ -64,6 +64,8 @@ Before any tab content loads, the user selects an exam:
 
 This selection persists across tab navigation. "Viewing: **SSC CGL Mock 5** — 28 institutions — 14,280 students — Conducted 2026-03-15"
 
+**Provisional results visibility:** Exam Selector shows exams with `exam_result_publication.status = PUBLISHED` regardless of `is_provisional` flag. F-08 renders data for the latest published result set. If result is PROVISIONAL: selector shows "[PROVISIONAL]" badge alongside exam name, and page header shows a persistent amber banner: "⚠️ Viewing provisional results — final results may differ after objection review." Analytics update automatically after results are re-published (post-rescore).
+
 ---
 
 ### KPI Strip (for selected exam)
@@ -127,9 +129,7 @@ When ≥ 2 institutions selected (checkboxes in Section B table), shows overlaid
 
 **Available only when:** answer key is FINAL + result computation is COMPLETED.
 
-**D-09 taxonomy enrichment:** When question metadata is available from the question bank (Div D — D-09 Question Bank), F-08 joins it to show the question's pre-tagged difficulty, topic, and subject alongside the computed statistics. This enables calibration: comparing the question bank's expected difficulty against the exam-measured difficulty.
-
-If D-09 metadata is unavailable for a question (e.g., imported paper with no bank linkage), those columns show `—` with tooltip: "Metadata unavailable — question not linked to question bank."
+**D-09 taxonomy enrichment:** When question metadata is available from the question bank (Div D — D-09 Question Bank), F-08 joins it via `exam_item_analysis.question_bank_id`. If `question_bank_id = NULL` (legacy/imported paper, no bank linkage): D-09 columns show `—` with tooltip: "Metadata unavailable — question not linked to question bank." Content Director (18) can request bulk question linking from Div D to enable enrichment for future runs. There is no fuzzy-matching — only exact `question_bank_id` links are used.
 
 #### Section A — Difficulty Index (p-value)
 
@@ -173,6 +173,8 @@ For each question, does it differentiate between high-performing and low-perform
 
 **Discrimination Index (D) formula:**
 D = (% correct in top 27% scorers) - (% correct in bottom 27% scorers)
+
+**Top/bottom 27% cohort edge cases:** Cohort size = `ceiling(total_valid_students × 0.27)` where `total_valid_students` excludes sessions with `rank = NULL` (timed out / no submission). If total valid students < 30: show ⚠️ "Insufficient data for reliable discrimination index ({N} valid submissions). Metric shown with caution." Chart still renders but bars are amber (unreliable data). For fractional cohort sizes, ceiling is applied (e.g., 100 students → top 27 students; 50 students → top 14 students).
 
 **Chart: Discrimination Bar (`BarChart`)**
 - X: question number
@@ -376,6 +378,8 @@ Celery task `compute_item_analysis` runs after answer key is FINAL + results com
 | Exam with only 1 student | Statistical charts render but with warning: "⚠️ Insufficient data ({N} students) for reliable statistical analysis." Charts still shown. |
 | Score distribution heavily skewed (>80% at max score) | Amber indicator: "⚠️ Unusual distribution — most students scored maximum marks. Review question difficulty or check for answer key error." Links to F-05. |
 | Analytics aggregate not yet computed | Tab 1 shows: "Analytics being computed… (usually available within 5 minutes of result publication)" with spinner. Page polls `?part=kpi` every 30s to detect when ready. |
+| Score distribution changes after answer key revision (rescore) | After accepted objection → rescore → re-publish (F-05 → F-04): Celery chain re-triggers `compute_exam_analytics_aggregate`. Memcached entry for this exam is invalidated. F-08 shows [Refresh] button if data is > 5 minutes old. On [Refresh]: clears Memcached, re-renders all tabs from fresh aggregate. |
+| Trend analysis exam series matching | Exams grouped by `exam_id` for trend calculation. If `paper_id` changes between instances (e.g., new question set each year): both instances included in trend line with annotation marker: "New paper set at this instance." Allows multi-year comparison while flagging paper difficulty shifts. |
 | No exams with published results | Empty state on exam selector: "No published results yet. Publish results in F-04 to view analytics." |
 | Item analysis sends to Content Team but question already under review | Create request in D-04 still proceeds; D-04 deduplication handles it (existing review flag + new analytics flag merged). |
 

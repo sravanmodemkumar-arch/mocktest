@@ -121,6 +121,8 @@ Each section header shows: section name · question count · total marks · sect
 
 **Bulk actions:** Select all → [Set All Marks to {X}] · [Set All Negative to {Y}]
 
+**Bulk marks validation:** If coordinator sets all marks to 0: confirmation dialog: "Setting all marks to 0 means no student can earn any points. Confirm?" If any individual question has `marks_awarded = 0` at publish time: warning shown: "Q{#} has 0 marks — students answering correctly receive no points. Review before publishing."
+
 **Import Answer Key (CSV):** [Import CSV] button. Format: `question_number,correct_option,marks_awarded,marks_for_wrong`. Validates on upload; preview before import.
 
 **[Save Draft]** → saves without publishing. ✅ "Answer key saved as draft" toast 4s.
@@ -137,6 +139,8 @@ Each section header shows: section name · question count · total marks · sect
 - All questions must have correct_option set
 - All marks_awarded must be ≥ 0
 - Total marks must equal `exam_question_paper.total_marks`
+
+**Answer key editing after PROVISIONAL publish:** Once `status = PROVISIONAL`, the grid is read-only. [Save Draft] disabled with tooltip: "Published answer key cannot be edited. Use [Edit Key] to create a new draft, then publish it as a revised key." Published key remains visible to institutions during objection window; draft can be prepared alongside it.
 
 **[Publish Provisional Answer Key]:** enables when all validation passes. Opens confirmation modal.
 
@@ -249,8 +253,14 @@ All unresolved objections across all published answer keys.
 
 **When ACCEPT selected:**
 - If `objection_type = WRONG_ANSWER`: shows "New correct answer" field (select corrected option)
-- If `objection_type = MULTIPLE_CORRECT`: shows "Award marks to:" radio — "Both A and B correct" or "Question cancelled (full marks to all)"
+- If `objection_type = MULTIPLE_CORRECT`: shows "Award marks to:" radio with three options: "Option A only (reject partial claim)" / "Option A AND B — both correct (award marks to students who chose either)" / "Cancel question — full marks to all". On selecting "Option A AND B": records `exam_answer_key_entry.multiple_correct_options = ['A', 'B']`. Rescoring awards marks to students who chose A OR B.
 - If `objection_type = QUESTION_ERROR`: shows "Mark as cancelled?" toggle — cancelled questions award full marks to all students
+
+**Question cancellation retroactive scoring:** When a question is marked `is_cancelled = True` (via accepted objection or manual action), the rescoring Celery task automatically: (1) sets `exam_answer_key_entry.is_cancelled = True`, (2) recomputes all scores — awards `marks_awarded` to every student for that question regardless of their response, (3) recomputes ranks. Previous scores are fully replaced; no partial or additive patching.
+
+**Duplicate objection on same question:** Before accepting an objection, the system checks for another ACCEPTED objection for the same question in the same exam. If found: "Q{#} already has an accepted objection (decision: {answer_change}). Accept this objection too? The most recent accepted decision will take effect." Both objections link to a single rescoring run (deduplication via `rescoring_pending_additional_changes` flag).
+
+**[Quick Accept] / [Quick Reject]:** Row expands inline below the table — a textarea (min 20 chars, max 500 chars) + [Confirm Accept/Reject] button appears. Clicking outside collapses without saving. On confirm: sets status = ACCEPTED/REJECTED, logs reason, refreshes table row.
 
 **[Submit Decision]** → sets `exam_answer_key_objection.status = ACCEPTED / REJECTED`. Triggers rescoring workflow if ACCEPTED. ✅ "Objection {accepted/rejected}" toast 4s.
 
@@ -267,7 +277,7 @@ All unresolved objections across all published answer keys.
 
 Read-only archive of all resolved objections with decision and reasoning.
 
-**Filters:** Date resolved · Decision (Accepted/Rejected) · Exam · Objection Type
+**Closed objections definition:** Tab 4 shows all objections with `status IN (ACCEPTED, REJECTED)` (both count as closed). Filters: Date resolved · Decision (Accepted/Rejected) · Exam · Objection Type. No separate "Status" column needed — all records here are closed by definition.
 
 **Export:** [Download Objections Report CSV] — useful for SME team (Div D) to review question quality.
 
@@ -280,7 +290,7 @@ Read-only archive of all resolved objections with decision and reasoning.
 "Publish provisional answer key for **{Exam Name}** at **{Institution}**?
 
 - {N} questions with answers
-- Objection window: {N} hours (closes at {datetime})
+- Objection window: {N} hours ({N} days) — closes at {datetime} IST
 - Institutions will be notified and can see the answer key immediately"
 
 [Confirm Publish] `bg-[#6366F1]` · [Cancel]

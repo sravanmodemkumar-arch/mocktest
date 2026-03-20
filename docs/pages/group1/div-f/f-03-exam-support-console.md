@@ -111,13 +111,15 @@ Polls every 60s during active exam window. Support Executive sees all tickets; t
 - LOW: 60 min
 - Countdown turns red when < 25% of SLA remaining
 
+**SLA timer start:** `sla_due = created_at + priority_sla_minutes`. Timer starts at ticket creation (`created_at`), regardless of assignment or IN_PROGRESS transition. All datetime arithmetic in IST (Asia/Kolkata timezone). `sla_due` stored as tz-aware timestamptz. Display: if `sla_due - now() < 0`, show "OVERDUE by {N} min {S}s"; if positive, show "{N} min {S}s remaining".
+
 **Row highlight:**
 - CRITICAL: `bg-[#1A0505]` red-tinted
 - Overdue: `bg-[#1A1200]` amber-tinted
 
 **Bulk actions (on row selection):**
 - Assign selected to me
-- Reassign selected to [Role picker]
+- Reassign selected to [Role picker] — Support Execs (35) can reassign to any Support Exec. Ops Manager (34) can reassign to any Support Exec or Ops Manager. All reassignments logged: "Reassigned to {role} by {actor_role} at {time}." Bulk reassignment sends in-app notification to new assignees: "You have been assigned {N} ticket(s)."
 
 **[+ New Ticket]** (header button): opens Create Ticket Modal (640px)
 
@@ -165,7 +167,7 @@ Polls every 60s during active exam window. Support Executive sees all tickets; t
 | Time Taken | Auto-computed: `resolved_at - created_at` (shown after resolution) |
 
 **Quick Resolution Buttons** (one-click standard resolutions):
-- **[Unlock Session]** — invokes session unlock API for the referenced student session. Shows success/failure inline. Only available for `SESSION_STUCK` and `STUDENT_LOCKED_OUT` types.
+- **[Unlock Session]** — calls `POST /ops/exam/support/unlock-session/{ticket_id}/` asynchronously. Button disables and shows spinner + "Unlocking session…". If response within 10s: ✅ "Session unlocked successfully" toast; ticket field "Session Status" → UNLOCKED. If timeout or error after 10s: ❌ "Session unlock failed — {error}" persistent toast; button re-enables for retry. Only available for `SESSION_STUCK` and `STUDENT_LOCKED_OUT` types.
 - **[Mark Submit Received]** — marks the submission as received (manual override for `SUBMIT_FAILED` cases where submission actually landed). Requires confirmation.
 - **[Inform: Will Resolve Naturally]** — for timer mismatch: notes that server time is authoritative, sets resolution = "Informed institution of server-side time authority". Resolves ticket.
 
@@ -215,6 +217,8 @@ A reference guide for Support Executives listing standard resolution steps for e
 | Question Not Loading | MEDIUM — 30 min | 1. Confirm CDN status. 2. If CDN issue: escalate to Incident (DevOps). 3. If only 1 student: ask to force-refresh. | If > 3 institutions affected → Critical Incident |
 | Timer Mismatch | LOW — 60 min | 1. Server time is authoritative. 2. Use [Inform: Will Resolve Naturally] resolution. 3. Note: timer discrepancy < 2 min is tolerable. | If mismatch > 5 min → escalate to Incident |
 | Login Issue | MEDIUM — 30 min | 1. Verify student credentials in portal. 2. Institution admin can reset password. 3. If OTP system down: escalate to Incident. | If OTP system affecting > 50 students → Critical |
+| Result Not Visible | MEDIUM — 30 min | 1. Check if results are published in F-04. 2. If published: ask student to refresh portal. 3. If not published: "Results not yet available — check F-04 for publication status." 4. If published but result shows WITHHELD: escalate to Ops Manager (integrity hold context). | If affecting > 10 students at once → escalate to Incident (publication issue). |
+| Other | LOW — 60 min | 1. Clarify issue details with institution. 2. If reproducible technical issue: escalate to L2 Support (Div I) or Ops Manager with full description. 3. Log detailed notes for later analysis. | If blocking exam for > 1 student → upgrade to relevant type and escalate. |
 
 ---
 
@@ -273,7 +277,11 @@ Which institutions generate most tickets. `BarChart` — institution name (anony
 | Affected Student Count | Yes | Number estimate |
 | Description | Pre-filled from ticket | Editable |
 
-**[Escalate]** → creates `exam_session_incident` linked to ticket (`exam_support_ticket.escalated_to_incident_id`). Sets ticket status = ESCALATED. ✅ "Escalated to incident" toast.
+**[Escalate]** → creates `exam_session_incident` linked to ticket (`exam_support_ticket.escalated_to_incident_id`). Sets ticket status = ESCALATED. ✅ "Escalated to incident — #{ref}" toast 8s.
+
+**Escalation failure handling:** If `exam_session_incident` creation fails (DB error): ❌ "Escalation failed — {error}. Retry?" Ticket status remains IN_PROGRESS (not ESCALATED). Ops Manager notified in-app. [Escalate] button re-enables. The SLA continuity between ticket and incident: when ticket status → ESCALATED, ticket's own SLA timer **stops** (ticket is no longer being directly resolved). The incident has no independent SLA — Ops Manager manages it. If incident resolves, linked ticket must be **closed manually** in F-03.
+
+**Exam schedule window for ticket creation:** Create Ticket Modal shows ACTIVE + SCHEDULED exams and COMPLETED exams within last 24 hours (post-exam support window). Exams completed > 24h ago: not shown (contact L2 support via Div I). Rationale: F-03 SLAs only apply during live + immediate post-exam window.
 
 ---
 
@@ -314,7 +322,7 @@ Full models in `div-f-pages-list.md`:
 | [Unlock Session] API fails | ❌ "Session unlock failed — check session status or contact DevOps" (persistent toast). Ticket remains IN_PROGRESS. |
 | Ticket SLA breached | Red row highlight. Ops Manager (34) notified in-app. Celery task `check_support_ticket_sla` fires every 5 min. |
 | Duplicate ticket (same student ref + exam) | Warning on create: "A ticket for this session reference already exists (#{number}). Create anyway?" — not a hard block. |
-| CRITICAL ticket older than 5 min unassigned | System auto-assigns to Support Exec with fewest open CRITICAL tickets. Notification sent. |
+| CRITICAL ticket older than 5 min unassigned | Celery task `check_support_ticket_sla` (runs every 5 min) auto-assigns to Support Exec with fewest open CRITICAL tickets. Assignee receives in-app notification: "CRITICAL ticket #{number} assigned to you — SLA due in {N} min." Newly assigned ticket highlights in their [Assigned To: Me] filter. |
 | Create ticket when no active exams | Warning banner in Tab 1: "No exams are currently active. You can still log tickets for recently completed exams." |
 
 ---
@@ -349,4 +357,4 @@ Full models in `div-f-pages-list.md`:
 ---
 
 *Page spec complete.*
-*F-03 covers: live ticket triage → quick resolutions (unlock session, mark submit received) → escalation to incident → SLA tracking → support stats.*
+*F-03 covers: live ticket triage → SLA timer from created_at (IST timezone) → quick resolutions ([Unlock Session] async with timeout, mark submit received) → auto-assignment with notification → reassign role hierarchy → escalation to incident (failure handling, SLA stop) → Quick Actions Reference (all 8 types including Result Not Visible + Other) → support stats.*

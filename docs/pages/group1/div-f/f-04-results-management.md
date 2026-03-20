@@ -91,7 +91,7 @@ Exams that have COMPLETED but do not yet have a result computation started.
 | Duration | No | Exam duration |
 | Registered | No | `exam_ops_snapshot.total_registered` |
 | Submitted | No | `exam_ops_snapshot.total_submitted` |
-| Submission Rate | No | `(submitted / registered) × 100`% |
+| Submission Rate | No | `(submitted / registered) × 100`% — 80%+ is healthy; 50–80% common (grace period); < 50% may indicate technical issues — check F-07 flags and F-03 tickets before computing. |
 | Integrity Hold | No | 🔒 hold badge if `integrity_hold = True` |
 | Actions | — | [Compute Results] · [View Exam] |
 
@@ -117,7 +117,9 @@ Header: "Compute Results — {Exam Name} at {Institution}"
 | Apply Normalization | OFF | Toggle — only valid when exam ran with multiple question papers (SET-A, SET-B). If ON: scores normalised before ranking. |
 | Normalization Notes | — | Text area (required if normalization ON) — explains normalisation method used |
 | Include Timed-Out Sessions | OFF | Whether to score sessions that expired before submission. If OFF: timed-out sessions get score = 0 and rank = last |
-| **Rank Scope** | Per Institution | Select: **Per Institution** (rank within this institution's cohort — default) · **Cross-Institution** (rank across all institutions running this same exam on the same day). Cross-Institution requires all institutions to have submitted results first. |
+| **Rank Scope** | Per Institution | Select: **Per Institution** (rank within this institution's cohort — default) · **Cross-Institution** (rank across all institutions running this same exam on the same scheduled_start date). |
+
+**Cross-Institution ranking validation:** Cross-Institution ranking is only available when: (1) all `exam_schedule` records with the same `exam_id` and `scheduled_start` date have `result_computation.status = COMPLETED`, AND (2) each such institution has ≥ 50% submission rate. If validation fails, the radio shows amber warning: "Cross-institution ranking unavailable — {N} of {total} institutions have not yet completed results. Available when all institutions finish." Radio option greys out until conditions are met. If user selects it while partially available: ❌ "Cannot compute cross-institution ranks yet. {N} institutions still pending."
 
 **Pre-computation summary (read-only):**
 - Total submissions: {N}
@@ -154,7 +156,7 @@ STAGE 2 — Rank Computation
 [████████████████████████████] 100% — Ranks assigned  ✅
 ```
 
-**[Cancel Computation]** — available to Results Coordinator. Cancels both stages. Celery rolls back any partial result records via `SELECT FOR UPDATE` — no partial data visible to students.
+**[Cancel Computation]** — available only when `status IN (PENDING, RUNNING)`. On click: sets `exam_result_computation.status = CANCELLED`. Celery task checks status at the start of each processing batch; if `CANCELLED`, task stops and performs rollback: deletes all `exam_result` records created by this computation job (identified by `computation_id`). If Celery task completes between cancel click and rollback check (race condition): rollback is skipped; UI shows ❌ "Computation already completed — cannot cancel. Use [Recompute] if results are incorrect." Cancel button is not shown for COMPLETED computations.
 
 ---
 
@@ -170,7 +172,7 @@ Exams with completed computation (`exam_result_computation.status = COMPLETED`) 
 | Institution | Yes | — |
 | Computed At | Yes (default: ASC) | — |
 | Students Processed | No | — |
-| Review Window Expires | Yes | Amber if < 4h; red if expired |
+| Review Window Expires | Yes | Amber if < 4h; red if expired. Computed as `exam_result_computation.completed_at + result_review_window_hours (from exam_operational_config)`. Stored in `exam_result_publication.review_window_expires_at`. |
 | Publication Status | No | DRAFT · REVIEWED |
 | Integrity Hold | No | 🔒 if hold active |
 | Actions | — | [Review] · [Quick Publish] |
@@ -193,6 +195,8 @@ Exams with completed computation (`exam_result_computation.status = COMPLETED`) 
 - Overlay: pass mark line (if defined)
 - Instant outlier detection: bars that are statistically anomalous shown in amber
 
+**Anomaly detection definition:** A score range is flagged amber (anomalous) if: (1) it contains > 40% of all students (heavily left/right-skewed distribution), OR (2) a single score value appears in ≥ 3 standard deviations above/below the mean frequency. If anomaly detected: inline warning: "⚠️ Anomalous score distribution detected — review before approval. Possible causes: answer key error, unusually easy/hard paper, or data issue." [View Details] opens an expanded analysis panel within the drawer.
+
 **Key statistics (computed from result set):**
 
 | Metric | Value |
@@ -211,7 +215,7 @@ Exams with completed computation (`exam_result_computation.status = COMPLETED`) 
 
 #### Drawer Tab 2 — Sample Records
 
-Random sample of 20 result records for spot-check. DPDPA: shows `student_ref` (anonymised), score, rank (provisional), and submission timestamp. NOT student names.
+Random sample of `min(20, total_students)` result records for spot-check. DPDPA: shows `student_ref` (anonymised), score, rank (provisional), and submission timestamp. NOT student names. If total students < 20: note "Showing all {N} results (exam has fewer than 20 submissions)."
 
 | Column | Notes |
 |---|---|
@@ -238,6 +242,8 @@ Automated pre-publication validation:
 | Submission count matches expected | ✅ / ⚠️ | ⚠️ if submitted < 70% of registered (warning, not block) |
 | Computation method matches config | ✅ / ❌ | — |
 | No integrity hold | ✅ / 🔒 | 🔒 = blocks publication (not computation review) |
+
+**Integrity hold placed after computation:** [Mark as Reviewed] remains enabled — review is always allowed. [Approve & Publish] disabled with tooltip: "Integrity hold active — results cannot be published. Contact Exam Integrity Officer (91)." Coordinator can still review and sign off; publish becomes available once hold is cleared.
 
 All ✅ or ⚠️ (no ❌): [Approve for Publication] button enabled.
 Any ❌: "Fix validation errors before approving" — [Recompute] button shown.
@@ -375,6 +381,11 @@ Full models in `div-f-pages-list.md`:
 | `is_provisional` | boolean | Mirrors `exam_result_publication.is_provisional` |
 | `created_at` | timestamptz | — |
 
+**`exam_result_publication`** additions:
+| Field | Type | Notes |
+|---|---|---|
+| `review_window_expires_at` | timestamptz | Computed on DRAFT: `exam_result_computation.completed_at + result_review_window_hours`. Nullable (NULL until computation completes). |
+
 ---
 
 ## 7. Access Control
@@ -429,4 +440,4 @@ Full models in `div-f-pages-list.md`:
 ---
 
 *Page spec complete.*
-*F-04 covers: computation queue → computation trigger + config → live progress → review with score distribution + validation checks → approve + publish gate → withhold/withdraw.*
+*F-04 covers: computation queue (submission rate guidance) → computation config (cross-institution rank validation) → live progress (cancel idempotency) → review (anomaly detection, sample min(20,N), review_window_expires_at, integrity hold after compute workflow) → approve + publish gate → withhold/withdraw.*

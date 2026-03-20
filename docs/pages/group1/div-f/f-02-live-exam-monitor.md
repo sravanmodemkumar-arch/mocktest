@@ -146,6 +146,11 @@ Each card = one active exam schedule.
 - Requires reason. All overrides logged to `exam_ops_action_log` with action type `SESSION_OVERRIDE`.
 - DPDPA: session_ref is anonymised — Ops Manager never sees student names
 
+**Override Session outcomes:**
+- **Unlock (reset to IN_PROGRESS):** session status reset; student's timer resumes from where it was. No scoring triggered.
+- **Force Submit (score current state):** `POST /ops/exam/support/force-submit/{session_ref}/` called synchronously. Button disables, spinner shown "Scoring submission…" (max 10s). On success: session marked SUBMITTED with score; toast ✅ "Session force-submitted — score recorded." On failure: ❌ "Force submit failed — {error}. Session unchanged." Button re-enables.
+- **Mark Timed Out:** session status → TIMED_OUT; score computed from current state by Celery (`compute_exam_result_for_session` task).
+
 **[···] — Refresh Snapshot:**
 - Triggers `?part=snapshot-refresh&schedule_id={id}`
 - Forces Celery to run a snapshot update for just this exam immediately (outside the Beat schedule)
@@ -167,6 +172,8 @@ Expands to show a compact list:
 **Purpose:** Ops Manager sees what's coming. ⚠️ "Not Locked" in this panel is an urgent flag — clicking it opens the F-01 Schedule Detail Drawer directly.
 
 **[Go to F-01 Schedule]** link per row. Panel auto-dismisses when exam becomes ACTIVE.
+
+**Panel overflow on high exam count:** If ≥ 20 exams are starting soon, show first 10 rows + "[View all {N} upcoming exams →]" button which expands to a full-screen modal. On mobile, limit visible rows to 5 + [View all]. Config Lock Status column computed using `exam_schedule.config_locked_at` compared against `exam_operational_config.config_lock_required_before_hours` — updates automatically on next HTMX poll when F-09 config changes.
 
 #### Exam Monitor Table (alternate view)
 
@@ -208,6 +215,9 @@ Registered: 1,240
 
 Session state breakdown `PieChart` (Recharts):
 - Active (green) · Submitted (blue) · Timed Out (grey) · Error (red)
+
+**Session state definition — "Active":**
+`total_active_sessions = COUNT(*) WHERE status IN (IN_PROGRESS, PAUSED)` in the tenant schema. Sessions with status = ERROR or ABANDONED are **not** counted as Active — they are counted separately in the "Errors" counter on the card. This ensures the Active count reflects students still able to continue their exam.
 
 **Section B — Submission Rate Chart**
 
@@ -342,6 +352,8 @@ Warning: `bg-[#451A03] border-[#F59E0B]` — "Pausing an exam freezes all active
 | Pause Reason | Yes | Text area; max 500 chars; logged in `exam_ops_action_log` |
 | Notify institutions? | Toggle | Default ON — sends in-app notification to institution admins |
 
+**Pause + in-flight submissions:** Pausing freezes session timers and prevents new submissions. Submissions already in-flight (session `status = SUBMITTING`) will be completed before pause takes effect. F-02 shows: "Waiting up to 30 seconds for in-flight submissions to complete before pausing…" Students see "Exam paused by administrator" immediately; their timer freezes.
+
 **[Pause Exam]** `bg-[#F59E0B] text-black` · [Cancel]
 
 On confirm:
@@ -437,6 +449,7 @@ Retention: 7 days (Celery Beat purge after exam + 7 days). Not exposed to F-08 a
 | Assign incidents | Exam Ops Manager (34) |
 | Read-only (all tabs) | DevOps/SRE (14), Results Coordinator (36), Integrity Officer (91) |
 | Pause/Extend action buttons | Hidden (not just disabled) for read-only roles |
+| Actions Log detail visibility | Full `action_details` JSON shown to: Ops Manager (34), Incident Manager (38), Platform Admin (10). Support Exec (35) sees action type + timestamp only. Integrity Officer (91) sees non-operational details only (no session-level data). |
 
 ---
 
@@ -476,6 +489,10 @@ Celery Beat (every 30s during active window)
 
 **Memcached cache key:** `exam_ops_snapshot_grid_{filter_hash}` · TTL 25s (just under 30s poll)
 
+**[Refresh All] cache bypass:** [Refresh All] triggers `?part=monitor-kpi&nocache=true` + `?part=monitor-grid&nocache=true`. Django view: if `nocache=true`, skips Memcached read, queries PostgreSQL `exam_ops_snapshot` directly, writes fresh result to Memcached with TTL reset. This prevents multiple users all clicking [Refresh All] from cascading direct DB queries — first request updates the cache; subsequent requests within the next 25s get the fresh cached result.
+
+**Celery health check:** F-02 calls `GET /ops/exam/monitor/health/` on page load and every 60s (HTMX). This endpoint pings `celery.app.control.inspect().ping()` with a 3-second timeout. If Celery workers respond: green dot in bottom-right corner "Celery: OK". If no response within 3s: red dot "Celery: Unreachable — contact DevOps." On unreachable: snapshot-age alert escalates from amber to red immediately regardless of actual snapshot age.
+
 ### Toast Messages
 
 | Action | Toast |
@@ -507,4 +524,4 @@ Celery Beat (every 30s during active window)
 ---
 
 *Page spec complete.*
-*F-02 covers: live exam session monitoring (30s snapshot) → operational triage → pause/extend/force-close → incident management → actions log. Operationally distinct from Div A War Room (executive infrastructure view).*
+*F-02 covers: live exam session monitoring (30s snapshot) → Celery health check → operational triage → pause (in-flight submission handling) → extend/force-close → Override Session (sync Force Submit) → Starting Soon panel (overflow handling) → incident management → actions log (role-based detail visibility). Operationally distinct from Div A War Room.*

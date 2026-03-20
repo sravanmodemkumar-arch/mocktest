@@ -167,6 +167,8 @@ Variables detected:
 
 **DLT note:** Templates not DLT-registered will be rejected by SMS gateway. F-06 enforces: SMS template with `dlt_template_id = NULL` cannot be activated.
 
+**DLT ID gateway verification:** On entering DLT Template ID and clicking [Activate], F-06 calls `POST /ops/notifications/verify-dlt/{dlt_id}/` which pings the SMS gateway provider's DLT verification API. If valid: ✅ "DLT registration verified." If invalid or not found: ❌ "DLT Template ID not found in gateway records. Verify on TRAI portal and confirm exact ID." Template cannot be activated without passing verification. Verification result logged to `exam_notification_template` audit log.
+
 **Overdue DLT warning:** If a template remains `PENDING_APPROVAL` for > 10 days, F-06 shows an amber warning badge in the template row: "⚠️ DLT approval pending for {N} days. Check TRAI portal for status." No automatic escalation — Notification Manager (37) must follow up manually.
 
 #### Section D — WhatsApp Registration (WhatsApp only)
@@ -265,6 +267,8 @@ When Meta rejects a template, the Notification Manager enters the rejection in F
 
 **Final recipient count:** "Sending to: {total - opt_outs} recipients"
 
+**Recipient list freshness:** The broadcast stores the **query filter** (e.g., `institution_type: COACHING, exam_schedule_id: X`), not a static list of recipients. When the Celery task processes the broadcast (status → SENDING), it re-queries the filter at send time to get the current recipient list. Any opt-outs added since queuing are automatically excluded. Broadcast completion log records: "Sent to {N} recipients ({delta} excluded as new opt-outs since queuing)."
+
 #### Step 3 — Variable Values
 
 For each `{{variable}}` in the template, define how the value is resolved:
@@ -276,6 +280,8 @@ For each `{{variable}}` in the template, define how the value is resolved:
 | `{{score}}` | Per-recipient DB field | System fills from exam_result per student |
 | `{{exam_date}}` | Manual entry | "Enter value: [2026-04-10]" |
 | `{{custom_message}}` | Manual entry | Static text applied to all recipients |
+
+**Variable resolution for per-recipient fields:** Auto-mapped variables (institution_name, exam_name) are resolved from shared schema. Per-recipient variables (score, student_ref, rank) are resolved by the `send_notification_broadcast` Celery task at send time: for each institution in the target group, Celery queries the tenant schema, builds a `recipient_ref → variable_values` mapping in batches of 1,000 rows, and resolves each message. Broadcast wizard marks dynamic variables with badge "Resolved per recipient". For large broadcasts (> 10K recipients), variable resolution happens in parallel Celery subtasks. If a recipient_ref has no matching result record: that recipient's message is skipped and logged as `FAILED` (failure_reason = "No result record found").
 
 **Preview (sample):** Shows a sample rendered message with dummy values. Notification Manager must verify before proceeding.
 
@@ -340,6 +346,13 @@ Per-broadcast delivery analytics.
 
 **[Retry Failed]** (available for PARTIAL/FAILED broadcasts within 24h): re-queues only the failed recipients. Opens confirmation modal with count + quota impact.
 
+**Failure reason categories — retryable vs permanent:**
+- **Transient (retryable):** Rate limit exceeded · Carrier temporary rejection · Gateway timeout
+- **Permanent (not retryable):** Invalid number · Opted out · Template not approved by Meta · Invalid email format · Recipient variable not found
+- [Retry Failed] enabled only when transient failures exist. Modal shows: "{N} transient failures can be retried. {N} permanent failures cannot — resolve template/opt-out issues before retry."
+
+**Auto-retry policy:** PARTIAL broadcast: Celery auto-queues retry for transient failures after 1 hour (once only). If second attempt also fails: status → FAILED; no further auto-retry. Manual [Retry Failed] remains available. FAILED broadcast (no sends): no auto-retry — requires manual trigger.
+
 **[Export Delivery Report]** → CSV download: columns = channel · recipient_ref (anonymised) · status · failure_reason · sent_at. DPDPA: no phone numbers in export — only anonymised refs.
 
 ---
@@ -366,6 +379,14 @@ Today's breakdown:
 ```
 
 **OTP reservation:** 5,000 WhatsApp/day reserved for OTP sends (authentication). This reservation cannot be consumed by broadcast sends. F-06 enforces this in the quota check before any send.
+
+**OTP quota daily reset:** Quotas reset at midnight IST. The 5K OTP reservation is freshly available each day. If OTP system uses < 5K in a given day, the unused portion does NOT roll over — broadcasts always have a ceiling of `daily_quota - 5000 = 145,000` messages per day regardless of actual OTP usage.
+
+**Quota depletion mid-broadcast:** If remaining daily quota falls below the current send rate during an in-progress broadcast, Celery pauses the broadcast (status → PAUSED), waits for quota reset at midnight IST, then resumes. Broadcast status shows "Paused — daily quota exhausted. Resuming at {midnight IST}." Notification Manager notified in-app.
+
+**Orphaned scheduled broadcasts:** Celery task `auto_queue_scheduled_broadcasts` runs every 5 minutes. It detects broadcasts with `status = APPROVED` and `scheduled_at ≤ now()`, transitions them to QUEUED, and begins sending. If coordinator wants to delay a past-scheduled broadcast, they must cancel it and create a new one with an updated schedule. Notification Manager receives in-app: "Broadcast '{name}' was scheduled in the past — automatically queued. [Cancel if not intended]."
+
+**Carrier bounce auto-opt-out:** Celery task `auto_add_carrier_bounce_optouts` runs daily at 01:00 IST. Queries `exam_notification_delivery_log` for all entries with `failure_reason = CARRIER_BOUNCE` in the last 7 days. For each `recipient_ref` with ≥ 3 bounce entries on the same channel: creates `exam_notification_opt_out` record with `opt_out_reason = CARRIER_BOUNCE`. Notification Manager can review and re-opt-in via Tab 5 if number is corrected.
 
 #### Quota History Chart
 
