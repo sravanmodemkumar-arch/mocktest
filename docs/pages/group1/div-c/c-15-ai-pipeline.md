@@ -800,6 +800,7 @@ Step 3 — HNSW rebuild:
 - "Schedule HNSW rebuild" toggle: choose timing (off-peak hours; Celery task with DBA superuser role)
 - Rebuild duration estimate: "~3–4 hours for 2M+ questions on db.r6g.xlarge"
 - During rebuild: duplicate detection falls back to exact-match only (weaker detection; some duplicates may slip through)
+- **"Create C-18 task for DBA"** button: creates a tagged P2 Engineering Incident in C-18 pre-filled with: title "HNSW index rebuild required — embedding model switch", category: Database, service: RDS/pgvector, description: "Embedding model switched to {new_model}. Rebuild required for {N} questions. Estimated duration: 3–4 hours. Schedule during off-peak window." — notifies the DBA (Role 15) who owns index rebuild scheduling and ensures the rebuild is tracked with an audit trail
 
 Step 4 — 2FA confirmation:
 - Admin or AI/ML Engineer required

@@ -639,6 +639,17 @@ A new **Environment Variables** tab is added to the `lambda-function-drawer` (an
 - Existing variables: `GET /api/lambda/{function}/env-vars/` → calls AWS Lambda GetFunctionConfiguration API → returns env var map
 - Save: `PATCH /api/lambda/{function}/env-vars/` → calls Lambda UpdateFunctionConfiguration → Celery job polls until configuration update completes → success toast
 
+**Post-Deploy Feature Flag Actions:**
+
+The deployment detail drawer shows a read-only "Post-deploy flag actions" panel at the bottom of the G1 Environment Variables tab. This panel lists any feature flags in C-21 that are linked to this function and configured to auto-enable on successful deployment:
+
+| Flag Key | Flag Name | Environment | Action on Success |
+|---|---|---|---|
+| `new_exam_ui_v2` | New Exam UI Version 2 | Production | Enable (OFF → ON) |
+| `new_grading_engine` | New Grading Engine | Staging | Enable (OFF → ON) |
+
+When the deployment health check passes, the Celery post-deploy task automatically enables each linked flag in its configured environment and logs the action to `platform_flag_audit_log` with `action = "deployment_auto_enabled"`. If no flags are linked, this panel shows "No post-deploy flag actions configured." Engineers can link flags from the C-21 Feature Flag Manager (Flag Config tab → Linked Deployment field).
+
 ---
 
 ## Amendment — G2: Scheduled Jobs Tab
