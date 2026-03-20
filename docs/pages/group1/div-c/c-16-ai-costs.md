@@ -548,6 +548,26 @@ Displayed as a card at the top of the section, updated every 30 minutes by Celer
 - Takes AI/ML Engineer to C-15 "Trigger New Job" pre-filled with the simulated config
 - Ensures the actual job config matches what was simulated
 
+**Model-Switch Cost Forecast Scenario:**
+
+A dedicated "Model Switch" tab within the Spend Simulator answers: "What would this month cost if I moved all remaining batches to a different model?"
+
+| Input | Description |
+|---|---|
+| Switch to model | Select: Claude Sonnet 4.6 · GPT-4o · Gemini 1.5 Pro · Gemini 1.5 Flash |
+| Switch from (day N) | Which day of the month to switch (default: today) |
+
+Outputs (compared against current model mix):
+
+| Output | Current Mix | If 100% Claude | If 100% GPT-4o | If 100% Gemini Flash |
+|---|---|---|---|---|
+| Remaining month spend | ₹3,15,800 | ₹3,28,000 | ₹2,86,000 | ₹1,72,000 |
+| Month-end total | ₹9,99,800 | ₹10,12,200 | ₹9,70,200 | ₹8,56,200 |
+| Budget impact vs current | baseline | +₹12,400 | −₹29,600 | −₹1,43,600 |
+| Within ₹12L budget? | ✅ | ✅ | ✅ | ✅ |
+
+The table recalculates instantly when the model selection changes. Pricing data sourced from `platform_ai_rate_limit_config` (manually maintained). Note: cheaper models may have different approval rates — a footnote shows "Model quality trade-off: Gemini Flash historically shows 8% lower approval rate for complex domains."
+
 ---
 
 ## 13. Amendment — G27: API Rate Limits Section
@@ -629,6 +649,40 @@ When a provider's RPM or TPM usage exceeds 95% of quota, the pipeline can be con
 | Google | ✅ Yes | 95% | Anthropic (if recovered) |
 
 "Edit auto-pause config" → allows AI/ML Engineer to toggle per-provider auto-pause and adjust threshold.
+
+**Quota reset countdown:**
+
+LLM provider quotas operate on rolling 1-minute windows. Each provider card shows:
+- "Quota window resets in: **{N}s**" — countdown timer, updated every second via JavaScript
+- Calculated as: 60 − (current_second % 60) seconds until next minute boundary
+- Useful when rate-limited: shows exactly how long until the next burst of calls can be made
+- During throttling (red state): countdown is displayed prominently so engineers know when to retry
+
+**Provider API Status:**
+
+Below the three provider cards, a "Provider API Health" row shows the current operational status of each provider's API, sourced from provider status pages polled by a Celery beat task every 5 minutes:
+
+| Provider | Status | Last Checked |
+|---|---|---|
+| Anthropic (status.anthropic.com) | ✅ Operational | 3 min ago |
+| OpenAI (status.openai.com) | ✅ Operational | 3 min ago |
+| Google Cloud (status.cloud.google.com) | ⚠ Degraded — Vertex AI latency elevated | 3 min ago |
+
+Status values: **Operational** (green) · **Degraded** (amber) · **Outage** (red) · **Unknown** (grey, if status page unreachable)
+
+When a provider shows Degraded or Outage: amber/red banner appears above that provider's card — "Provider API degraded — pipeline may experience higher latency or failures."
+
+Data model: `platform_ai_provider_status`
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| provider | ENUM | anthropic/openai/google |
+| status | ENUM | operational/degraded/outage/unknown |
+| status_description | TEXT | message from provider status page |
+| checked_at | TIMESTAMPTZ | |
+
+Celery beat task: `portal.tasks.ai_monitoring.refresh_provider_status` — runs every 5 minutes, fetches provider status page JSON APIs, upserts `platform_ai_provider_status`. Result shown via HTMX poll on `/engineering/ai-costs/?part=provider-status` every 60s.
 
 **Quota limits configuration:**
 

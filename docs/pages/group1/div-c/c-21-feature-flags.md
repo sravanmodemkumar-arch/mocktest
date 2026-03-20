@@ -102,6 +102,7 @@ Without feature flags, every feature enable or disable requires a code deploy �
 | Name | Human-readable name | ✅ |
 | Type | Boolean · Rollout (%) · Variant (A/B/C) | ✅ |
 | Category | Feature (user-facing) · Infrastructure (internal) · Experiment (A/B test) · Kill switch | ✅ |
+| Team Group | Frontend · Backend · Mobile · AI · Experimental | ✅ |
 | Staging | Current value in Staging environment | — |
 | Pre-prod | Current value in Pre-production | — |
 | Production | Current value in Production | — |
@@ -122,6 +123,7 @@ Without feature flags, every feature enable or disable requires a code deploy �
 **Filter bar:**
 - Type: All / Boolean / Rollout / Variant
 - Category: All / Feature / Infrastructure / Experiment / Kill switch
+- Team Group: All / Frontend / Backend / Mobile / AI / Experimental
 - Production state: All / ON / OFF / Partial (rollout)
 - Has tenant overrides: toggle
 - Owner: dropdown filter
@@ -153,10 +155,13 @@ Without feature flags, every feature enable or disable requires a code deploy �
 | Name | "New Exam UI Version 2" | ✅ |
 | Type | Boolean | ❌ (immutable — changing type requires creating a new flag) |
 | Category | Feature | ✅ |
+| Team Group | Backend | ✅ (Frontend / Backend / Mobile / AI / Experimental) |
 | Description | "Enables the redesigned exam-taking interface with split-panel layout." | ✅ |
 | Owner | Rohan (Backend Engineer) | ✅ |
 | Linked Ticket / PR | GitHub issue or PR URL | ✅ optional |
-| Expected Removal | Date when this flag should be cleaned up from code | ✅ optional |
+| Expected Removal | Date when this flag should be auto-disabled (see below) | ✅ optional |
+| Auto-disable on expiry | Toggle: if enabled, flag is automatically turned OFF in all environments when Expected Removal date passes | ✅ optional |
+| Linked Deployment | C-05 Lambda deployment that auto-enables this flag on successful deploy | ✅ optional |
 | Created By | Priya (Admin) | ❌ |
 | Created At | Jan 15, 2026 | ❌ |
 
@@ -177,6 +182,16 @@ Three rows — Staging · Pre-production · Production:
 
 **Kill switch note (for Kill switch category):**
 - Red banner: "This flag is a Kill Switch. Disabling it will turn OFF the associated feature for ALL tenants simultaneously. Exercise with extreme caution."
+
+**Flag Expiry Auto-Disable:**
+
+When "Auto-disable on expiry" is enabled and an Expected Removal date is set:
+- A Celery beat task (`portal.tasks.feature_flags.expire_flags`) runs daily at 02:00 UTC
+- Any flag with `auto_disable_on_expiry = True` and `expected_removal_date < today` is automatically turned OFF in all environments
+- On auto-disable: the flag's `platform_flag_audit_log` gets an entry with `action = "auto_disabled_on_expiry"` and `actor = "system"`
+- Email notification sent to the flag Owner and Platform Admin: "Flag `{key}` was automatically disabled — expected removal date {date} has passed. Please clean up from code."
+- The flag is NOT deleted — it remains in archived state for code cleanup tracking
+- Flags without `auto_disable_on_expiry` enabled show Expected Removal as a reminder label only (amber highlight when overdue, no auto-action)
 
 **Save/Toggle actions:**
 - "Save" for metadata changes (no 2FA)
@@ -229,8 +244,10 @@ Three rows — Staging · Pre-production · Production:
 - Slider: 0% – 100%
 - Current value: 15%
 - "Scheduled increase" toggle: set automatic step increases (e.g., +10% every 24h if no error rate spike)
-- Manual override: set specific % immediately (2FA required if > 50% increase at once)
-- Preview: "At 15%, approximately 307 of 2,050 tenants see this feature (based on deterministic hash of tenant_id)"
+- Manual override: set specific % immediately
+  - ≤ 50% total rollout: 2FA required (Backend / DevOps / Admin can approve own change)
+  - > 50% total rollout: **Platform Admin approval required** — change is submitted as a "Rollout Approval Request"; Backend/DevOps engineers can propose but cannot self-approve; Platform Admin receives an in-app notification and email; the rollout is applied only after explicit Admin approval; stored in `platform_flag_rollout_approvals` table
+- Preview: "At 15%, approximately 307 of 2,050 tenants see this feature (based on deterministic hash of tenant_schema_name)"
 
 **Rollout algorithm:**
 The rollout % is evaluated deterministically per tenant using a hash function on the tenant schema name (not random per request). This ensures consistency: a tenant either always sees the feature or never does at a given rollout %, without session-to-session inconsistency.
@@ -416,7 +433,7 @@ FeatureFlagManagerPage
 | flag_id | UUID FK → platform_feature_flags | |
 | flag_key | VARCHAR(100) | denormalised (flag may be archived later) |
 | actor_id | UUID FK → platform_staff | |
-| action | ENUM | created/toggled/rollout_changed/override_added/override_removed/archived/emergency_disabled |
+| action | ENUM | created/toggled/rollout_changed/override_added/override_removed/archived/emergency_disabled/auto_disabled_on_expiry/deployment_auto_enabled |
 | environment | ENUM | nullable |
 | before_state | JSONB | snapshot of relevant field before change |
 | after_state | JSONB | snapshot of relevant field after change |
@@ -438,6 +455,44 @@ FeatureFlagManagerPage
 | status | ENUM | pending/executed/paused/skipped |
 | executed_at | TIMESTAMPTZ | nullable |
 
+### platform_flag_rollout_approvals
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| flag_id | UUID FK → platform_feature_flags | |
+| requested_by | UUID FK → platform_staff | Backend or DevOps engineer |
+| requested_pct | SMALLINT | proposed rollout % |
+| reason | TEXT | required |
+| status | ENUM | pending/approved/rejected |
+| reviewed_by | UUID FK → platform_staff | Platform Admin only |
+| reviewed_at | TIMESTAMPTZ | nullable |
+| review_note | TEXT | nullable |
+| created_at | TIMESTAMPTZ | |
+
+### platform_flag_deployment_links
+
+Stores the linkage between a feature flag and a C-05 Lambda deployment that should auto-enable it.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| flag_id | UUID FK → platform_feature_flags | |
+| environment | ENUM | staging/pre_production/production |
+| lambda_function_name | VARCHAR(200) | function that triggers the auto-enable |
+| auto_enable_on_success | BOOLEAN | if true, flag is turned ON when deployment health check passes |
+| created_by | UUID FK → platform_staff | |
+| created_at | TIMESTAMPTZ | |
+
+**C-05 Deployment Integration:**
+
+When a deployment link is configured on a flag:
+- In C-05 Service Deployment Manager, after a Lambda deployment completes successfully (all health checks pass), a post-deploy webhook calls the feature flag API to enable the linked flag in the specified environment
+- The flag's `platform_flag_audit_log` records `action = "deployment_auto_enabled"` with `actor = "system"` and `note = "Auto-enabled by deployment {deployment_id} of {function_name}"`
+- If the deployment health check fails, the flag is not enabled and the deployment failure is noted in the audit log
+- In C-21, the "Linked Deployment" field on the Flag Config tab shows the linked function name and environment with a link back to C-05
+- In C-05, the Deployment detail drawer shows "Post-deploy flag actions" — a read-only list of flags that will be auto-enabled on success
+
 ---
 
 ## 8. Validation Rules
@@ -447,7 +502,7 @@ FeatureFlagManagerPage
 | Flag key format | Lowercase letters, numbers, and underscores only · min 3 chars · max 100 chars · must be unique across all environments · immutable after creation |
 | Production toggle | 2FA required for all production environment changes (toggle, rollout %, override add/remove) |
 | Emergency disable all | Admin only · 2FA · type "DISABLE ALL FLAGS" to confirm · C-18 incident auto-created |
-| Rollout % increase | > 50% increase at once in production requires 2FA confirmation and written reason |
+| Rollout % increase | > 50% total production rollout requires Platform Admin approval via `platform_flag_rollout_approvals`; Backend/DevOps can propose, not self-approve |
 | Variant flag type | Cannot change flag type after creation — archive old flag and create new one |
 | Tenant override note | Required (min 10 chars) for all production overrides |
 | Rollout schedule | Minimum 2 steps; scheduled trigger_at must be in the future |
