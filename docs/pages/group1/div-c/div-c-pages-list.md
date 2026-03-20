@@ -83,7 +83,7 @@
 
 ---
 
-## DevOps / SRE Engineer — Pages (Role 14) · 5 pages
+## DevOps / SRE Engineer — Pages (Role 14) · 5 pages (+ 1 tab via G11)
 
 > Most operationally critical role. Owns the platform at 74K peak exam day.
 
@@ -91,36 +91,36 @@
 |---|---|---|---|---|---|---|
 | C-08 | Infrastructure Monitor | `/engineering/infrastructure/` | `c-08-infrastructure.md` | P0 | ⬜ | Real-time AWS: Lambda total + reserved concurrency per function · ECS cluster CPU/memory/task count · RDS primary + replicas (CPU · connections · IOPS · storage · replica lag) · Memcached hit-rate/evictions · ALB request rate + 5xx · CloudFront bandwidth + cache ratio · S3 bucket sizes · All with WRITE controls: change concurrency · restart ECS tasks · promote read replica · drain ALB target · **[G4] Celery Queues tab**: per-queue worker count (active/idle) · queue depth (messages waiting) · processed/failed tasks per hour (24h chart) · average task duration per queue · dead-letter queue (DLQ) item count with retry-all action · individual worker detail (worker hostname · current task · uptime) · worker restart action (graceful/hard) · queue-level pause/resume |
 | C-09 | CI/CD Pipeline Manager | `/engineering/cicd/` | `c-09-cicd.md` | P0 | ⬜ | GitHub Actions runs across all 12 repos · pipeline stages (Test → Lint → Build → Deploy Staging → QA Gate → Pre-Prod → Prod) · manual approval gate for production · parallel pipeline grid view · rollback (re-run last passing workflow) · failed pipeline log tail · integration with QA sign-off (Div B page 21) and Release Manager (Div B page 03) · deployment frequency + DORA metrics |
-| C-10 | Auto-scaling & Capacity Planner | `/engineering/scaling/` | `c-10-scaling.md` | P1 | ⬜ | Lambda reserved + provisioned concurrency config per function · scheduled scaling rules (pre-warm 30 min before exam start) · ECS task min/max per service · RDS read replica add/remove · cache node scaling · exam calendar integration: upcoming peak events with estimated load · capacity simulation: "at 80K VUs — which service throttles first?" · cost impact of scaling decisions |
+| C-10 | Auto-scaling & Capacity Planner | `/engineering/scaling/` | `c-10-scaling.md` | P1 | ⬜ | Lambda reserved + provisioned concurrency config per function · scheduled scaling rules (pre-warm 30 min before exam start) · ECS task min/max per service · RDS read replica add/remove · cache node scaling · exam calendar integration: upcoming peak events with estimated load · capacity simulation: "at 80K VUs — which service throttles first?" · cost impact of scaling decisions · **[G11] Exam Day Mode tab**: one-click "Activate Exam Day Mode" (2FA-gated) that simultaneously sets all exam-endpoint Lambda provisioned concurrency to max · scales ECS tasks to configured max per service · switches CloudFront to no-cache for API responses · locks production CI/CD deployments for the day (C-09 deploy button disabled) · sends Slack + email confirmation with timestamp · shows cost impact estimate before activation · "Deactivate" button reverses all effects · activation history with duration and peak metrics |
 | C-19 | AWS Infrastructure Cost Monitor | `/engineering/aws-costs/` | `c-19-aws-costs.md` | P1 | ⬜ | Per-service monthly AWS spend via Cost Explorer API: Lambda invocations · RDS storage + I/O · CloudFront egress · ECS compute · S3 storage · SES · ACM · month-over-month trend · budget vs actual · cost anomaly alerts · Reserved Instance coverage % · cost breakdown per exam peak event · ₹ spend forecast |
 | C-20 | DNS & Certificate Manager | `/engineering/dns-certs/` | `c-20-dns-certs.md` | P1 | ⬜ | Route53 DNS record management (A · CNAME · TXT · MX) for platform domains + 2,050 institution custom subdomains · ACM SSL certificate inventory (domain · expiry date · auto-renewal status · validation method) · expiry calendar (30/14/7 day alerts) · DNS propagation checker · certificate request workflow · CloudFront distribution ↔ cert mapping · Security Engineer read access |
 
 ---
 
-## Database Administrator — Pages (Role 15) · 2 pages (+ 1 tab via G5)
+## Database Administrator — Pages (Role 15) · 2 pages (+ 4 tabs/actions via G5, G12, G13, G20)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-11 | Database Admin Dashboard | `/engineering/database/` | `c-11-database.md` | P0 | ⬜ | All 2,051 PostgreSQL schemas: slow query log (> 1s) · active connections per schema · PgBouncer pool status · table sizes top-20 · index health (unused / missing / bloated indexes) · autovacuum status per table · lock monitoring (long-running locks with kill option) · replication lag primary → replicas · query EXPLAIN analyzer · schema size growth trend · **[G5] DB Configuration tab**: RDS parameter group editor (work_mem · shared_buffers · max_connections · autovacuum_vacuum_scale_factor · checkpoint_completion_target — all with current value · pending value · requires-restart flag) · apply changes (immediate or pending-reboot) · PgBouncer config editor (pool_size per database · max_client_conn · pool_mode · server_idle_timeout) · PostgreSQL role/grant manager per tenant schema (view GRANT tree · grant/revoke role · create read-only reporting user) · all changes 2FA-gated + logged in DB audit table |
-| C-12 | Backup & Migration Manager | `/engineering/db-migrations/` | `c-12-db-migrations.md` | P1 | ✅ | RDS automated snapshot schedule (daily · 30-day retention) · manual snapshot on demand (before risky migrations) · PITR restore to any second in retention window · Django migration status across all 2,051 schemas · pending unapplied migrations list · selective schema migration execution · migration rollback (`migrate app 000X`) · data archival to S3 Glacier (data > 2 years old) · backup cost tracking |
+| C-11 | Database Admin Dashboard | `/engineering/database/` | `c-11-database.md` | P0 | ⬜ | All 2,051 PostgreSQL schemas: slow query log (> 1s) · active connections per schema · PgBouncer pool status · table sizes top-20 · index health (unused / missing / bloated indexes) · autovacuum status per table (last autovacuum time · dead tuple count · live tuple count) · lock monitoring (long-running locks with kill option) · replication lag primary → replicas · query EXPLAIN analyzer · schema size growth trend · **[G5] DB Configuration tab**: RDS parameter group editor (work_mem · shared_buffers · max_connections · autovacuum_vacuum_scale_factor · checkpoint_completion_target — all with current value · pending value · requires-restart flag) · apply changes (immediate or pending-reboot) · PgBouncer config editor (pool_size per database · max_client_conn · pool_mode · server_idle_timeout) · PostgreSQL role/grant manager per tenant schema (view GRANT tree · grant/revoke role · create read-only reporting user) · all changes 2FA-gated + logged in DB audit table · **[G20] Manual VACUUM action** (table context menu): "Trigger VACUUM ANALYZE" confirmation modal showing table name + estimated duration + last autovacuum time → Celery task executes VACUUM ANALYZE via direct RDS superuser connection bypassing PgBouncer · progress polling via HTMX · result: rows processed · dead tuples removed · index pages reclaimed · logged in DBA audit table · schema-wide VACUUM available to Platform Admin only |
+| C-12 | Backup & Migration Manager | `/engineering/db-migrations/` | `c-12-db-migrations.md` | P1 | ⬜ | RDS automated snapshot schedule (daily · 30-day retention) · manual snapshot on demand (before risky migrations) · PITR restore to any second in retention window · Django migration status across all 2,051 schemas · pending unapplied migrations list · selective schema migration execution · migration rollback (`migrate app 000X`) · data archival to S3 Glacier (data > 2 years old) · backup cost tracking · **[G12] Migration Matrix tab**: all 2,051 schemas in a grid — schema name · latest applied migration per app · pending migration count (0 = green · 1–3 = amber · >3 = red) · last migration timestamp · bulk "Apply pending to all schemas" action with live HTMX progress modal · filter by pending-only / healthy / specific app · selective apply: pick N schemas + apply · failures isolated per schema with error log · **[G13] Restore Verification tab**: trigger test restores from RDS snapshots to an isolated ephemeral RDS instance (db.t3.medium) — select source snapshot · verification checks: table count match · row count sample per 10 tables · referential integrity check on 5 key FK chains · Pass/Fail result with detail · auto-decommission ephemeral instance after verification · restore test history (last 12 months) · configurable monthly schedule · estimated cost shown before trigger |
 
 ---
 
-## Security Engineer — Pages (Role 16) · 2 pages (+ 3 tabs via G6, G7, G8)
+## Security Engineer — Pages (Role 16) · 2 pages (+ 7 tabs/sections via G6, G7, G8, G16, G17, G18, G19)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-13 | Security Operations Dashboard | `/engineering/security/` | `c-13-security-ops.md` | P0 | ⬜ | AWS WAF rules (block · rate-limit · geo-restrict) · failed auth heatmap (IP · country · time-of-day) · account lockout event log · suspicious JWT anomaly detection · CVE tracker (pip audit + npm audit) · CERT-In incident log with 6h countdown timer · DPDPA breach tracker with 72h notification countdown · full VAPT results · dependency vulnerability scanner · active threat alerts · **[G6] VAPT Schedule tab**: penetration test engagement tracker — schedule test (date · vendor name · scope: in/out of scope URL/IP ranges · test type: black-box/grey-box/white-box) · engagement status (Scheduled → In Progress → Report Received → Findings Triaged → Closed) · findings log per engagement (severity: Critical/High/Medium/Low · CVE ref if applicable · affected component · remediation owner · due date · status) · findings import via CSV or manual entry · integration with CVE tracker: critical findings auto-create CVE tracker items · vendor NDA expiry tracking |
-| C-14 | Secret & Key Manager | `/engineering/secrets/` | `c-14-secrets.md` | P0 | ⬜ | Complete secret inventory: JWT signing keys · AWS KMS CMKs · RDS master credentials · Razorpay API keys (test + live) · FCM server keys · Hive AES-256 keys · S3 presign keys · SMTP credentials · OAuth client secrets · rotation schedule per secret · 2FA-gated rotation trigger · rotation history audit · AWS Secrets Manager sync status · expiry countdowns · **[G7] OAuth App Registry tab**: all OAuth 2.0 applications registered on the platform — app name · client ID (masked, last-4 visible) · allowed scopes (checkboxes) · redirect URI list · app owner (staff account) · creation date · last-used date · revoke action (2FA-gated, immediate) · new app registration wizard · scope change requires Security Engineer 2FA · **[G8] Mobile Keys tab** *(accessible to Mobile Engineer — read-only)*: Hive AES-256 key rotation schedule (current key version · rotation date · next scheduled rotation) · FCM server key expiry date · iOS APNs certificate expiry · Android keystore alias and expiry — Mobile Engineer can see dates only, no raw values, no rotation trigger |
+| C-13 | Security Operations Dashboard | `/engineering/security/` | `c-13-security-ops.md` | P0 | ⬜ | AWS WAF rules (block · rate-limit · geo-restrict) · failed auth heatmap (IP · country · time-of-day) · account lockout event log · suspicious JWT anomaly detection · CVE tracker (pip audit + npm audit) · CERT-In incident log with 6h countdown timer · DPDPA breach tracker with 72h notification countdown · full VAPT results · dependency vulnerability scanner · active threat alerts · **[G6] VAPT Schedule tab**: penetration test engagement tracker — schedule test (date · vendor name · scope: in/out of scope URL/IP ranges · test type: black-box/grey-box/white-box) · engagement status (Scheduled → In Progress → Report Received → Findings Triaged → Closed) · findings log per engagement (severity: Critical/High/Medium/Low · CVE ref if applicable · affected component · remediation owner · due date · status) · findings import via CSV or manual entry · integration with CVE tracker: critical findings auto-create CVE tracker items · vendor NDA expiry tracking · **[G16] Data Localization Audit tab**: compliance dashboard verifying all student PII is in ap-south-1 — S3 bucket list with region column (green = ap-south-1 · red = other) · RDS + Lambda region check · "Run Audit Now" triggers Celery task calling AWS Config + S3 getBucketLocation for all buckets · violation log: out-of-region resource auto-creates DPDPA incident linked to C-18 · automated monthly audit schedule · DPO compliance export (PDF) · **[G17] CERT-In Report tab**: structured CERT-In 6-hour incident report generator — select active incident from C-18 board · pre-populated template with 12 CERT-In incident categories · fields: discovery timestamp · affected systems · estimated affected user count · attack vector · containment actions · evidence file upload · generate PDF + submission tracking number · 6-hour countdown timer from incident discovery · submission history with PDF download · DPDPA §31 72-hour DPO notification sub-workflow (draft notification → DPO email send) |
+| C-14 | Secret & Key Manager | `/engineering/secrets/` | `c-14-secrets.md` | P0 | ⬜ | Complete secret inventory: JWT signing keys · AWS KMS CMKs · RDS master credentials · Razorpay API keys (test + live) · FCM server keys · Hive AES-256 keys · S3 presign keys · SMTP credentials · OAuth client secrets · rotation schedule per secret · 2FA-gated rotation trigger · rotation history audit · AWS Secrets Manager sync status · expiry countdowns · **[G7] OAuth App Registry tab**: all OAuth 2.0 applications registered on the platform — app name · client ID (masked, last-4 visible) · allowed scopes (checkboxes) · redirect URI list · app owner (staff account) · creation date · last-used date · revoke action (2FA-gated, immediate) · new app registration wizard · scope change requires Security Engineer 2FA · **[G8] Mobile Keys tab** *(accessible to Mobile Engineer — read-only)*: Hive AES-256 key rotation schedule (current key version · rotation date · next scheduled rotation) · FCM server key expiry date · iOS APNs certificate expiry · Android keystore alias and expiry — Mobile Engineer can see dates only, no raw values, no rotation trigger · **[G18] Rotation Compliance tab**: aggregate compliance view across all 47 tracked secrets — rotation SLA per secret type (JWT: 30d · KMS CMK: 365d · RDS password: 90d · API keys: 90d · FCM: 365d) · compliance status per secret (On Track / Due Soon <7d / Overdue) · overall compliance % (target ≥ 95%) · secrets never-rotated flagged as critical · bulk rotation trigger for all overdue secrets (2FA-gated) · exportable compliance report (PDF) for security audit · next 30-day rotation calendar · **[G19] JWT Compromise Response section** *(Security Engineer + Platform Admin only)*: guided 6-step runbook — Step 1: revoke current JWT key + generate new key in AWS Secrets Manager · Step 2: bulk invalidate all active sessions across 2,050 schemas (Celery task with progress bar) · Step 3: force re-login for all active users via FCM push notification · Step 4: log incident to C-13 CERT-In tracker (pre-filled) · Step 5: email DPO with breach summary · Step 6: verify new key active in all Lambda environments — each step requires explicit confirmation · type "REVOKE-JWT" to unlock the workflow · full timestamped action log |
 
 ---
 
-## AI / ML Engineer — Pages (Role 17) · 2 pages (+ 1 tab via G9)
+## AI / ML Engineer — Pages (Role 17) · 2 pages (+ 3 tabs/sections via G9, G14, G15)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-15 | AI Pipeline Dashboard | `/engineering/ai-pipeline/` | `c-15-ai-pipeline.md` | P2 | ⬜ | MCQ generation pipeline: batch job status · questions generated vs target · auto-rejection funnel (hallucination · duplicate · formatting · copyright) · prompt version A/B performance comparison · LLM model tracking (Claude · GPT-4o · Gemini) · human review queue depth · review-to-approval rate · per-domain generation stats · error classification breakdown · **[G9] Pipeline Config tab**: auto-rejection threshold editor — hallucination confidence score cutoff (default 0.75, range 0–1) · duplicate cosine similarity cutoff (default 0.80) · formatting rule toggles (enforce option count ≥ 4 · explanation min length · LaTeX syntax check) · per-domain quality thresholds (e.g. GK domain stricter copyright check) · AI provider fallback order (if Claude quota exceeded → fallback to GPT-4o) · batch size per job (10–2000) · max concurrent batch jobs · all threshold changes versioned with before/after values in audit log |
-| C-16 | AI Cost & Usage Monitor | `/engineering/ai-costs/` | `c-16-ai-costs.md` | P2 | ✅ | LLM token consumption: input + output per model per day · cost per exam domain · cost per question type · monthly budget with 80% alert / 95% hard stop · wasted spend (cost of rejected questions) · model cost comparison · optimization flags (expensive prompts with high rejection rate) · ₹ spend trend MoM · cost per approved question metric |
+| C-15 | AI Pipeline Dashboard | `/engineering/ai-pipeline/` | `c-15-ai-pipeline.md` | P2 | ⬜ | MCQ generation pipeline: batch job status · questions generated vs target · auto-rejection funnel (hallucination · duplicate · formatting · copyright) · prompt version A/B performance comparison · LLM model tracking (Claude · GPT-4o · Gemini) · human review queue depth · review-to-approval rate · per-domain generation stats · error classification breakdown · **[G9] Pipeline Config tab**: auto-rejection threshold editor — hallucination confidence score cutoff (default 0.75, range 0–1) · duplicate cosine similarity cutoff (default 0.80) · formatting rule toggles (enforce option count ≥ 4 · explanation min length · LaTeX syntax check) · per-domain quality thresholds (e.g. GK domain stricter copyright check) · AI provider fallback order (if Claude quota exceeded → fallback to GPT-4o) · batch size per job (10–2000) · max concurrent batch jobs · all threshold changes versioned with before/after values in audit log · **[G14] Prompt Version Manager tab**: create/edit/deploy prompt versions — version label (e.g. v1.4.2) · prompt body editor with syntax highlighting (markdown/LaTeX-aware) · associated LLM model · system message · temperature + top_p config · activation state: Prod / Canary / Archived · promotion workflow: promote canary to prod requires ≥ 500 approved questions generated by the canary version · side-by-side diff between any two versions · auto-archive after 90 days inactive · all changes DB-versioned with author + timestamp + before/after diff |
+| C-16 | AI Cost & Usage Monitor | `/engineering/ai-costs/` | `c-16-ai-costs.md` | P2 | ⬜ | LLM token consumption: input + output per model per day · cost per exam domain · cost per question type · monthly budget with 80% alert / 95% hard stop · wasted spend (cost of rejected questions) · model cost comparison · optimization flags (expensive prompts with high rejection rate) · ₹ spend trend MoM · cost per approved question metric · **[G15] Cost Forecast section**: month-to-date spend + projected month-end based on current daily burn rate · "Run N more batches" cost simulator (enter batch count → shows estimated token cost + whether it breaches ₹15L monthly cap) · daily burn rate trend (7 days) · days until monthly cap at current rate · budget cap editor (₹/month with 95% hard-stop config) · overage alert recipients list · model cost comparison forecast (cost differential if switching all batches to GPT-4o vs Claude) |
 
 ---
 
@@ -187,6 +187,15 @@
 | aws-cost-drawer | C-19 → service row | 560px | Daily Spend Chart · Top Cost Drivers · Forecast |
 | dns-record-drawer | C-20 → DNS record row | 480px | Record Details · Edit · Propagation Status · History |
 | cert-detail-drawer | C-20 → certificate row | 480px | Domain · Expiry · Validation · CloudFront Mapping |
+| exam-day-activation-drawer | C-10 Exam Day Mode → activate button | 600px | Pre-flight Checklist · Cost Estimate · Activation History |
+| migration-matrix-drawer | C-12 Migration Matrix → schema row | 560px | Pending Migrations · Apply Log · Error Detail |
+| restore-verification-drawer | C-12 Restore Verification → history row | 640px | Snapshot Details · Verification Checks · Pass/Fail Report |
+| prompt-version-drawer | C-15 Prompt Version Manager → version row | 720px | Prompt Body · Config · A/B Stats · Diff View |
+| data-localization-drawer | C-13 Data Localization Audit → resource row | 560px | Resource Details · Region · Violation Log · Remediation |
+| cert-in-report-drawer | C-13 CERT-In Report → submission row | 720px | Report Fields · Evidence Files · PDF Preview · Submission Status |
+| rotation-compliance-drawer | C-14 Rotation Compliance → secret row | 480px | Rotation SLA · History · Overdue Reason · Trigger Rotation |
+| jwt-compromise-drawer | C-14 JWT Compromise Response | 640px | Step Checklist · Action Log · Confirmation Input |
+| vacuum-progress-drawer | C-11 table row VACUUM action | 480px | Table Info · Progress · Result Stats · Audit Log |
 
 ---
 
@@ -201,11 +210,16 @@ P0 — Before any institution goes live
   C-09  CI/CD Pipeline Manager  (every deploy goes through this)
   C-11  Database Admin          (2,051 schemas — DBA needs live monitoring)
                                  + G5 amendment: DB Configuration tab
+                                 + G20 amendment: Manual VACUUM ANALYZE action (audit-safe)
   C-13  Security Operations     (WAF · CERT-In 6h · DPDPA 72h — compliance from day 1)
                                  + G6 amendment: VAPT Schedule tab
+                                 + G16 amendment: Data Localization Audit tab (DPDPA ap-south-1 check)
+                                 + G17 amendment: CERT-In Report tab (6h statutory report generator)
   C-14  Secret & Key Manager    (JWT rotation · KMS — security foundation)
                                  + G7 amendment: OAuth App Registry tab
                                  + G8 amendment: Mobile Keys tab
+                                 + G18 amendment: Rotation Compliance tab (47 secrets · SLA tracking)
+                                 + G19 amendment: JWT Compromise Response section (guided 6-step)
   C-18  Incident Manager        (P0 incidents need runbooks before first exam)
                                  + G10 amendment: Alert Rules tab
 
@@ -216,7 +230,10 @@ P1 — Sprint 2
                                  + G1 amendment: Environment Variables tab
                                  + G2 amendment: Scheduled Jobs tab (Celery beat)
   C-10  Auto-scaling Planner    (pre-warm for exam peaks — needed before first 74K event)
+                                 + G11 amendment: Exam Day Mode tab (one-click 74K readiness)
   C-12  Backup & Migration Mgr  (snapshot + PITR before data grows large)
+                                 + G12 amendment: Migration Matrix tab (2,051 schema grid)
+                                 + G13 amendment: Restore Verification tab (backup integrity)
   C-17  Log Viewer              (debugging needs logs from day 1)
   C-19  AWS Infrastructure Cost Monitor  (track ₹70K–90K/month infra spend)
   C-20  DNS & Certificate Manager        (2,050+ custom domain SSL expiry management)
@@ -227,7 +244,9 @@ P2 — Sprint 3
   C-07  Mobile Build Pipeline   (when Flutter app goes to stores)
   C-15  AI Pipeline Dashboard   (when MCQ AI generation is active)
                                  + G9 amendment: Pipeline Config tab (rejection thresholds)
+                                 + G14 amendment: Prompt Version Manager tab (create/deploy/rollback)
   C-16  AI Cost Monitor         (when AI spend reaches ₹8L+/month)
+                                 + G15 amendment: Cost Forecast section (month-end projection + simulator)
 ```
 
 ---
@@ -295,6 +314,16 @@ P2 — Sprint 3
 | 29 | Monitor AI API token spend and budget | AI/ML | C-16 |
 | 30 | Search and trace logs across all services | All roles | C-17 |
 | 31 | Manage P0–P2 incidents with runbooks | Admin + DevOps + Security | C-18 |
+| 32 | Activate exam day mode (pre-warm Lambda, scale ECS, lock prod deploys) | DevOps | C-10 (G11) |
+| 33 | View all 2,051 schemas' Django migration status in one aggregated grid | DBA | C-12 (G12) |
+| 34 | Verify backup integrity via test restore to ephemeral RDS instance | DBA | C-12 (G13) |
+| 35 | Create, edit, and promote AI prompt versions with A/B gates | AI/ML | C-15 (G14) |
+| 36 | Forecast month-end LLM cost and simulate additional batch spend | AI/ML | C-16 (G15) |
+| 37 | Audit student PII data localization (verify all resources in ap-south-1) | Security + DevOps | C-13 (G16) |
+| 38 | Generate structured CERT-In 6-hour incident reports and DPO notifications | Security | C-13 (G17) |
+| 39 | View secrets rotation compliance % and bulk-trigger overdue rotations | Security | C-14 (G18) |
+| 40 | Execute JWT signing key compromise response workflow (6-step guided) | Security | C-14 (G19) |
+| 41 | Trigger manual VACUUM ANALYZE on tables or schemas from the portal | DBA | C-11 (G20) |
 
 ---
 
@@ -312,12 +341,24 @@ P2 — Sprint 3
 | G8 | **Mobile Engineer locked out of key schedule** — Access matrix gives Mobile Engineer zero access to C-14 but they own Hive AES-256 and FCM keys. Must see rotation dates to plan releases | Medium | Add "Mobile Keys" read-only tab to C-14 + grant Mobile Eng access to that tab only |
 | G9 | **AI rejection thresholds read-only** — C-15 shows the rejection funnel but AI/ML Engineer cannot configure hallucination score cutoff, duplicate similarity %, or formatting rules | Medium | Add "Pipeline Config" tab to C-15 |
 | G10 | **Alert rules config missing** — C-18 has on-call schedule and PagerDuty integration but nobody can configure metric alert thresholds (e.g. Lambda error rate > 5% → P1) | High | Add "Alert Rules" tab to C-18 |
+| G11 | **Exam Day Mode controls missing** — DevOps cannot manually activate "exam day mode": simultaneously pre-warm all Lambda provisioned concurrency, scale ECS to max, lock production deploys, and confirm team readiness before a 74K-peak exam event | High | Add "Exam Day Mode" tab to C-10 |
+| G12 | **Mass migration status dashboard missing** — DBA can execute migrations schema-by-schema but has no aggregated view of which of the 2,051 schemas are behind, how many pending migrations exist per app, or a bulk "apply to all" action | High | Add "Migration Matrix" tab to C-12 |
+| G13 | **Backup restore verification missing** — No workflow to test-restore a snapshot to an isolated ephemeral RDS instance to verify data integrity. Backups are taken but never verified, creating undetected silent corruption risk | High | Add "Restore Verification" tab to C-12 |
+| G14 | **Prompt version management UI missing** — C-15 shows A/B comparison results but AI/ML Engineer cannot create, edit, label, or deploy new prompt versions from the portal. All prompt changes are untracked and cannot be rolled back | High | Add "Prompt Version Manager" tab to C-15 |
+| G15 | **LLM cost forecasting missing** — C-16 shows historical spend but has no month-end forecast, no "cost if we run N more batches" simulator, and no burn-rate visibility. AI/ML Engineer cannot predict whether ₹15L monthly cap will be breached before end of month | Medium | Add "Cost Forecast" section to C-16 |
+| G16 | **Data localization compliance audit missing** — No dashboard verifying that all student PII (S3 buckets, RDS, Lambda environments) remains in ap-south-1. DPDPA 2023 violation goes undetected until an audit or breach | Critical | Add "Data Localization Audit" tab to C-13 |
+| G17 | **CERT-In report generator missing** — Security Engineer must file CERT-In 6-hour incident reports but has no structured template or generator. Reports are drafted manually under time pressure, risking non-compliance with the statutory 6-hour deadline | Critical | Add "CERT-In Report" tab to C-13 |
+| G18 | **Secrets rotation compliance dashboard missing** — C-14 shows per-secret rotation history but has no aggregate view: which secrets are overdue, overall compliance %, secrets that have never been rotated. No bulk rotation trigger for overdue items | High | Add "Rotation Compliance" tab to C-14 |
+| G19 | **JWT compromise response workflow missing** — No guided workflow for responding to JWT signing key compromise. Security Engineer must manually execute 6 steps (revoke, bulk-invalidate sessions, force re-login, CERT-In log, DPO email, verify rollout) with no coordination or audit trail | Critical | Add "JWT Compromise Response" section to C-14 |
+| G20 | **Manual VACUUM ANALYZE missing** — DBA can see autovacuum status per table but cannot trigger a manual VACUUM ANALYZE from the portal. Must SSH directly into RDS, creating an audit gap and access control risk | Medium | Add "Manual VACUUM" context-menu action to C-11 |
 
 ---
 
 *Last updated: 2026-03-20*
 *Total pages: 20 (C-01 to C-18 original · C-19 AWS Costs · C-20 DNS & Certs)*
-*Total tabs added via amendments: 10 (G1–G10)*
+*Total tabs/sections/actions added via amendments: 20 (G1–G20)*
 *Roles covered: 8 (Roles 10–17)*
-*All 10 functional gaps resolved — descriptions updated in page table above*
+*Functional coverage: 41 jobs mapped across all 8 roles*
+*All 20 functional gaps resolved — descriptions updated in page table above*
+*Compliance gaps resolved: G16 (DPDPA data localisation) · G17 (CERT-In 6h report) · G19 (JWT compromise workflow)*
 *Status: Pages list complete with amendments — individual page spec files pending*
