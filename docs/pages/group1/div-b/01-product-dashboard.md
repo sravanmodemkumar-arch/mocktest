@@ -655,6 +655,105 @@ class ProductDashboardView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 ---
 
+---
+
+## G5 Amendment — Critical Alert Bus (Shared Across All Division B Pages)
+
+### Purpose
+
+When a P0 production incident fires — a kill-switch is activated, a performance SLA breach is detected at 74K concurrent users, a P0 defect opens, or a Lambda Lambda cold-start cascade begins — every team member working in any Division B page must be immediately aware. Without this, a PM editing a roadmap card in page 05 has no idea the platform is in crisis.
+
+The Critical Alert Bus is a **server-side SSE (Server-Sent Events) stream** that delivers real-time platform alerts to all Division B pages simultaneously. It is implemented as a shared component included in the base template for all Division B pages.
+
+---
+
+### Alert Banner Behaviour
+
+**Position:** Fixed top of page, above the navigation bar. Full-width. Z-index: 9999.
+
+**Style by severity:**
+
+| Severity | Background | Border | Icon | Example |
+|---|---|---|---|---|
+| P0 — Critical | `bg-[#450A0A]` | `border-b border-[#EF4444]` | 🔴 | Lambda cold-start cascade · active exam data loss risk |
+| P1 — High | `bg-[#451A03]` | `border-b border-[#F59E0B]` | 🟡 | Kill-switch fired · performance SLA breached |
+| Info | `bg-[#0C1A2E]` | `border-b border-[#3B82F6]` | 🔵 | Scheduled maintenance in 30 minutes |
+
+**Banner content:**
+```
+🔴  [P0] Lambda cold-start cascade detected — 74K exam submissions impacted.
+    Incident: INC-2026-03-20-001  ·  Open since: 14:32  ·  [View Incident →]  [Dismiss ✕]
+```
+
+- **[View Incident →]**: opens Defect Tracker (page 25) filtered to this incident
+- **[Dismiss ✕]**: hides the banner for the current user's session only. The alert still exists — other users still see it. Cannot be dismissed for P0 alerts (the × is disabled for P0).
+
+**Multiple alerts:** If 2+ alerts are active, a stacked banner with a counter shows: "2 active alerts" with an expand chevron to show all.
+
+---
+
+### Alert Source — `platform_alerts` Redis Key
+
+A single Redis sorted set: `platform_alerts` holds all active alerts, scored by creation timestamp.
+
+Alerts are written to this key by:
+- Defect Tracker (page 25): when a P0 or P1 defect is created or escalated
+- Automation Monitor (page 26): when a CI/CD gate fails blocking a release
+- Performance Test Dashboard (page 24): when SLA thresholds are breached
+- Feature Flags (page 02): when a kill-switch is activated
+- External monitoring (PagerDuty/CloudWatch): via webhook into the platform
+
+An alert entry contains: `alert_id · severity · title · body · source_page · incident_url · created_at · auto_expire_at`.
+
+**Auto-expiry:** P1/Info alerts auto-expire after 4 hours. P0 alerts never auto-expire — they must be manually resolved by the creator (with a "Resolve Alert" button available only to the PM Platform and QA Lead roles).
+
+---
+
+### SSE Stream Endpoint
+
+`GET /api/v1/platform-alerts/stream/` — Returns `text/event-stream`.
+
+Each event:
+```
+event: alert
+data: {"alert_id": "ALT-001", "severity": "P0", "title": "...", "body": "...", "source": "defect-tracker"}
+```
+
+All authenticated Division B pages subscribe to this stream on page load. If the SSE connection drops, the client falls back to polling `GET /api/v1/platform-alerts/` every **60 seconds**.
+
+**Guard:** Poll/SSE is paused while `document.querySelector('.modal-open,.drawer-open')` is true — the alert banner still shows if already loaded, but no new fetch is triggered during modal interactions.
+
+---
+
+### War Room Integration
+
+The Product Dashboard (this page) has an additional capability: when a P0 alert is active, a **[Open War Room →]** button appears inside the alert banner. This links to the War Room page (`/product/war-room/` — see page 32 of Division A or a future Division B page) where all stakeholders coordinate the incident response.
+
+If a War Room page does not exist yet, the button links to the Incident Manager in Division A (`/dashboard/incidents/`).
+
+---
+
+### Role-Based Alert Visibility
+
+| Role | Sees Alert Banner | Can Dismiss | Can Resolve Alert | Can Create Alert Manually |
+|---|---|---|---|---|
+| PM Platform | ✅ | P1/Info only | ✅ | ✅ |
+| PM Exam Domains | ✅ | P1/Info only | — | — |
+| PM Institution Portal | ✅ | P1/Info only | — | — |
+| UI/UX Designer | ✅ | P1/Info only | — | — |
+| QA Engineer | ✅ | P1/Info only | ✅ | ✅ |
+
+---
+
+### Pages Where This Banner Appears
+
+The Critical Alert Bus banner appears on all Division B pages:
+01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28
+
+It is included in the base Division B layout template — no per-page implementation needed beyond the shared component.
+
+---
+
 ## 10. Keyboard Shortcuts
 
 | Shortcut | Action |

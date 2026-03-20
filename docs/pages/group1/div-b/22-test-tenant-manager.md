@@ -539,4 +539,45 @@ At max capacity (15,000 students, 500 exams, with results): provisioning can tak
 | Activity log | Per-tenant audit trail | Multiple engineers use the same tenant; log shows who changed what and when |
 | DB schema isolation | Separate schema per tenant | Prevents cross-tenant data leakage during testing; allows clean deletion without affecting other tenants |
 | Resource usage monitor | Always-visible panel | Teams self-regulate tenant creation when they can see total consumption approaching limits |
+| Student impersonation | Separate tab in drawer | QA must be able to log in as a real student account on the test tenant to validate full student-facing flows end-to-end; sharing student credentials is a security risk |
+
+---
+
+## G3 Amendment — Student Impersonation
+
+### Impersonate Tab (in Test Tenant Drawer — Tab 5 after Reset)
+
+**Purpose:** Allows QA Engineers to temporarily log in as a specific student or teacher account within a test tenant to validate flows from the institution user's perspective. This is the only way to verify that features such as exam submission, result pages, WhatsApp notifications, and leaderboards work correctly for end users without accessing production data.
+
+**How it works:**
+1. QA opens the tenant drawer → clicks "Impersonate" tab
+2. Search field: type student name or email — shows matching accounts in this tenant
+3. Each result row: Student name · Class/Batch · Account status · Last login
+4. Click **[Impersonate →]** button on any row
+5. 2FA verification prompt: "Enter your 6-digit code to start impersonation session"
+6. After 2FA: student portal opens in a **new browser tab** with a persistent red impersonation banner at the top: "⚠ Impersonation active — logged in as Priya Sharma (Class 10A) · [End Session]"
+7. QA can perform any student-facing action: take an exam, view results, check notifications
+8. Session auto-expires after **30 minutes** — student portal shows "Impersonation session expired" and tab closes
+9. QA can end the session manually by clicking [End Session] in the banner
+
+**Audit logging:** Every impersonation session is recorded in the audit log with: QA engineer name, student account impersonated, tenant name, session start time, session end time, and a list of page URLs visited during the session.
+
+**Business rules:**
+- Only QA Engineers can impersonate — PM roles cannot
+- Cannot impersonate admin or teacher accounts (student accounts only) — prevents privilege escalation risk
+- Cannot impersonate on production tenants — only test tenants
+- A maximum of 2 simultaneous impersonation sessions per QA engineer (prevents accidental confusion between sessions)
+- If the student account being impersonated has an active exam in progress, a warning is shown: "This student has an exam in progress. Starting impersonation may interfere with their session." Confirmation required.
+
+**Teacher Impersonation (separate):** A "Teacher" sub-tab allows impersonating teacher/HOD accounts for testing class management flows. Same 2FA + audit log + 30-minute expiry rules apply. Teacher impersonation requires an additional permission: `qa.impersonate_teacher`.
+
+**Impersonation History Table:**
+
+| Session ID | Impersonated Account | Account Type | QA Engineer | Started | Duration | Ended By |
+|---|---|---|---|---|---|---|
+| IMP-2026-03-20-001 | Priya Sharma (Class 10A) | Student | Deepa Menon | 14:30 | 12 min | Manual [End Session] |
+| IMP-2026-03-20-002 | Raj Kumar (Batch B) | Student | Deepa Menon | 15:05 | 30 min | Auto-expiry |
+| IMP-2026-03-19-005 | Mrs. Lakshmi (Teacher) | Teacher | Arjun (QA) | 11:20 | 8 min | Manual |
+
+**Role-based visibility:** Only QA Engineers see the Impersonate tab. PM and Designer roles do not see this tab at all.
 

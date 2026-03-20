@@ -483,6 +483,102 @@ class TestSeriesEnrollment(models.Model):
 
 ---
 
+## G1 Amendment — Exam Schedule Calendar View
+
+### Purpose
+
+At 800+ active test series across 8+ exam domains with 2,050 institutions, PM Exam Domains needs a capacity planning view to answer: "Which weeks are overloaded with scheduled exams? Will 74,000 concurrent students be attempted in the same 2-hour window on Thursday?"
+
+The calendar view sits alongside the existing list view as a toggle — no separate page needed.
+
+---
+
+### Calendar View Toggle
+
+Located in the page header toolbar, to the right of the filter bar:
+
+```
+[☰ List]  [📅 Calendar]          ← toggle, only one active
+```
+
+Switching to Calendar view does NOT lose the current filter state (domain, status, institution type filters carry over).
+
+---
+
+### Calendar View Layout
+
+**Weekly view (default):** 7-column grid (Mon–Sun). Each day column shows all exams scheduled to start that day, sorted by start time.
+
+**Monthly view:** Standard month grid. Exams shown as compact colour-coded chips. Click a chip to open the Series Drawer.
+
+**View switcher:** Week · Month · Day (Day view used when zooming into a single high-load day).
+
+---
+
+### Exam Chip — Colour Coding
+
+| Colour | Meaning |
+|---|---|
+| `bg-[#3B82F6]` Blue | SSC / RRB domain |
+| `bg-[#10B981]` Green | NEET / JEE domain |
+| `bg-[#F59E0B]` Amber | AP Board / TS Board |
+| `bg-[#8B5CF6]` Purple | IBPS / SBI / Banking |
+| `bg-[#EF4444]` Red | Exam overdue (scheduled but not published) |
+| `bg-[#6B7280]` Grey | Draft — not yet scheduled |
+
+Each chip shows: **Series name (abbreviated) · Start time · Enrolled count**
+Hover tooltip: full series name · institution count · exam type · domain.
+
+---
+
+### Concurrent Load Indicator
+
+**Purpose:** The most critical capacity planning signal. At 74K peak concurrent users, the PM must know when two or more high-enrollment exams overlap.
+
+Above the calendar grid: a **load bar** per half-hour time slot for the visible week. Bar height = estimated concurrent submissions in that slot.
+
+- Green bar: < 40,000 concurrent (safe)
+- Amber bar: 40,000–65,000 (approaching limit)
+- Red bar: > 65,000 (potential SLA breach — warning banner shown)
+
+Calculation: sum of enrolled students across all exams whose window includes that time slot × an estimated submission rate of 80%.
+
+If a red bar is detected, a warning card appears at the top of the calendar:
+> ⚠ **Capacity warning — Thursday 27 Mar, 10:00–11:30 AM:** Estimated 71,200 concurrent submissions. This exceeds the safe 65,000 threshold. Consider rescheduling one exam to reduce overlap.
+
+---
+
+### Calendar Filters (carry over from list view)
+
+| Filter | Type |
+|---|---|
+| Domain | Multi-select chip (SSC · RRB · NEET · JEE · AP Board · TS Board · IBPS/SBI) |
+| Institution Type | Multi-select (School · College · Coaching · Group) |
+| Status | Multi-select (Draft · Scheduled · Live · Completed · Cancelled) |
+| Date Range | Date picker (custom or quick: This Week / Next Week / This Month) |
+
+---
+
+### Calendar Interactions
+
+| Action | Result |
+|---|---|
+| Click an exam chip | Opens Series Detail Drawer (same drawer as list view) |
+| Drag an exam chip to another day | Reschedule modal: "Reschedule [Series Name] to [New Date]? This will notify all enrolled institutions." Confirm → updates schedule |
+| Right-click an exam chip | Context menu: View Details · Reschedule · Cancel Exam · Copy Link |
+| Click empty day slot | New Series modal pre-filled with that date as start date |
+| Hover a load bar | Tooltip: "Estimated X concurrent users · Y exams overlapping · Top 3 series by enrollment: …" |
+
+---
+
+### Data Source
+
+Calendar data is fetched via `GET /api/v1/test-series/calendar/?week_start=2026-03-23&domain=all&status=scheduled,live` — returns all series with scheduled windows in the requested range.
+
+Poll interval: **120 seconds** (same Redis cache as KPI strip) — guarded by `[!document.querySelector('.drawer-open,.modal-open')]`.
+
+---
+
 ## 11. Keyboard Shortcuts
 
 | Shortcut | Action |

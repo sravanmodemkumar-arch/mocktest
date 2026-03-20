@@ -686,6 +686,47 @@ class PlanStagedChange(models.Model):
 
 ---
 
+---
+
+## G4 Amendment — API Rate Limits per Plan Tier
+
+### Rate Limits Tab (in Plan Config Edit Drawer — Tab 5 after Preview)
+
+**Purpose:** Configures API request throttle limits per subscription plan tier. At scale, a single Starter-tier institution making unlimited API calls can starve shared Lambda concurrency from Enterprise-tier institutions during exam peaks. Rate limits enforce fair usage and protect the platform SLA.
+
+**Why a separate tab:** Rate limits are not a "feature" toggle — they are infrastructure-level constraints that determine platform stability under load. They belong with Plan Config because they directly define what each paying tier receives in terms of API access.
+
+**Rate Limit Configuration Table:**
+
+| Endpoint Category | Starter | Standard | Professional | Enterprise | Unit |
+|---|---|---|---|---|---|
+| General API calls | 100 | 300 | 800 | 2,000 | req/min per institution |
+| Exam submission endpoint | 50 | 200 | 500 | 2,000 | req/min per institution |
+| Bulk export (CSV/XLSX) | 2 | 5 | 20 | Unlimited | req/hour per institution |
+| Report generation | 1 | 3 | 10 | 30 | req/hour per institution |
+| Student data API | 50 | 150 | 400 | 1,500 | req/min per institution |
+| Webhook delivery | 10 | 30 | 100 | 500 | events/min |
+| Question bank API (read) | 20 | 60 | 200 | 1,000 | req/min per institution |
+
+**Edit behaviour:**
+- PM Platform clicks a cell value to edit it inline
+- Changing a value shows a projected impact: "This change will affect 842 Standard-tier institutions currently at 270 req/min average"
+- Values are validated: cannot set a lower tier higher than a higher tier (Starter cannot exceed Standard)
+- "Burst allowance" toggle per row: allows 2× the limit for up to 30 seconds before throttling kicks in
+- 2FA required to publish rate limit changes (same staged-changes flow as plan features)
+
+**Rate limit breach response (displayed in this config for PM reference):**
+- Institution receives HTTP 429 with `Retry-After` header
+- Breach event logged in institution's usage analytics
+- After 5 breaches in 1 hour: an automatic email is sent to the institution admin recommending upgrade
+- After 20 breaches in 1 day: CSM is notified (visible in Revenue & Billing Dashboard page 28)
+
+**Historical rate limit data:**
+- Sparkline chart per category: "Average API usage last 30 days by tier" — shows if current limits are too tight or have headroom
+- "P99 usage" column: the 99th percentile request rate across all institutions in that tier — visible in the config table to guide limit-setting decisions
+
+---
+
 ## 10. Error States
 
 | Error | Display |

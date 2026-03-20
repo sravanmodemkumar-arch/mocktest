@@ -449,6 +449,79 @@ class MarksScheme(models.Model):
 
 ---
 
+---
+
+## G2 Amendment — Localization / i18n Config per Domain
+
+### Purpose
+
+The platform serves students in AP Board (Telugu-medium), TS Board (Telugu/Urdu), NEET (English/Hindi), SSC (Hindi/English), and Banking (English). Question content, UI labels, exam instructions, and result messages must be available in the correct language per domain. Without an explicit i18n config per domain, the frontend cannot know which locales to load or which content versions to display.
+
+---
+
+### Localization Tab (added to Domain Config Drawer — Tab 6 after Analytics)
+
+**Tab label:** 🌐 Localization
+
+**Why in the drawer and not a separate page:** Localization settings are tightly coupled to a specific exam domain — the supported languages for SSC Hindi are fundamentally different from AP Board Telugu. A single i18n page would require constant domain context-switching; attaching the tab to the domain drawer keeps context intact.
+
+---
+
+### Localization Tab — Content
+
+**Section 1: Supported Locales**
+
+| Language | Code | Script | Status | Default? | Content Coverage |
+|---|---|---|---|---|---|
+| English | `en` | Latin | Active | ✅ (for SSC/Banking/JEE/NEET) | 100% |
+| Hindi | `hi` | Devanagari | Active | ✅ (for SSC/RRB) | 94% |
+| Telugu | `te` | Telugu | Active | ✅ (for AP Board/TS Board) | 88% |
+| Urdu | `ur` | Nastaliq (RTL) | Active | — | 71% |
+| Tamil | `ta` | Tamil | Beta | — | 43% |
+| Kannada | `kn` | Kannada | Planned | — | 12% |
+
+- **Default locale:** The locale loaded when a student has not set a personal language preference. Only one locale can be the default per domain. Changing the default triggers a warning: "This will change the language for ~{N} students who have not set a preference."
+- **Status options:** Active · Beta (available but marked "preview") · Planned (visible in admin but not served to students) · Disabled
+- **Content coverage %:** Computed automatically from the question bank — (questions with translation in this locale / total questions in this domain) × 100. Updates nightly.
+
+**Section 2: UI String Translations**
+
+UI labels, error messages, exam instructions, and button text are separate from question content. This section shows translation completeness for portal UI strings.
+
+| String Category | Total Strings | Telugu | Hindi | Urdu |
+|---|---|---|---|---|
+| Exam instructions | 48 | 48 ✅ | 48 ✅ | 42 ⚠ |
+| Result page labels | 32 | 32 ✅ | 32 ✅ | 28 ⚠ |
+| Error messages | 120 | 110 ⚠ | 118 ✅ | 89 ⚠ |
+| Navigation & buttons | 86 | 86 ✅ | 86 ✅ | 79 ⚠ |
+| Notification templates | 24 | 22 ⚠ | 24 ✅ | 18 ⚠ |
+
+Missing strings shown with a ⚠ badge and a "View Missing →" link that opens a modal listing all untranslated strings with an inline text area for PM to submit draft translations (routed to content team for review).
+
+**Section 3: RTL Support**
+
+For Urdu (`ur`) and any future Arabic/RTL locale:
+- Toggle: "Enable RTL layout for this domain" — when ON, all portal UI elements mirror for RTL rendering (text direction, icon placement, table column order)
+- RTL status indicator: "RTL layout is currently Active / Inactive for Urdu users on this domain"
+- Warning: "RTL requires design review — submit a review request to UI Review Board (page 20) before enabling in production"
+
+**Section 4: Language Switcher Config**
+
+Controls what students see in the language picker at the top of the exam portal:
+- Show language switcher: Yes / No (per domain)
+- Switcher position: Top-right navbar / Exam start screen only / Both
+- Languages shown in switcher: checkboxes matching Supported Locales above (only Active locales can be shown to students)
+- Mid-exam language switch: Allow / Block — if "Block": language can only be selected at exam start screen; "Allow": student can switch anytime (question text reloads in new locale)
+
+**Section 5: Locale Publish**
+
+Changes to locale config follow the same staged-changes workflow as domain metadata:
+- "Stage Changes" button → amber banner: "Localization changes pending publication"
+- Review modal: shows each change (e.g., "Telugu set as default locale for AP Board — affects 4,200 students")
+- 2FA → Publish
+
+---
+
 ## 9. Empty States
 
 | Section | Copy |
