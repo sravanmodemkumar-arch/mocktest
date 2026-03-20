@@ -58,20 +58,20 @@
 
 ---
 
-## Backend Engineer — Pages (Role 11) · 2 pages
+## Backend Engineer — Pages (Role 11) · 2 pages (+ 2 tabs via G1, G2)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
 | C-04 | API Health Monitor | `/engineering/api-health/` | `c-04-api-health.md` | P0 | ✅ | All Lambda endpoints: P50/P95/P99 latency per endpoint · error rate by HTTP status code · cold start frequency · throttle events · exam-critical SLA tracking (exam submit < 200ms · result fetch < 500ms) · API version registry (v1/v2/v3) · deprecation tracker with sunset countdowns · endpoint dependency map |
-| C-05 | Service Deployment Manager | `/engineering/deployments/` | `c-05-deployments.md` | P1 | ✅ | Lambda function version history · blue/green weighted routing (e.g. 95%/5% canary) · Lambda alias management ($LATEST vs named versions) · one-click rollback to any previous version · pre/post-deploy health check automation · deployment log with actor + timestamp · integration with CI/CD (C-09) and Release Manager (Div B page 03) |
+| C-05 | Service Deployment Manager | `/engineering/deployments/` | `c-05-deployments.md` | P1 | ⬜ | Lambda function version history · blue/green weighted routing (e.g. 95%/5% canary) · Lambda alias management ($LATEST vs named versions) · one-click rollback to any previous version · pre/post-deploy health check automation · deployment log with actor + timestamp · integration with CI/CD (C-09) and Release Manager (Div B page 03) · **[G1] Environment Variables tab**: per-function env var viewer + editor (value references AWS Secrets Manager ARN — raw values never stored in Django DB) · diff view between deployed vs pending env vars · deploy-on-save with health check · **[G2] Scheduled Jobs tab**: full Celery beat task registry — task name · queue · schedule (cron/interval) · last run time · next run time · last run status (success/failure) · average duration · pause/resume per task · trigger manual run now · execution history (last 30 runs per task) |
 
 ---
 
-## Frontend Engineer — Pages (Role 12) · 1 page
+## Frontend Engineer — Pages (Role 12) · 1 page (+ 1 tab via G3)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-06 | CDN & Asset Manager | `/engineering/cdn/` | `c-06-cdn-assets.md` | P2 | ✅ | CloudFront cache invalidation (path patterns · wildcard `/static/*` · emergency full purge) · R2/S3 static asset browser (CSS · JS · images · fonts · WOFF2) · cache hit rate per distribution · asset version registry (content-hash file names) · Brotli/gzip compression status · HTMX template deployment log · CDN cost per GB |
+| C-06 | CDN & Asset Manager | `/engineering/cdn/` | `c-06-cdn-assets.md` | P2 | ⬜ | CloudFront cache invalidation (path patterns · wildcard `/static/*` · emergency full purge) · R2/S3 static asset browser (CSS · JS · images · fonts · WOFF2) · cache hit rate per distribution · asset version registry (content-hash file names) · Brotli/gzip compression status · HTMX template deployment log · CDN cost per GB · **[G3] Performance Monitor tab**: real-user Core Web Vitals per page path (LCP · FID · CLS · TTFB) sourced from CloudWatch RUM · P75 / P95 percentiles · JS error rate and top error messages · page load time trend (7-day) · device/OS breakdown · alert threshold config (LCP > 2.5s → amber, > 4s → red) |
 
 ---
 
@@ -89,7 +89,7 @@
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-08 | Infrastructure Monitor | `/engineering/infrastructure/` | `c-08-infrastructure.md` | P0 | ⬜ | Real-time AWS: Lambda total + reserved concurrency per function · ECS cluster CPU/memory/task count · RDS primary + replicas (CPU · connections · IOPS · storage · replica lag) · Memcached hit-rate/evictions · ALB request rate + 5xx · CloudFront bandwidth + cache ratio · S3 bucket sizes · All with WRITE controls: change concurrency · restart ECS tasks · promote read replica · drain ALB target |
+| C-08 | Infrastructure Monitor | `/engineering/infrastructure/` | `c-08-infrastructure.md` | P0 | ⬜ | Real-time AWS: Lambda total + reserved concurrency per function · ECS cluster CPU/memory/task count · RDS primary + replicas (CPU · connections · IOPS · storage · replica lag) · Memcached hit-rate/evictions · ALB request rate + 5xx · CloudFront bandwidth + cache ratio · S3 bucket sizes · All with WRITE controls: change concurrency · restart ECS tasks · promote read replica · drain ALB target · **[G4] Celery Queues tab**: per-queue worker count (active/idle) · queue depth (messages waiting) · processed/failed tasks per hour (24h chart) · average task duration per queue · dead-letter queue (DLQ) item count with retry-all action · individual worker detail (worker hostname · current task · uptime) · worker restart action (graceful/hard) · queue-level pause/resume |
 | C-09 | CI/CD Pipeline Manager | `/engineering/cicd/` | `c-09-cicd.md` | P0 | ⬜ | GitHub Actions runs across all 12 repos · pipeline stages (Test → Lint → Build → Deploy Staging → QA Gate → Pre-Prod → Prod) · manual approval gate for production · parallel pipeline grid view · rollback (re-run last passing workflow) · failed pipeline log tail · integration with QA sign-off (Div B page 21) and Release Manager (Div B page 03) · deployment frequency + DORA metrics |
 | C-10 | Auto-scaling & Capacity Planner | `/engineering/scaling/` | `c-10-scaling.md` | P1 | ⬜ | Lambda reserved + provisioned concurrency config per function · scheduled scaling rules (pre-warm 30 min before exam start) · ECS task min/max per service · RDS read replica add/remove · cache node scaling · exam calendar integration: upcoming peak events with estimated load · capacity simulation: "at 80K VUs — which service throttles first?" · cost impact of scaling decisions |
 | C-19 | AWS Infrastructure Cost Monitor | `/engineering/aws-costs/` | `c-19-aws-costs.md` | P1 | ⬜ | Per-service monthly AWS spend via Cost Explorer API: Lambda invocations · RDS storage + I/O · CloudFront egress · ECS compute · S3 storage · SES · ACM · month-over-month trend · budget vs actual · cost anomaly alerts · Reserved Instance coverage % · cost breakdown per exam peak event · ₹ spend forecast |
@@ -97,39 +97,39 @@
 
 ---
 
-## Database Administrator — Pages (Role 15) · 2 pages
+## Database Administrator — Pages (Role 15) · 2 pages (+ 1 tab via G5)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-11 | Database Admin Dashboard | `/engineering/database/` | `c-11-database.md` | P0 | ✅ | All 2,051 PostgreSQL schemas: slow query log (> 1s) · active connections per schema · PgBouncer pool status · table sizes top-20 · index health (unused / missing / bloated indexes) · autovacuum status per table · lock monitoring (long-running locks with kill option) · replication lag primary → replicas · query EXPLAIN analyzer · schema size growth trend |
+| C-11 | Database Admin Dashboard | `/engineering/database/` | `c-11-database.md` | P0 | ⬜ | All 2,051 PostgreSQL schemas: slow query log (> 1s) · active connections per schema · PgBouncer pool status · table sizes top-20 · index health (unused / missing / bloated indexes) · autovacuum status per table · lock monitoring (long-running locks with kill option) · replication lag primary → replicas · query EXPLAIN analyzer · schema size growth trend · **[G5] DB Configuration tab**: RDS parameter group editor (work_mem · shared_buffers · max_connections · autovacuum_vacuum_scale_factor · checkpoint_completion_target — all with current value · pending value · requires-restart flag) · apply changes (immediate or pending-reboot) · PgBouncer config editor (pool_size per database · max_client_conn · pool_mode · server_idle_timeout) · PostgreSQL role/grant manager per tenant schema (view GRANT tree · grant/revoke role · create read-only reporting user) · all changes 2FA-gated + logged in DB audit table |
 | C-12 | Backup & Migration Manager | `/engineering/db-migrations/` | `c-12-db-migrations.md` | P1 | ✅ | RDS automated snapshot schedule (daily · 30-day retention) · manual snapshot on demand (before risky migrations) · PITR restore to any second in retention window · Django migration status across all 2,051 schemas · pending unapplied migrations list · selective schema migration execution · migration rollback (`migrate app 000X`) · data archival to S3 Glacier (data > 2 years old) · backup cost tracking |
 
 ---
 
-## Security Engineer — Pages (Role 16) · 2 pages
+## Security Engineer — Pages (Role 16) · 2 pages (+ 3 tabs via G6, G7, G8)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-13 | Security Operations Dashboard | `/engineering/security/` | `c-13-security-ops.md` | P0 | ✅ | AWS WAF rules (block · rate-limit · geo-restrict) · failed auth heatmap (IP · country · time-of-day) · account lockout event log · suspicious JWT anomaly detection · CVE tracker (pip audit + npm audit) · CERT-In incident log with 6h countdown timer · DPDPA breach tracker with 72h notification countdown · full VAPT results · dependency vulnerability scanner · active threat alerts |
-| C-14 | Secret & Key Manager | `/engineering/secrets/` | `c-14-secrets.md` | P0 | ✅ | Complete secret inventory: JWT signing keys · AWS KMS CMKs · RDS master credentials · Razorpay API keys (test + live) · FCM server keys · Hive AES-256 keys · S3 presign keys · SMTP credentials · OAuth client secrets · rotation schedule per secret · 2FA-gated rotation trigger · rotation history audit · AWS Secrets Manager sync status · expiry countdowns |
+| C-13 | Security Operations Dashboard | `/engineering/security/` | `c-13-security-ops.md` | P0 | ⬜ | AWS WAF rules (block · rate-limit · geo-restrict) · failed auth heatmap (IP · country · time-of-day) · account lockout event log · suspicious JWT anomaly detection · CVE tracker (pip audit + npm audit) · CERT-In incident log with 6h countdown timer · DPDPA breach tracker with 72h notification countdown · full VAPT results · dependency vulnerability scanner · active threat alerts · **[G6] VAPT Schedule tab**: penetration test engagement tracker — schedule test (date · vendor name · scope: in/out of scope URL/IP ranges · test type: black-box/grey-box/white-box) · engagement status (Scheduled → In Progress → Report Received → Findings Triaged → Closed) · findings log per engagement (severity: Critical/High/Medium/Low · CVE ref if applicable · affected component · remediation owner · due date · status) · findings import via CSV or manual entry · integration with CVE tracker: critical findings auto-create CVE tracker items · vendor NDA expiry tracking |
+| C-14 | Secret & Key Manager | `/engineering/secrets/` | `c-14-secrets.md` | P0 | ⬜ | Complete secret inventory: JWT signing keys · AWS KMS CMKs · RDS master credentials · Razorpay API keys (test + live) · FCM server keys · Hive AES-256 keys · S3 presign keys · SMTP credentials · OAuth client secrets · rotation schedule per secret · 2FA-gated rotation trigger · rotation history audit · AWS Secrets Manager sync status · expiry countdowns · **[G7] OAuth App Registry tab**: all OAuth 2.0 applications registered on the platform — app name · client ID (masked, last-4 visible) · allowed scopes (checkboxes) · redirect URI list · app owner (staff account) · creation date · last-used date · revoke action (2FA-gated, immediate) · new app registration wizard · scope change requires Security Engineer 2FA · **[G8] Mobile Keys tab** *(accessible to Mobile Engineer — read-only)*: Hive AES-256 key rotation schedule (current key version · rotation date · next scheduled rotation) · FCM server key expiry date · iOS APNs certificate expiry · Android keystore alias and expiry — Mobile Engineer can see dates only, no raw values, no rotation trigger |
 
 ---
 
-## AI / ML Engineer — Pages (Role 17) · 2 pages
+## AI / ML Engineer — Pages (Role 17) · 2 pages (+ 1 tab via G9)
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-15 | AI Pipeline Dashboard | `/engineering/ai-pipeline/` | `c-15-ai-pipeline.md` | P2 | ✅ | MCQ generation pipeline: batch job status · questions generated vs target · auto-rejection funnel (hallucination · duplicate · formatting · copyright) · prompt version A/B performance comparison · LLM model tracking (Claude · GPT-4o · Gemini) · human review queue depth · review-to-approval rate · per-domain generation stats · error classification breakdown |
+| C-15 | AI Pipeline Dashboard | `/engineering/ai-pipeline/` | `c-15-ai-pipeline.md` | P2 | ⬜ | MCQ generation pipeline: batch job status · questions generated vs target · auto-rejection funnel (hallucination · duplicate · formatting · copyright) · prompt version A/B performance comparison · LLM model tracking (Claude · GPT-4o · Gemini) · human review queue depth · review-to-approval rate · per-domain generation stats · error classification breakdown · **[G9] Pipeline Config tab**: auto-rejection threshold editor — hallucination confidence score cutoff (default 0.75, range 0–1) · duplicate cosine similarity cutoff (default 0.80) · formatting rule toggles (enforce option count ≥ 4 · explanation min length · LaTeX syntax check) · per-domain quality thresholds (e.g. GK domain stricter copyright check) · AI provider fallback order (if Claude quota exceeded → fallback to GPT-4o) · batch size per job (10–2000) · max concurrent batch jobs · all threshold changes versioned with before/after values in audit log |
 | C-16 | AI Cost & Usage Monitor | `/engineering/ai-costs/` | `c-16-ai-costs.md` | P2 | ✅ | LLM token consumption: input + output per model per day · cost per exam domain · cost per question type · monthly budget with 80% alert / 95% hard stop · wasted spend (cost of rejected questions) · model cost comparison · optimization flags (expensive prompts with high rejection rate) · ₹ spend trend MoM · cost per approved question metric |
 
 ---
 
-## Cross-Role Shared Pages · 2 pages
+## Cross-Role Shared Pages · 2 pages (+ 1 tab via G10)
 
 | # | Page Name | URL | File | Priority | Status | Description | Roles |
 |---|---|---|---|---|---|---|---|
 | C-17 | Centralized Log Viewer | `/engineering/logs/` | `c-17-logs.md` | P1 | ✅ | CloudWatch Logs aggregation: structured JSON search · correlation ID trace (single exam submission across all Lambda hops) · log level filter · service filter · tenant filter · time range picker · saved search queries · alert rules (log pattern → PagerDuty) · log retention policy per service | All Div C roles |
-| C-18 | Engineering Incident Manager | `/engineering/incidents/` | `c-18-incidents.md` | P0 | ✅ | Active incident board (P0–P2) · incident timeline (detection→ack→mitigate→resolve) · runbook library (30+ known incident types) · on-call schedule (current + 2 weeks) · PagerDuty + OpsGenie integration · postmortem tracker with action items · MTTR analytics · links to War Room (Div A page 32) for exam-day P0s | Platform Admin · DevOps · Security |
+| C-18 | Engineering Incident Manager | `/engineering/incidents/` | `c-18-incidents.md` | P0 | ⬜ | Active incident board (P0–P2) · incident timeline (detection→ack→mitigate→resolve) · runbook library (30+ known incident types) · on-call schedule (current + 2 weeks) · PagerDuty + OpsGenie integration · postmortem tracker with action items · MTTR analytics · links to War Room (Div A page 32) for exam-day P0s · **[G10] Alert Rules tab**: metric alert configuration — rule builder (metric name · condition: >, >=, <, <= · threshold value · evaluation window: 1/5/15 min · consecutive breaches before alert: 1–5) · severity assignment (P0/P1/P2) · notification routing (PagerDuty policy · OpsGenie team · Slack channel · email list) · snooze policy (auto-snooze after N alerts in M hours) · active alert rules list with enable/disable per rule · alert rule test: fire a test alert to verify routing · per-rule history: last triggered · times triggered (30d) | Platform Admin · DevOps · Security |
 
 ---
 
@@ -168,12 +168,25 @@
 |---|---|---|---|
 | tenant-detail-drawer | Tenant Manager row click | 720px | Config · Schema · Usage · Audit |
 | lambda-function-drawer | API Health / Deployments row | 640px | Metrics · Versions · Live Logs · Config |
+| lambda-envvar-drawer | C-05 Environment Variables → function row | 560px | Current Vars · Pending Changes · Deploy History |
+| scheduled-job-drawer | C-05 Scheduled Jobs → task row | 560px | Schedule · Last 30 Runs · Execution Log · Config |
 | migration-detail-drawer | DB Migrations row | 560px | SQL Preview · Affected Schemas · History |
 | secret-detail-drawer | Secret Manager row | 560px | Current (masked) · History · Rotation Schedule |
+| oauth-app-drawer | C-14 OAuth App Registry → app row | 560px | App Details · Scopes · Redirect URIs · Usage · Revoke |
+| mobile-keys-drawer | C-14 Mobile Keys → key row | 480px | Rotation Schedule · Expiry Dates (read-only) |
 | incident-detail-drawer | Incident Manager row | 720px | Timeline · Runbook · Communications · Postmortem |
+| alert-rule-drawer | C-18 Alert Rules → rule row | 560px | Rule Config · Routing · Snooze Policy · Trigger History |
 | pipeline-run-drawer | CI/CD row | 720px | Stages · Logs · Artifacts · Approvals |
 | ai-job-drawer | AI Pipeline row | 640px | Job Config · Sample Questions · Errors · Cost |
+| ai-config-drawer | C-15 Pipeline Config → threshold row | 480px | Current Value · History · Test Threshold |
 | db-query-drawer | Database slow query row | 640px | Explain Plan · Index Suggestions · Historical Trend |
+| db-param-drawer | C-11 DB Configuration → parameter row | 480px | Current Value · Pending Value · Restart Required · History |
+| vapt-engagement-drawer | C-13 VAPT Schedule → engagement row | 640px | Scope · Findings · Status Timeline · Vendor Comms |
+| celery-queue-drawer | C-08 Celery Queues → queue row | 560px | Workers · Queue Depth Trend · DLQ Items · Task History |
+| cdn-perf-drawer | C-06 Performance Monitor → page path row | 560px | Web Vitals Trend · Error Log · Device Breakdown |
+| aws-cost-drawer | C-19 → service row | 560px | Daily Spend Chart · Top Cost Drivers · Forecast |
+| dns-record-drawer | C-20 → DNS record row | 480px | Record Details · Edit · Propagation Status · History |
+| cert-detail-drawer | C-20 → certificate row | 480px | Domain · Expiry · Validation · CloudFront Mapping |
 
 ---
 
@@ -247,8 +260,6 @@ P2 — Sprint 3
 
 ---
 
----
-
 ## Functional Coverage Matrix — All 8 Roles
 
 | # | Job to Be Done | Role | Pages Covering It |
@@ -305,7 +316,8 @@ P2 — Sprint 3
 ---
 
 *Last updated: 2026-03-20*
-*Total pages: 20 (C-01 to C-18 original + C-19 AWS Costs + C-20 DNS & Certs)*
+*Total pages: 20 (C-01 to C-18 original · C-19 AWS Costs · C-20 DNS & Certs)*
+*Total tabs added via amendments: 10 (G1–G10)*
 *Roles covered: 8 (Roles 10–17)*
-*Functional gaps identified: 10 · All 10 assigned as amendments (G1–G10) to existing pages*
-*New pages added: 2 (C-19, C-20)*
+*All 10 functional gaps resolved — descriptions updated in page table above*
+*Status: Pages list complete with amendments — individual page spec files pending*
