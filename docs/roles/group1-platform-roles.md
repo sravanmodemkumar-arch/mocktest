@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 81 roles across 14 divisions.
+> Total: 91 roles across 15 divisions.
 
 ---
 
@@ -144,7 +144,7 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division F — Exam Day Operations (5 roles)
+## Division F — Exam Day Operations (7 roles)
 
 > Most critical division on exam day.
 > 74,000 students submit simultaneously — this team runs the war room.
@@ -156,6 +156,8 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | 36 | Results Coordinator | 3 | Trigger rank computation, review before publish | Approve result publish |
 | 37 | Notification Manager | 3 | WhatsApp/SMS/Email templates, result broadcasts, OTP routing | Send bulk 74K notifications |
 | 38 | Incident Manager — Exam Day | 4 | Escalate infra issues to DevOps, coordinate war room | Emergency Lambda scale-up |
+| 90 | Exam Configuration Specialist | 3 | Pre-exam setup: timing windows, question paper assignment, negative marking, section configs, batch eligibility across 2,050 institutions | Lock exam config before go-live |
+| 91 | Exam Integrity Officer | 3 | Statistical malpractice analysis, proctor flag triage, institution malpractice coordination, NCPCR/Legal escalation | Open malpractice case; trigger result withhold |
 
 ---
 
@@ -283,7 +285,7 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | C — Engineering | 8 |
 | D — Content & Academics | 13 |
 | E — Video & Learning | 11 (3 Phase 1 + 8 Phase 2) |
-| F — Exam Day Operations | 5 |
+| F — Exam Day Operations | 7 |
 | G — Background Verification | 3 |
 | H — Data & Analytics | 5 |
 | I — Customer Support | 6 |
@@ -293,7 +295,7 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | M — Finance & Billing | 6 |
 | N — Legal & Compliance | 4 |
 | O — HR & Administration | 3 |
-| **Total** | **89** |
+| **Total** | **91** |
 
 ---
 
