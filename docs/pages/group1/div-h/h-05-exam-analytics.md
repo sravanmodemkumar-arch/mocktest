@@ -87,11 +87,11 @@ Eight tiles. Source: `analytics_daily_snapshot` for the selected period.
 | Avg Score % | Mean score across all attempts | Green ≥55%; Amber 45–55%; Red <45% |
 | Completion Rate | Submitted ÷ started | Green ≥90%; Amber 80–90%; Red <80% |
 | Avg Time on Paper (min) | Mean time from exam start to submission | Green if within ±20% of time limit; Amber if < 60% (students finishing too fast) |
-| Avg Rank Delta | For re-attempting students: mean change in percentile rank | Green > 0 (improving); Amber = 0; Red < 0 |
+| Avg Rank Delta | **DPDPA-compliant cohort metric:** For the cohort of students who attempted the same exam type more than once within the period, the group-average change in percentile rank from first attempt to most recent attempt. No individual rank tracking — computed as `avg(latest_attempt_percentile_band) - avg(first_attempt_percentile_band)` across the cohort. Cohort must have ≥ 30 students; otherwise shows "—". Source: `analytics_daily_snapshot` metric_key=`avg_rank_delta`, dimension=exam_domain. | Green > 0 (improving); Amber = 0; Red < 0 |
 | Abandonment Rate | Started but not submitted (timed out or closed) | Green <5%; Red >15% |
 | SLA-breach Correlation | % of exams where infrastructure SLA was breached during the exam window | Red if > 0% (any SLA breach correlating with exams) |
 
-**SLA-breach correlation** — links Division F SLA data with exam outcomes. Computed by joining exam time windows with infrastructure incident records. High value indicates students are being impacted by platform issues.
+**SLA-breach correlation** — links Division F SLA data with exam outcomes. Computed by joining exam time windows with infrastructure incident records from `analytics_infrastructure_event` table (synced nightly from Division F's `incident_log` via the `aggregate_daily_platform_metrics` Celery task — a read-only cross-schema join at aggregation time, not at page render time). High value indicates students are being impacted by platform issues.
 
 ---
 
@@ -116,7 +116,7 @@ Hover tooltip: "{Domain} — {metric}: {value} · Period: {start}–{end}"
 
 ### Section D — Exam Performance Table
 
-Server-side paginated, 25 rows per page. One row = one distinct exam instance. Source: `analytics_daily_snapshot` + exam registry.
+Server-side paginated, 25 rows per page. One row = one distinct exam instance. Source: `analytics_daily_snapshot` + exam registry. **Exam name denormalization:** `exam_name` and `institution_name` are denormalized into `analytics_daily_snapshot` at aggregation time by the `aggregate_daily_platform_metrics` Celery task. If an exam is renamed after aggregation, the analytics record retains the name at time of aggregation — updated on the next nightly run.
 
 | Column | Sortable | Notes |
 |---|---|---|
@@ -139,7 +139,7 @@ Server-side paginated, 25 rows per page. One row = one distinct exam instance. S
 - [Export Selected CSV] — exam performance data for selected rows
 - [Compare Selected] — opens comparison modal (max 5 exams) showing side-by-side metrics
 
-**Compare modal:** Table with selected exams as columns, metrics as rows. Useful for comparing "same test series, different months" to identify performance drift.
+**Compare modal:** Table with selected exams as columns, metrics as rows. Useful for comparing "same test series, different months" to identify performance drift. **Domain mismatch warning:** if selected exams span more than 2 different domains, a banner appears: "⚠ Selected exams span {N} domains ({list}). Cross-domain score comparison may be misleading due to different passing thresholds. Continue?"
 
 ---
 
@@ -168,7 +168,7 @@ Server-side paginated, 25 rows per page. One row = one distinct exam instance. S
 - [Infrastructure incidents] toggle — overlays red borders on cells where SLA was breached during that time window in the period
 - [Peak load periods] toggle — highlights cells that exceed 70% of the max cell value
 
-**Data:** Computed from `analytics_daily_snapshot` with time-of-day dimension during the aggregation job (day_of_week + hour_of_day bucketed into 3h bands).
+**Data:** Computed from `analytics_daily_snapshot` with time-of-day dimension during the `aggregate_daily_platform_metrics` aggregation job. The Celery task reads `exam_start_time` from tenant schemas, extracts `day_of_week` (0=Monday–6=Sunday) and `hour_of_day` (0–23), buckets into 3-hour bands (0–2, 3–5, ..., 21–23), and writes to `analytics_daily_snapshot` with `dimension_type = 'time_band'` and `dimension_value = '{day_of_week}_{band}'` (e.g., `'0_6'` = Monday 6–9am band). All times stored in IST.
 
 ---
 

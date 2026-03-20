@@ -90,7 +90,7 @@ Seven tiles sourced from `analytics_question_stats` (latest nightly computation)
 | Never Used | `quality_flag = NEVER_USED` — published but never appeared in any exam | Amber if > 5% of total |
 | Poor Discrimination | `discrimination_index < 0.2` (with ≥30 attempts) | Red if > 10% of total |
 | Negative D | `discrimination_index < 0` — red flag: wrong key or ambiguous | Red — always |
-| Stale (>90 days) | `last_used_at < 90 days ago` and `quality_flag = STALE` | Amber if > 20% |
+| Stale (>90 days) | `last_used_at < NOW() - INTERVAL '90 days'` — **rolling 90-day window**, not a fixed calendar date. Resets immediately when a question is used in any new exam. `quality_flag` is set to `STALE` nightly by `compute_question_analytics`. | Amber if > 20% |
 | Avg Difficulty | Mean `difficulty_index` across all questions with ≥30 attempts | Green if 0.45–0.65 (ideal range); Amber outside |
 | Questions with Issues | Any `quality_flag != OK` | Red if > 15% of questions with ≥30 attempts |
 
@@ -132,10 +132,13 @@ Clicking a segment: applies that quality flag filter to the table below.
     │ ●●●●●●●●●●●●    ●●●
 0.0 │─────────────────────────────────────
     │ ●     ●      ●  ●         ← negative D — suspicious
+-0.5│
     └────────────────────────────────────
       0.0         0.5          1.0
       (Hard)    (Medium)     (Easy)    p (Difficulty)
 ```
+
+**Y-axis range:** -0.5 to 1.0 (matching the Discrimination Range slider in Section A). Questions with D < 0 must be visible below the zero line — never clipped.
 
 **Zones:**
 - **Ideal zone:** D > 0.3, p = 0.30–0.70 (medium difficulty, good discrimination) — shown with green shading
@@ -146,7 +149,7 @@ Clicking a segment: applies that quality flag filter to the table below.
 **Interactions:**
 - Hover on a dot: tooltip with `question_id` + subject + p-value + D-value + attempt count
 - Click on a dot: opens Question Detail Drawer for that specific question
-- Box select (drag): select multiple questions → bulk actions available (flag for review, commission AI replacement)
+- **Point selection** (click individual dots): clicking a dot in the scatter adds it to a staging selection list (dot turns orange). Multiple dots can be selected. **[Commission AI Replacements from Selection]** button appears when ≥ 1 dot is selected — navigates to `/analytics/ai-generation/?prefill=1&domain={comma_sep_domains}&subject={comma_sep_subjects}&topic={comma_sep_topics}&source_questions={comma_sep_question_ids}`. H-07 reads these URL params to pre-populate the batch creation wizard. Note: drag/box-select on HTML Canvas requires chartjs-plugin-zoom (`mode: 'x', dragToZoom: false, selectMode: 'point'`); if the plugin is not available, selection degrades to click-only mode with a banner: "Point selection only — drag selection unavailable."
 - Legend toggle: [Show by Domain] — colour-codes dots by exam domain
 
 ---
@@ -167,11 +170,11 @@ Server-side paginated, 25 rows per page. Source: `analytics_question_stats`.
 | Omission Rate | Yes | Amber if > 20% (students are skipping this question) |
 | Last Used | Yes | Date; grey if > 90 days |
 | Quality Flag | Yes | Pill badge colour-coded per flag value |
-| Actions | — | [View →] opens drawer; [Flag for Review] (marks for Division D review queue); [Archive] (Data Engineer only) |
+| Actions | — | [View →] opens drawer; [Flag for Review] (marks for Division D review queue); [Archive] (Data Engineer and Platform Admin only — **disabled with tooltip "Archive requires Data Engineer access"** for other roles) |
 
-**[Flag for Review]:** Sets a `division_d_review_flag = true` on the question (creates a content review task in Division D's queue visible to Content Director, role 18). Confirmation: "Flag '{question_id}' for Division D review? This will create a review task for the Content Director."
+**[Flag for Review]:** Sets a `division_d_review_flag = true` on the question (creates a content review task in Division D's question management page, visible to Content Director role 18 and relevant SME). Confirmation: "Flag '{question_id}' for Division D review? This will create a review task for the Content Director."
 
-**[Archive]:** Data Engineer only. Moves question to `archived` status in question registry. Confirmation: "Archive question {id}? It will no longer appear in exam creation tools. This action can be reversed by Division D Content Director within 30 days." Not a hard delete.
+**[Archive]:** Data Engineer (43) and Platform Admin (10) only. Rendered as disabled button for Analytics Manager and Data Analyst (not hidden — they can see the action exists but cannot perform it). Moves question to `archived` status in question registry. Confirmation: "Archive question {id}? It will no longer appear in exam creation tools. This action can be reversed by Division D Content Director within 30 days." Not a hard delete.
 
 **Bulk actions** (rows selected):
 - [Bulk Flag for Division D Review] — flags all selected as needing review
@@ -213,6 +216,8 @@ Interpretation: Option D is barely used (8%). A good distractor should be chosen
 
 **Percentile chart:** Bar chart — "How did this question perform across score bands?" Shows % correct in each score decile (decile 1 = lowest scorers, decile 10 = highest). For a good question, higher scorers should get it right more often (upward slope). Negative D questions show a downward slope.
 
+**DPDPA-compliant discrimination index computation:** The `discrimination_index` (point-biserial) is computed from **bucketed, aggregate data only** — no individual student IDs are used. The Celery task groups attempt records by score decile (10 buckets), then computes the correlation between decile-bucket membership (proportion correct per bucket) and decile rank. This approximation of point-biserial is DPDPA-compliant because: (1) student IDs never leave the tenant schema, (2) only per-question aggregate correct-counts per decile bucket are read, and (3) the analytics schema stores only the final computed `discrimination_index` value, not the underlying attempt records.
+
 #### Question Preview Tab
 
 Displays the full question text, all 4 options, the correct answer, and the explanation. Read-only.
@@ -223,15 +228,17 @@ Note: "Question content is read-only in Division H. To edit this question, navig
 
 #### History Tab
 
-List of every exam this question appeared in (if accessible across tenants — shown as aggregate counts, not tenant-specific for privacy).
+Aggregate usage summary for this question across all tenants. **Not a per-exam list** — `analytics_question_stats` stores only pre-aggregated summary fields, not a row per exam. A per-exam history would require a separate `analytics_question_exam_history` table that does not currently exist; this tab shows the available aggregates only.
 
-| Metric | Value |
-|---|---|
-| Exams appeared in | {N} total exams |
-| First exam | {date} |
-| Last exam | {date} |
-| Domains used in | SSC, AP Board |
-| Avg score in exams where this appeared | {pct}% |
+| Metric | Value | Source |
+|---|---|---|
+| Total exam appearances | {N} | `analytics_question_stats.attempt_count` (proxy — each attempt = one exam use) |
+| First used in an exam | {date} | `analytics_question_stats.first_used_at` |
+| Last used in an exam | {date} | `analytics_question_stats.last_used_at` |
+| Domains this question has been used in | SSC, AP Board | `analytics_question_stats.domain` (single domain per question — question bank is domain-specific) |
+| Avg score in exams where this appeared | {pct}% | `analytics_question_stats.difficulty_index` (inverse proxy: avg score ≈ p-value × 100%) |
+
+**Note to devs:** If per-exam drill-down is needed in a future sprint, add an `analytics_question_exam_history` table (`question_id`, `exam_date`, `tenant_id` redacted for DPDPA, `attempt_count`, `pct_correct`) populated by Task 2. Until then, this tab shows the aggregated stats only.
 
 #### Similar Questions Tab
 
@@ -267,7 +274,7 @@ List of up to 5 questions with the same Domain + Subject + Topic that have bette
 
 | Scenario | Behaviour |
 |---|---|
-| Question has < 30 attempts | Quality flag = `INSUFFICIENT_ATTEMPTS`. Difficulty/Discrimination shown as "—" (not enough data for reliable CTT). Tooltip: "Minimum 30 attempts required for reliable statistics." |
+| Question has < 30 attempts | Quality flag = `INSUFFICIENT_ATTEMPTS`. Difficulty/Discrimination shown as "—". Distractor stats not shown (< 30 students — DPDPA minimum not met for any question stat display). Tooltip: "Minimum 30 student attempts required for reliable statistics and DPDPA compliance." The scatter plot excludes these questions from visible dots (they are shown only in the `INSUFFICIENT_ATTEMPTS` colour in the flag distribution pie chart). Filter default (Min Attempts = 30) enforces this at the table level. |
 | Discrimination index = exactly 0 | Shows as "0.00" — theoretically possible if all students scored identically. Tooltip: "Zero discrimination — this question provided no information about student ability." |
 | All 4 options have identical distractor rates | Distractor analysis panel shows warning: "⚠ All distractors equally attractive — this is unusual and may indicate question ambiguity." |
 | Question archived in Division D but still in analytics | Quality flag = `ARCHIVED`. Row still shows in H-04 (historical data preserved). Badge: "ARCHIVED — not in active bank." |

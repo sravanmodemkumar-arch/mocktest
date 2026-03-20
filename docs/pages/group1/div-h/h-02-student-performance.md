@@ -97,7 +97,7 @@ Seven tiles. All values computed from `analytics_daily_snapshot` for the selecte
 | Avg Score % | Mean score across all attempts | Green ≥55%; Amber 45–55%; Red <45% |
 | Pass Rate | % attempts scoring above domain pass threshold | Green ≥60%; Amber 40–60%; Red <40% |
 | Avg Attempts/Student | `total_attempts ÷ unique_students` — measures engagement depth | Green >1.5; Neutral 1.0–1.5; Amber <1.0 |
-| Re-attempt Rate | % students who took the same exam type more than once | Green >40%; Amber 20–40%; Red <20% (low re-engagement) |
+| Re-attempt Rate | % of exam enrollments where the student had a prior attempt on the same exam type (computed cohort-wide: `multi_attempt_enrollments ÷ total_enrollments`). Source: `analytics_daily_snapshot` metric_key=`re_attempt_rate`, dimension=exam_domain. | Green >40%; Amber 20–40%; Red <20% (low re-engagement) |
 | Abandonment Rate | Attempts started but never submitted ÷ total starts | Green <5%; Amber 5–15%; Red >15% |
 
 ---
@@ -176,7 +176,7 @@ Month 12 █████████░░░░░░░░░░░░░░�
 Cohort: Sep 2024 (n=14,200 students) ▾
 ```
 
-**Cohort selector:** Dropdown to view any month's cohort from the last 24 months.
+**Cohort selector:** Dropdown listing all calendar months in the last 24 months. Months where the pipeline ran and produced data are shown normally. Months where the pipeline missed are shown with "(Data not computed)" label and are selectable — the chart will show "⚠ Cohort data not available for {month}. [Re-run pipeline →] (H-06)". Months where the cohort had < 30 students are shown with "(Insufficient data — < 30 students)" label and display only a "Cohort too small to display (DPDPA)" placeholder when selected.
 
 **Overlay mode:** Select up to 3 cohorts to compare retention curves on the same chart (different line colours).
 
@@ -214,7 +214,7 @@ Six-row table (one per exam domain). Server-side sorted and filtered based on ac
 | Signal | Definition | Threshold | Severity |
 |---|---|---|---|
 | Single-attempt cohort | Students who took exactly 1 exam and never returned | > 40% of new monthly students | WARN |
-| Score stagnation | Students who've taken 5+ exams with no improvement (< 2pp) | > 25% of multi-attempt students | WARN |
+| Score stagnation (cohort) | **Aggregate signal — DPDPA compliant.** Computed as: of the cohort of students who made their 1st attempt in a given 30-day window, the cohort-average score on their 5th+ attempt is ≤2pp higher than cohort-average on their 1st attempt. No individual student tracking — all values are group means. Source: `analytics_daily_snapshot` metric_key=`cohort_score_stagnation_rate`. | > 25% of rolling cohorts show stagnation | WARN |
 | Post-exam abandonment | Students who completed an exam but didn't return within 14 days | > 35% | INFO |
 | Domain-specific drop-off | One domain losing > 20% of its student base vs. prior month | — | CRITICAL |
 | Night-only usage drop | Students only attempting exams after 10pm (proxy for de-prioritisation) | Trend | INFO |
@@ -224,8 +224,8 @@ Six-row table (one per exam domain). Server-side sorted and filtered based on ac
 - Signal name + severity badge
 - Current value vs threshold
 - Period this was computed for
-- [See Cohort in H-02] — pre-fills cohort filter to show this specific student segment
-- [Download Segment CSV] — exports anonymised cohort data (IDs hashed, no names)
+- [See Cohort in H-02] — pre-fills filters and scrolls to the relevant section. URL format: `/analytics/students/?signal={signal_key}&period={period_start}_{period_end}&domain={domain}`. H-02 reads these params on load: if `signal` param present, the Dropout Signals panel is expanded with that signal highlighted, and the domain/period filters are pre-selected.
+- [Download Segment CSV] — exports anonymised cohort data (IDs hashed, no names). **30-student minimum enforced at export time**: if the signal's qualifying cohort has fewer than 30 students after applying active filters, export is blocked with message "Cohort too small to export (< 30 students) — broaden filters to meet minimum threshold."
 
 **Zero signals:** "✅ No dropout risk signals above threshold for the selected period."
 

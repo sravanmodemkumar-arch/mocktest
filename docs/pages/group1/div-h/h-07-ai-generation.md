@@ -150,7 +150,7 @@ Each card shows one MCQ for rapid review:
 | ❌ Reject | Sets `review_status = REJECTED`. MCQ discarded. | Required — min 10 chars |
 | Skip → | Moves to next card, comes back to this one later. | — |
 
-**[Skip →]** button: temporarily defers an MCQ (it drops to the bottom of the queue for this session). Useful when the AI Gen Manager is unsure and wants to consult an SME before deciding.
+**[Skip →]** button: defers an MCQ for 24 hours — it is removed from the current review queue and reappears at the bottom of the queue after 24h. This is tracked server-side via a `skipped_until` timestamp on the MCQ record (not session-based — persists across browser sessions and devices). Use case: AI Gen Manager needs to consult an SME before deciding. After 24h, the MCQ is re-surfaced automatically. Repeat skipping is permitted (each skip adds another 24h). The queue stats strip shows skipped count: "({S} skipped — reappear within 24h)".
 
 **Keyboard shortcuts** (desktop):
 - `A` → Approve
@@ -161,7 +161,7 @@ Each card shows one MCQ for rapid review:
 **Batch review mode toggle:** [Review by Batch] / [Review All] — "Review by Batch" shows a batch selector at top, then only shows MCQs from that batch. Useful for large batches where the AI Gen Manager wants to review one batch completely before moving to the next.
 
 **[Review All] button** at batch level (in Batch Management Table when status = REVIEW_PENDING): Approve or Reject all MCQs in a batch with a single action. Use case: batch for a simple topic where all generated MCQs are clearly correct or clearly wrong.
-- [Approve All in Batch] — confirmation: "Approve all {N} MCQs in batch {ref}? They will all enter Division D review queue."
+- [Approve All in Batch] — pre-flight check before confirmation: if any MCQs in the batch have `ai_confidence_score < 0.5`, the modal shows: "⚠ {K} of {N} MCQs in this batch have low AI confidence (< 0.5). These may have higher error rates. Review them individually or proceed with bulk approval?" with options [Review Low-Confidence First] and [Approve All Anyway]. If no low-confidence MCQs: standard confirmation "Approve all {N} MCQs in batch {ref}? They will all enter Division D review queue."
 - [Reject All in Batch] — requires reason (batch-level reject note applied to all).
 
 **Progress indicator:** "Reviewed {N} of {total} in current session." Visual progress bar.
@@ -180,14 +180,20 @@ Each card shows one MCQ for rapid review:
 **Charts:**
 1. **Acceptance rate by month** (bar chart): `approved ÷ generated` per month. Target ≥ 70%. A declining trend signals prompt degradation or model version change.
 
-2. **Rejection reason breakdown** (pie chart, MTD): Distribution of rejection notes (auto-categorised by keyword matching):
-   - Wrong correct answer
-   - Factually incorrect
-   - Poor distractors
-   - Topic drift
-   - Ambiguous question
-   - Duplicate of existing
-   - Other
+2. **Rejection reason breakdown** (pie chart, MTD): Distribution of rejection reasons. Reasons are captured via a **structured selector** (not free-text keyword matching) shown alongside the review note field when an MCQ is rejected or flagged:
+
+   | Reason Code | Label |
+   |---|---|
+   | `WRONG_ANSWER` | Wrong correct answer |
+   | `FACTUALLY_INCORRECT` | Factually incorrect content |
+   | `POOR_DISTRACTORS` | Poor or implausible distractors |
+   | `TOPIC_DRIFT` | Off-topic for requested domain/subject |
+   | `AMBIGUOUS` | Ambiguous wording |
+   | `DUPLICATE` | Duplicate of existing question (manual flag; distinct from AUTO_REJECTED) |
+   | `LANGUAGE_QUALITY` | Poor grammar or language |
+   | `OTHER` | Other (must add note) |
+
+   The `review_status` = `REJECTED` or `FLAGGED_FOR_REVISION` requires selecting ≥ 1 reason code. Reason code stored in `analytics_ai_generated_mcq.rejection_reason_codes` (varchar[] field — add to data model). The pie chart shows distribution by reason code, no NLP required.
 
 3. **Confidence score vs. acceptance rate** (scatter plot): X = `ai_confidence_score`, Y = accepted (1) or rejected (0). Shows whether the model's self-reported confidence correlates with actual quality. A well-calibrated model should have higher acceptance at high confidence scores.
 
@@ -299,6 +305,7 @@ Accessible via [⚙ Manage Model Configs] button. Opens a full-page modal.
 - Active/Inactive status toggle (AI Gen Manager only)
 - Average acceptance rate (computed from historical batches using this config)
 - Average cost per MCQ
+- **Key rotation status:** "Rotation due: {date} (in {N} days)" — amber if ≤ 14 days, red if overdue. If overdue: card shows a red "KEY ROTATION REQUIRED" badge and batch creation with this config is disabled. "Last rotated: {date} by {user}" shown below.
 - [Edit] opens edit form (below)
 - [Test Config] — generates 3 sample MCQs with the current config (costs ~₹5–10) to validate a new or changed prompt before using it for a full batch
 
@@ -312,8 +319,9 @@ Accessible via [⚙ Manage Model Configs] button. Opens a full-page modal.
 | User Prompt Template | Textarea — must include `{domain}`, `{subject}`, `{topic}`, `{difficulty}`, `{count}` placeholders |
 | Temperature | Range slider 0.0–1.0 |
 | Max Tokens | Number input |
-| API Key Source | Select: use platform AI API key (from config) or [Custom Key] |
-| Monthly Budget (₹) | Number input — threshold for cost alerts |
+| API Key | Password-type input (write-only — never displayed after save, shows `••••••••` mask). Value is AES-256-GCM encrypted using AWS KMS before storing in `api_key_encrypted`. On save, key is submitted to a `validate_ai_api_key` Celery task (queue: `ai_generation`) — async validation to avoid UI blocking. The config is saved immediately with `is_active = false` and a `VALIDATING` banner. If the test API call succeeds, config is activated (`is_active = true`) and AI Gen Manager is notified. If it fails, config remains inactive with error: "API key validation failed: {error}. [Retry Validation →]". |
+| Key Rotation Due | Read-only display — shows `api_key_rotation_required_at` as a date with days remaining: "Rotation due: 15 Jan 2025 (in 24 days)". If overdue: red badge "Rotation overdue — batch creation blocked. [Rotate Key →]". Clicking [Rotate Key →] shows the API Key input field for the same config. Last rotated date also shown: "Last rotated: 12 Oct 2024 by {user}." |
+| Monthly Budget (₹) | Number input — `monthly_budget_inr`. Sets per-config cost alert threshold. Null = no cap (uses global platform cap only). |
 
 **[Save Config]:** Saved. AI Gen Manager can immediately use it in batch creation.
 **[Test Config]:** Generates 3 test MCQs. Results shown in a preview modal. Test MCQs NOT added to any batch or stored permanently.
@@ -342,11 +350,13 @@ Accessible via [⚙ Manage Model Configs] button. Opens a full-page modal.
 |---|---|
 | AI API call fails during generation | Batch status → FAILED. AI Gen Manager and Data Engineer notified: "Batch {ref} failed — API error: {message}. [Retry →]". [Retry] re-queues the Celery task. 3 total attempts before permanent failure. |
 | AI returns fewer MCQs than requested | Common (API may return 47 of 50). `generated_count` = actual. No error — expected behaviour documented in batch summary. |
-| AI generates a question identical to an existing question in the bank | Detected post-generation by `analytics_ai_generated_mcq` dedup check (hash of `question_text`). Auto-set to `review_status = FLAGGED_FOR_REVISION` with note: "Possible duplicate of question {id} in bank. Verify before approving." |
+| AI generates a question identical to an existing question in the bank | Detected post-generation by SHA-256 hash comparison (`question_text_hash` unique constraint). Auto-set to `review_status = AUTO_REJECTED` with note: "Duplicate detected — question text matches existing MCQ in question bank. Not sent for review." These AUTO_REJECTED duplicates are counted in batch stats but not shown in the review queue (nothing to review). The batch summary shows the count: "{D} duplicates auto-rejected." |
 | No active model configs | [+ Create Batch] disabled: "No active model configurations. [Configure a model →]" linking to Model Config Manager. |
-| Monthly budget exceeded (100%) | New batch creation blocked: "Monthly AI budget (₹{N}) is exhausted. Contact Analytics Manager to increase budget or wait until next month." Platform Admin can override. |
+| Monthly budget exceeded (100%) — per-config budget | New batch creation with that config blocked: "Monthly AI budget (₹{N}) for config '{config_name}' is exhausted. Contact Analytics Manager to increase budget or wait until next month." Platform Admin can override. |
+| Global monthly AI budget exceeded | A platform-wide global AI monthly budget cap (₹) is configurable in admin settings (Platform Admin scope). If all configs' MTD spend + current batch estimated cost > global budget, batch creation is blocked across all configs: "Platform global AI budget for this month is exhausted (₹{used} of ₹{cap}). Wait until next month or Platform Admin can increase the global cap." This cap protects against runaway costs if multiple AI Gen Managers create large batches concurrently. |
+| AI batch remains FAILED for > 1 hour after notification | Escalation alert to Platform Admin (10): "AI Batch {ref} has been in FAILED state for over 1 hour and has not been retried. This may indicate an API credential issue or system misconfiguration. [View H-07 →]" |
 | Review queue > 1,000 pending MCQs | Warning banner: "Review backlog is high ({N} MCQs). Consider using [Approve All in Batch] for trusted batches to clear the queue faster." |
-| AI Gen Manager approves MCQ → Division D rejects it | Division D rejection creates a task notification back to AI Gen Manager: "Division D rejected AI MCQ {id}: '{reason}'. This MCQ was from batch {ref}. Consider updating the model prompt for this topic." Tracked in quality metrics as "Division D rejection rate" (separate from AI Gen Manager rejection rate). |
+| AI Gen Manager approves MCQ → Division D rejects it | When a Division D SME or Approver rejects an AI-sourced MCQ (`source = AI_GENERATED`), Division D's content system calls the H-07 notification callback via the F-06 notification hub (in-app notification to AI Gen Manager 45): "Division D rejected AI MCQ {id} from batch {ref}: '{reason}'. Consider updating the model prompt for this topic." The callback also updates `analytics_ai_generated_mcq.division_d_reject_reason` (new field) so rejection reasons appear in the H-07 quality metrics "Division D rejection rate" chart (separate KPI from AI Gen Manager's own rejection rate). |
 
 ---
 

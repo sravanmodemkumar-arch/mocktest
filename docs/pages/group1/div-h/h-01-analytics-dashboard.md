@@ -98,12 +98,12 @@ Six tiles. All values from `analytics_daily_snapshot` for yesterday (or last ava
 
 | Tile | Metric Key | Value Format | Colour Rule | Links To |
 |---|---|---|---|---|
-| Active Institutions (MTD) | `active_institutions` | Integer · `{N} of 2,050` | Green if MTD ≥ last MTD same period last month; Red if < 80% | H-03 |
+| Active Institutions (MTD) | `active_institutions_mtd` (dedicated metric key). **Aggregation note:** `analytics_daily_snapshot` stores the daily distinct-institution count per day (`metric_key='active_institutions'`), but simply summing these double-counts institutions active on multiple days. Instead, `aggregate_daily_platform_metrics` (Task 1) also computes and writes `metric_key='active_institutions_mtd'` each night — this is the running cumulative distinct institution count from the 1st of the current month to yesterday, re-computed each night. The H-01 tile reads the latest `active_institutions_mtd` row (most recent `snapshot_date` in current month). Cached in Memcached 60 min. | Integer · `{N} of 2,050` | Green if MTD ≥ last MTD same period last month; Red if < 80% | H-03 |
 | Exam Attempts (MTD) | `exam_attempts_total` | Integer with K/M suffix | Green ≥ last MTD; Amber -10%; Red -20% | H-05 |
 | New Students (MTD) | `new_students` | Integer | Green ≥ last MTD | H-02 |
 | Avg Score (MTD) | `avg_score_pct` | `{N}%` | Green ≥ target (configurable, default 55%); Amber 45–55%; Red < 45% | H-02 |
-| AI MCQs in Pipeline | Live count: `analytics_ai_batch` where `status IN (QUEUED, GENERATING, REVIEW_PENDING)` | `{N} MCQs · {M} batches` | Green if 0 pending review (no backlog); Amber > 200 pending | H-07 |
-| Critical Churn Risk | Latest `analytics_institution_engagement` count where `churn_risk = CRITICAL` | `{N} institutions` | Green = 0; Amber 1–5; Red > 5 | H-03 filtered to CRITICAL |
+| AI MCQs in Pipeline | Count of individual MCQs pending review: `COUNT(*) FROM analytics_ai_generated_mcq WHERE review_status = 'PENDING' AND (skipped_until IS NULL OR skipped_until < NOW())`. This is a direct DB query on analytics schema (cached 5 min) — not a batch-level count. | `{N} MCQs pending review · {M} active batches` | Green if 0 pending; Amber > 200 pending; Red > 500 (critical backlog — risk to Division D pipeline) | H-07 |
+| Critical Churn Risk | Latest `analytics_institution_engagement` count where `churn_risk = CRITICAL` | `{N} institutions` | Green = 0; Amber 1–5; Red > 5 | H-03 at `/analytics/institutions/?churn_risk=CRITICAL` — H-03 reads `churn_risk` URL param on load and pre-selects that filter |
 
 **MoM comparison badge** on each tile: `▲ 12%` (green) or `▼ 8%` (red) vs. previous month same period.
 
@@ -163,8 +163,8 @@ Six-row table (one per exam domain). Sortable by any column.
 | Active Institutions | Institutions using this domain this month |
 | Exam Attempts (MTD) | From `analytics_daily_snapshot` dimension_type=exam_domain |
 | Avg Score % | — |
-| Pass Rate | `% scoring above domain pass threshold` (configurable per domain in G-08 equivalent analytics config) |
-| Question Bank Size | Live count from question registry (not pre-aggregated — DB query, cached 60min) |
+| Pass Rate | `% scoring above domain pass threshold`. Pass threshold is configured per domain in the platform admin settings (Division B Product Manager scope — not a Division H table). Division H reads it from the shared `exam_domain_config` table (read-only). |
+| Question Bank Size | Pre-computed nightly: `analytics_daily_snapshot` metric_key=`question_bank_size`, dimension_type=`exam_domain`. Populated by `aggregate_daily_platform_metrics` Celery task. Cached in Memcached 60 min. (No live cross-schema query at page render time.) |
 | Trend | Mini 7-day sparkline for exam attempts — Chart.js inline sparkline |
 
 **Row click** → navigates to H-05 Exam & Domain Analytics pre-filtered to that domain.
@@ -216,18 +216,21 @@ ANOMALY ALERTS                                              [Dismiss All]
 
 ### Section F — Analytics Activity Feed
 
-Recent actions across Division H, shown to all H roles.
+Recent actions across Division H, shown to all H roles. Sourced from `analytics_audit_log` (ordered by `created_at DESC`, last 20 records). Each entry shows: action label, actor name, object reference, and relative timestamp ("1 hour ago").
 
 | Event | Who | When |
 |---|---|---|
 | Pipeline `aggregate_daily_platform_metrics` completed | System (Celery) | e.g., "1 hour ago" |
-| AI batch AIB-202409-0042 approved (42/50 MCQs) | AI Gen Manager name | — |
+| AI batch AIB-202409-0042 approved (42/50 MCQs, 3 auto-rejected duplicates) | AI Gen Manager name | — |
 | Institution report template "Monthly Summary" published | Analytics Manager name | — |
 | Report delivery: 98 coaching institutions delivered | System | — |
 | Question bulk archive: 1,240 NEVER_USED questions flagged | Data Analyst name | — |
 | Export request "question_stats_ssc_sept" ready for download | — | — |
+| Anomaly dismissed: RRB attempt drop | Analytics Manager name | — |
 
 Pagination: last 20 events. [Load More] loads previous 20.
+
+**Anomaly dismissals** are logged to `analytics_audit_log` (action=`ANOMALY_DISMISSED`, detail includes anomaly_type and value). This ensures dismissed anomalies are auditable — the team can review whether anomalies that were dismissed were actually real issues that got ignored.
 
 ---
 
@@ -265,7 +268,7 @@ Useful for: Analytics Manager sharing daily brief in leadership standups.
 | Scenario | Behaviour |
 |---|---|
 | No nightly pipeline has ever run (fresh install) | KPI bar shows "No data yet — pipeline has not run." with [Trigger First Run →] linking to H-06 for Data Engineer |
-| Nightly pipeline failed last night | Orange staleness banner: "⚠ Last successful data: {date at X:XX IST} — {N} hours ago. Pipeline failed. [View Details →] (H-06)" |
+| Nightly pipeline failed last night | Orange staleness banner: "⚠ Last successful data: {DD Mon} at {HH:MM AM/PM} IST — {N} hours ago. Pipeline failed. [View Details →] (H-06)". Timestamp format: "30 Nov at 01:04 AM IST" to avoid "yesterday" ambiguity during early morning hours (01:00–03:00 IST when pipelines run). |
 | KPI tile has no data for a dimension | Shows "—" (em-dash) with tooltip "No data for this period." Never shows 0 if 0 means "not computed" vs "genuinely zero" |
 | All 6 domains show 0 exam attempts | Anomaly alert raised; also possible the pipeline failed before domain aggregation finished |
 | Analytics Manager opens dashboard during pipeline run | Blue strip: "⏳ Metrics pipeline running — data will refresh when complete." KPI tiles show previous values clearly labelled as "previous" |

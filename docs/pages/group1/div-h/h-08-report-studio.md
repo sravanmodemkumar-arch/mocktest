@@ -74,7 +74,7 @@ H-08 is the **Report Designer's (46) workspace** for building institution-facing
 
 Each card shows:
 - Template name
-- Status badge: PUBLISHED (green) / DRAFT (amber) / ARCHIVED (grey)
+- Status badge: `PUBLISHED` (green) / `DRAFT` (amber) / `PENDING_APPROVAL` (blue, pulsing) / `DRAFT_WITH_FEEDBACK` (orange — Analytics Manager returned with comments) / `ARCHIVED` (grey). State transitions: DRAFT → PENDING_APPROVAL (via [Submit for Approval]) → PUBLISHED or DRAFT_WITH_FEEDBACK → DRAFT (Report Designer edits) → PENDING_APPROVAL again → eventually → ARCHIVED.
 - Target audience: INSTITUTION_ADMIN / INTERNAL_EXEC / DIVISION_H_ONLY
 - Institution types: ALL / SCHOOL / COLLEGE / COACHING
 - Schedule: Monthly · 1st / Quarterly / Annual / Manual
@@ -124,10 +124,10 @@ Opens when [Edit] is clicked on a template. This is a **section-based report bui
 | Exam History Table | Table of institution's recent exams | Columns to show; number of rows (5–20); period |
 | Domain Breakdown | Table comparing domains | Which domains; which metrics |
 | Trend Chart | Line chart of any metric over time | Metric; period; show vs platform avg toggle |
-| Ranking Table | Institution's rank vs peers | Metric; peer group definition |
+| Ranking Table | Institution's rank vs peers | Metric (select: exam_attempts / avg_score / completion_rate / engagement_score); peer group definition: auto (same type + tier + region) or manual override (select: same region only / same tier only / national / custom state list); minimum peer group size = 5 (section shows "Insufficient peers" if < 5 institutions match the peer group definition) |
 | Text Block | Static text / commentary | Markdown text; can reference template variables like `{institution_name}`, `{period}` |
 | Page Break | Force new page in PDF output | Position in section list |
-| BGV Summary | Staff BGV coverage snapshot | Reads from BGV compliance data (read-only) |
+| BGV Summary | Staff BGV coverage snapshot for the recipient institution | Reads from `bgv_institution_compliance` table (Division G schema) — read-only. Shows: total staff count, verified count, pending count, flagged count, coverage %. Note: BGV data lag may be up to 24h (synced nightly). |
 
 **Section configuration:**
 Each section has a [Configure] button that opens a slide-out panel with the section's config options. Changes immediately reflected in the canvas preview.
@@ -139,7 +139,7 @@ Each section has a [Configure] button that opens a slide-out panel with the sect
 - `{generated_date}` — date report was generated
 - `{platform_avg_score}` — platform average for comparison
 
-**Section ordering:** [↑] [↓] arrows on each section. Drag-and-drop not required (arrow-based reordering is simpler and keyboard-accessible).
+**Section ordering:** [↑] [↓] arrows on each section. Drag-and-drop not required (arrow-based reordering is simpler and keyboard-accessible). Each section also has a [⊕ Duplicate] button — creates a copy of that section immediately below (useful for showing the same KPI bar for two different time periods).
 
 **[Preview with Sample Data]:** Renders the report with realistic but synthetic sample data. Shows exactly how the report will look for a typical coaching centre. Opens in a new modal at full PDF dimensions (A4).
 
@@ -155,7 +155,7 @@ Each section has a [Configure] button that opens a slide-out panel with the sect
 - Analytics Manager (42) sees the template with an approval banner: "This template is awaiting your approval before it can be scheduled and delivered."
 - Analytics Manager clicks [Preview] to review.
 - [Approve & Publish] → status = PUBLISHED. Report Designer notified: "'{name}' approved and published by {manager_name}."
-- [Request Changes] → opens comment textarea → status = DRAFT_WITH_FEEDBACK. Report Designer notified with the feedback.
+- [Request Changes] → opens comment textarea → status = `DRAFT_WITH_FEEDBACK`. Feedback stored in `analytics_report_template.feedback_note`. Report Designer notified: "'{name}' returned with feedback: '{note preview}'. [View feedback →]". When Report Designer opens the template, a yellow banner shows the feedback note prominently above the builder canvas. Template can be edited and re-submitted.
 
 **Feedback loop:** Template can go through multiple DRAFT → PENDING_APPROVAL → DRAFT_WITH_FEEDBACK cycles. All feedback preserved in template history (Section G: Change Log tab in builder).
 
@@ -185,7 +185,7 @@ Triggered by [+ New Template].
 - Opens the full Section Builder (Section B) pre-seeded with 2 default sections (KPI Bar + Trend Chart) as a starting point
 - Report Designer fills in all sections
 
-**[Create Template]** → saves as DRAFT. Opens the full builder for continued editing.
+**[Create Template]** → saves the template as DRAFT status, closes the wizard, and immediately opens the full Section Builder (Section B) for the newly created template. The wizard does not stay open alongside the builder. The URL transitions to `/analytics/report-studio/templates/{new_id}/?part=builder`.
 
 ---
 
@@ -221,10 +221,11 @@ Shows all report deliveries (past and current). Source: `analytics_report_delive
 
 **Delivery Detail Drawer (400px):**
 - Delivery metadata (all columns from table)
-- File size
-- Signed R2 download URL (72h expiry) — [Download] button
-- Error message (if FAILED) — full error text
-- [Retry] — re-generates the report. Only for FAILED deliveries.
+- File size (`file_size_bytes` formatted as human-readable, e.g., "2.4 MB")
+- Signed R2 download URL — [Download] button. If `download_url_expires_at < NOW()`: button replaced by [Regenerate Download Link] — generates a fresh 72h signed URL. Action logged to `analytics_audit_log` (action=`DOWNLOAD_LINK_REGENERATED`).
+- Error message (if FAILED) — full error text including which template section caused failure
+- Error type badge: `TRANSIENT` (safe to retry) / `DATA_ERROR` (fix template first) / `QUOTA_EXCEEDED` (contact Data Engineer)
+- [Retry] — re-queues the report for generation. TRANSIENT errors: enabled immediately. DATA_ERROR: shows pre-flight warning "⚠ This failure is a data/template issue. Retrying without fixing the template will likely fail again. Continue?" QUOTA_EXCEEDED: button disabled.
 - Timeline: PENDING → GENERATING (started at {time}) → DELIVERED/FAILED (completed at {time}, duration: {N}s)
 
 ---
@@ -297,8 +298,10 @@ Opens from [Preview with Sample Data] in the builder or [Preview] on a template 
 | Analytics Manager is unavailable (out of office) for approval | No automatic override. Platform Admin (10) can approve. Report Designer should contact Analytics Manager directly. |
 | Institution has insufficient data for a section (e.g., KPI Bar with no exam attempts) | Section renders with "Insufficient data for this period" placeholder rather than showing 0 values or breaking the layout. Each section independently handles its empty state. |
 | Scheduled delivery day falls on a weekend | Report delivers on the next business day (configurable: "Deliver on: {day} or next business day if weekend"). |
+| `schedule_day` = 28–31 and current month is shorter (e.g., February with 28 days) | Report delivers on the last day of the month. Example: `schedule_day = 31`, February — delivers on 28 Feb (or 29 Feb in leap year). This is enforced by the `generate_scheduled_reports` Celery task using `min(schedule_day, last_day_of_month)`. |
+| Download URL expired before institution accessed the report | R2 signed URL in notification email/in-app link expires after 72h, but the underlying R2 file is retained for the full `analytics_report_delivery` retention period (1 year). [Regenerate Download Link] creates a fresh 72h URL — the file itself is never deleted until the retention cleanup job runs. |
 | PDF generation fails due to chart rendering error | Error message includes which section failed: "Report failed at section '{section_name}' — chart data error. [View Details]" in delivery drawer. |
-| Template variable `{institution_name}` used but recipient is anonymous (internal report) | Variable renders as "Platform Overview" for INTERNAL_EXEC reports. Documented in template variable reference. |
+| Template variable `{institution_name}` used but recipient is anonymous (internal report) | Variable renders as "Platform Overview" for INTERNAL_EXEC reports. `{institution_type}` renders as "All Institution Types". `{period_start}` / `{period_end}` render as actual date range. `{platform_avg_score}` renders as actual platform average. `{generated_date}` renders as actual generation date. All fallback values documented in template variable reference tooltip (hover the `{variable}` syntax in Text Block config). |
 
 ---
 

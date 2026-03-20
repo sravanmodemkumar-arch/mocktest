@@ -49,7 +49,7 @@ H-06 gives the Data Engineer:
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │  Page header: "Data Pipeline Monitor"   [Run All Pipelines Now]   │
-│  Overall status: ✅ All 7 pipelines healthy · Last run: 01:47 IST │
+│  Overall status: ✅ All 8 pipelines healthy · Last run: 01:47 IST │
 ├──────────────────────────────────────────────────────────────────┤
 │  Pipeline Health Cards (one card per Celery task)                │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
@@ -78,7 +78,7 @@ Single-line banner at top of page (below header).
 
 | State | Display |
 |---|---|
-| All pipelines healthy | `✅ All {N} pipelines ran successfully. Last completed: {job_name} at {time} IST.` (green) |
+| All pipelines healthy | `✅ All 8 pipelines ran successfully. Last completed: {job_name} at {time} IST.` (green) |
 | Any pipeline failed | `❌ {N} pipeline(s) failed. Data may be stale. Scroll to failed cards for details.` (red) |
 | Any pipeline partial success | `⚠ {N} pipeline(s) completed with partial failures ({M} tenants failed). Review logs.` (amber) |
 | Pipeline currently running | `⏳ {job_name} is currently running — started {N} min ago. {M}% complete.` (blue) |
@@ -87,7 +87,19 @@ Single-line banner at top of page (below header).
 
 ### Section B — Pipeline Health Cards
 
-One card per Celery analytics task. 7 tasks (see div-h-pages-list.md for full list). Cards in a responsive grid.
+One card per Celery analytics task. 8 tasks total — 4 analytics pipeline tasks (queues: `analytics`), 2 AI tasks (queue: `ai_generation`), 1 report task (queue: `reports`), 1 export task (queue: `exports`). Cards in a responsive grid, grouped by queue.
+
+**Celery worker health strip** (above the cards, below the status banner):
+| Queue | Workers Active | Workers Expected | Status |
+|---|---|---|---|
+| `analytics` | {N} | 2 | ✅ / ❌ |
+| `ai_generation` | {N} | 3 | ✅ / ❌ |
+| `reports` | {N} | 5 | ✅ / ❌ |
+| `exports` | {N} | 2 | ✅ / ❌ |
+
+Worker count read from Celery inspect API (cached 60s). If any queue has 0 active workers: ❌ red — "No workers on '{queue}' queue. Pipeline tasks will queue but not execute. Contact DevOps." Data Engineer and Platform Admin see this strip; Analytics Manager sees only the overall worker status (✅/❌), not the per-queue breakdown.
+
+**Auto-escalation:** If any queue has 0 active workers for > 5 consecutive minutes, an in-app alert is sent to Platform Admin (10): "⚠ Celery queue '{queue}' has no active workers for 5+ minutes. Tasks are queuing but not executing. [View H-06 →]". This is separate from individual pipeline failure notifications. The "expected" worker count per queue is defined in an environment variable (`CELERY_WORKER_COUNT_{QUEUE}`) set during infrastructure provisioning.
 
 **Card anatomy:**
 - Job name (human-readable label)
@@ -105,7 +117,7 @@ One card per Celery analytics task. 7 tasks (see div-h-pages-list.md for full li
 - Warning: "This pipeline is scheduled to run at {time} anyway. Manual runs are for recovery from failures."
 - [Confirm] → triggers Celery task → card shows `⏳ RUNNING` state, with a progress indicator updated via HTMX polling every 15s
 
-**[Run All Pipelines Now]** (header button, Data Engineer only): Triggers all 7 pipelines in their dependency order. Confirmation: "Run all analytics pipelines now? This will process all 2,050 tenant schemas across all tasks. Estimated total duration: 75–90 minutes. Cancel the Celery queue if you need to stop mid-run." Progress tracked in overall status banner.
+**[Run All Pipelines Now]** (header button, Data Engineer only): Triggers all 8 pipelines in their dependency order. Confirmation: "Run all analytics pipelines now? This will process all 2,050 tenant schemas across all tasks. Estimated total duration: 75–90 minutes. Cancel the Celery queue if you need to stop mid-run." Progress tracked in overall status banner.
 
 ---
 
@@ -167,12 +179,13 @@ Full Python traceback from the Celery task, rendered in a `<pre>` code block wit
 | `analytics_institution_engagement` | Sunday 03:14 | 4 days | ✅ OK (weekly) |
 | `analytics_cohort_snapshot` | 2024-09-01 | 18 days | ✅ OK (monthly) |
 | `analytics_ai_batch` (status updates) | Live (5min Celery poll) | 4 min | ✅ Live |
+| `analytics_infrastructure_event` | Today 01:47 IST (synced by Task 1 nightly) | 3h | ✅ Fresh (< 26h). Threshold: FRESH < 26h, STALE 26–48h, CRITICAL > 48h (same as daily snapshot — both synced by Task 1). |
 | `analytics_report_template` | Live (on-save) | Real-time | ✅ Live |
 | `analytics_pipeline_run` | Live | Real-time | ✅ Live |
 
-**Freshness thresholds per table type:**
-- Daily snapshot: FRESH < 26h, STALE 26–48h, CRITICAL > 48h
-- Weekly engagement: FRESH < 8 days, STALE 8–14 days
+**Freshness thresholds per table type (unified with H-01 staleness banner — both use the same thresholds):**
+- Daily snapshot: FRESH < 26h, STALE 26–48h, CRITICAL > 48h. H-01 pipeline strip triggers at ≥ 26h (STALE threshold) — consistent.
+- Weekly engagement: FRESH < 8 days, STALE 8–14 days, CRITICAL > 14 days
 - Monthly cohort: FRESH < 35 days, STALE > 35 days
 - Live tables: always FRESH
 
@@ -184,7 +197,7 @@ Full Python traceback from the Celery task, rendered in a `<pre>` code block wit
 
 **Purpose:** A read-only SQL interface against the `analytics` schema (PostgreSQL). Allows Data Engineers (and Analytics Managers with read access) to run ad-hoc queries for investigations — without needing direct DB access or a BI tool.
 
-**Important:** This is ANALYTICS schema only — no access to any tenant schema, no access to PII tables. Query runs as a read-only DB user with permissions only on the analytics schema.
+**Important:** This is ANALYTICS schema only — no access to any tenant schema, no access to PII tables. Query runs as the PostgreSQL `analytics_reader` role — a DB-level read-only user created with `GRANT SELECT ON ALL TABLES IN SCHEMA analytics TO analytics_reader`. This is enforced at the database layer, not application string-checking, so it cannot be bypassed. The Django ORM connection for SQL Explorer uses a separate DB config entry pointing to `analytics_reader` credentials. Session-level `SET statement_timeout = '30000'` (30s) is applied before each query execution to enforce the timeout at the PostgreSQL level.
 
 **UI:**
 ```
@@ -223,7 +236,7 @@ Full Python traceback from the Celery task, rendered in a `<pre>` code block wit
 - Shared queries: Data Engineer can mark a query as "shared with Division H team"
 - Queries stored in `analytics_saved_query` table (simple model: `name, sql, created_by, is_shared`)
 
-**Query history:** Last 20 queries run by this user, accessible from editor. Click to reload.
+**Query history:** Last 50 queries run by this user (ring-buffer, FIFO auto-deletion — stored in `analytics_query_history`), accessible from editor. Click to reload.
 
 ---
 
@@ -248,7 +261,7 @@ Full Python traceback from the Celery task, rendered in a `<pre>` code block wit
 | Scenario | Behaviour |
 |---|---|
 | A pipeline has never run (fresh install) | Card shows "— NEVER_RUN" state. Freshness table shows "No data yet." [Run Now] highlighted with pulsing attention state: "Run this pipeline to initialize analytics data." |
-| Pipeline is still running from yesterday (stuck) | Card shows ⏳ RUNNING with elapsed time: "Running for 4h 32m — expected < 45m. May be stuck." [Force Stop] button (Data Engineer only) → sends Celery `revoke()` with terminate=True. Confirmation: "Stop the running task? Current progress will be lost. The partial results will remain until the next full run." |
+| Pipeline is still running from yesterday (stuck) | Card shows ⏳ RUNNING with elapsed time: "Running for 4h 32m — expected < 45m. May be stuck." [Force Stop] button (Data Engineer only) → sends Celery `revoke()` with `terminate=True`. Confirmation: "Stop the running task? Current progress will be lost. Partial analytics_daily_snapshot rows written so far will remain in the table — they represent valid data for the tenants that completed. The next full run will upsert over them. The analytics_pipeline_run record will be set to FAILED with reason 'Manually stopped'." |
 | Manual run triggered while scheduled run is queued | System checks Celery queue: "A scheduled run of this pipeline is already queued for {time}. Triggering a manual run now will run both — the second run will overwrite the first. Continue?" |
 | SQL query times out (> 30s) | Error displayed inline: "Query exceeded 30-second limit. Simplify your query or add a WHERE clause to filter data." No partial results shown. |
 | SQL query returns > 10,000 rows | First 10,000 rows shown with banner: "Showing 10,000 of {N} total rows. [Download Full CSV] to get all results." |
@@ -285,4 +298,4 @@ Full Python traceback from the Celery task, rendered in a `<pre>` code block wit
 ---
 
 *Page spec complete.*
-*H-06 covers: overall pipeline health banner → 7 pipeline health cards (status / last run / metrics / manual trigger) → execution run history table → tenant failure breakdown drawer with full error log → data freshness dashboard per analytics table → read-only SQL explorer with 30s timeout, schema browser, saved queries, and query history.*
+*H-06 covers: overall pipeline health banner → Celery worker health strip (per-queue) → 8 pipeline health cards (status / last run / metrics / manual trigger) → execution run history table → tenant failure breakdown drawer with full error log → data freshness dashboard per analytics table → read-only SQL explorer (PostgreSQL `analytics_reader` role, 30s `statement_timeout`, schema browser, saved queries, query history).*

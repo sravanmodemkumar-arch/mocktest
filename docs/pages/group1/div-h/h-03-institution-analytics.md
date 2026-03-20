@@ -36,6 +36,8 @@ H-03 is the analytical perspective on institution health — **distinct from Div
 - Analytics Manager (42) — monthly institution health reporting, churn analysis
 - Data Analyst (44) — deep institution investigations, segmentation analysis
 
+**Data source note:** All data reads from `analytics_institution_engagement` (pre-aggregated). Institution names and types displayed here are denormalized and re-synced weekly during the `compute_institution_engagement` Celery task (Sunday 03:00 IST). Subscription/billing data in the institution drawer is read-only from the platform billing module (`institution_subscription` table) — H-03 makes a direct DB read, no editing capability. Name changes made Monday–Saturday appear in H-03 the following Sunday.
+
 ---
 
 ## 3. Layout
@@ -76,6 +78,8 @@ H-03 is the analytical perspective on institution health — **distinct from Div
 | Onboarded After | Date picker | Filter to recently onboarded institutions |
 
 Active filter chips below filter bar. [Reset All].
+
+**URL pre-filter support:** H-03 reads the following URL params on page load and pre-selects the corresponding filters: `?churn_risk=CRITICAL` (from H-01 KPI tile), `?institution_type=SCHOOL` (from institution type filters elsewhere), `?region=Telangana` (from choropleth map state click — state name URL-encoded). Choropleth state clicks append `?region={state_name}` to the URL and programmatically set the Region filter.
 
 ---
 
@@ -154,7 +158,7 @@ Main table. Server-side paginated, 25 rows per page. Source: `analytics_institut
 
 **Bulk actions** (rows selected):
 - [Export Selected CSV] — downloads engagement data for selected institutions
-- [Share to CSM Team] — sends in-app notification to all Customer Success Managers (53, Division J) with a list of selected institutions and their churn risk levels. Confirmation required: "Send {N} institution alerts to Customer Success team?"
+- [Share to CSM Team] — sends in-app notification to all Customer Success Managers (53, Division J) with a list of selected institutions and their churn risk levels. Confirmation required: "Send {N} institution alerts to Customer Success team?" **30-day deduplication:** institutions already notified within the last 30 days are excluded. Pre-confirmation message shows: "{M} of {N} selected institutions will be notified ({K} already notified within 30 days — skipped)."
 
 **Row click** → opens detail drawer.
 
@@ -196,7 +200,7 @@ The primary driver of churn risk is shown: "Primary risk signal: Exam frequency 
 - Question bank usage % (last 12 weeks)
 - Admin login days (last 4 weeks as bar chart)
 
-Data from: `analytics_institution_engagement` historical records (one row per week per institution, retained 12 months).
+Data from: `analytics_institution_engagement` historical records (one row per week per institution, retained up to 2 years per data retention policy). Chart defaults to showing the last 12 weekly snapshots (~3 months) for readability; a [Show 24 weeks] toggle extends the chart to ~6 months. Full 2-year data is available via H-09 Institution Engagement Export.
 
 #### Exam History Tab
 
@@ -236,6 +240,7 @@ Peer group: Institutions with same type, tier, and region. Min peer group size: 
 | Page access | Analytics Manager (42), Data Analyst (44), Platform Admin (10) |
 | [Export Engagement Report] | Analytics Manager (42), Platform Admin (10) |
 | [Share to CSM Team] bulk action | Analytics Manager (42) only — Data Analyst cannot send CSM notifications |
+| CSM notification deduplication | System-enforced: 30-day cooldown per institution. Tracked via `analytics_audit_log` (action=`CSM_NOTIFIED`, object_type=`institution`). |
 | [Notify CSM] in drawer | Analytics Manager (42) only |
 | Engagement score data | Read-only for all roles on this page |
 | Subscription / billing details in drawer | Read — visible; no edit capability on this page |
@@ -249,7 +254,7 @@ Peer group: Institutions with same type, tier, and region. Min peer group size: 
 |---|---|
 | Institution engagement score not yet computed (new institution onboarded this week) | Row shows "Score: Pending — first weekly computation on Sunday" with info tooltip |
 | Institution has 0 exams ever (onboarded but not activated) | Engagement score = 0. `churn_risk = CRITICAL` (zero activation). Last Exam: "Never". Special badge: "NOT ACTIVATED". |
-| Institution Group (type=GROUP) | Shows aggregate stats across all child institutions. Clicking row: drawer shows group overview + child institution list (each with their own engagement score) |
+| Institution Group (type=GROUP) | Shows aggregate stats (weighted average of child engagement scores). Clicking row: drawer tabs change to **Group Overview \| Child Institutions \| Exam History \| Comparison**. "Group Overview" shows aggregate engagement scorecard + weighted composite score. "Child Institutions" shows a sub-table of all child institutions with their individual engagement scores, churn risk, and [View →] link to that child's full drawer. "Exam History" and "Comparison" are disabled for GROUP type (benchmarking groups against individual institutions is not meaningful). |
 | Peer comparison group has < 5 members | "Peer comparison unavailable — fewer than 5 similar institutions" message in Comparison tab. Shows platform average as fallback comparison. |
 | CSM not assigned to institution | [Notify CSM] button disabled: "No CSM assigned. Assign in Division J." |
 | State has 0 institutions | State shows grey on map. Hover: "{State} — No institutions." Not shown in table. |
@@ -271,7 +276,7 @@ Peer group: Institutions with same type, tier, and region. Min peer group size: 
 | Action | Toast |
 |---|---|
 | Export queued | ✅ "Engagement report queued — notified when ready" (4s) |
-| CSM notification sent | ✅ "{N} institutions shared with CSM team" (4s) |
+| CSM notification sent | ✅ "{N} institutions shared with CSM team. {K} skipped (notified recently). [View Skipped →]" (persistent until dismissed — shows a modal with skipped institution names + their last notification date) |
 | CSM notify (drawer) | ✅ "CSM {name} notified for {institution}" (3s) |
 
 ### Responsive
