@@ -1,0 +1,136 @@
+{% extends "portal_base_dark.html" %}
+
+{% block page_content %}
+<div class="p-6 space-y-5">
+
+  {# ── Page header ──────────────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-xs mb-1" style="color:#64748B;">
+        <a href="/exec/dashboard/" style="color:#818CF8;">Dashboard</a> / Incidents
+      </p>
+      <h1 class="text-xl font-bold" style="color:#F1F5F9;">Incident Manager</h1>
+    </div>
+    <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg"
+            style="background:rgba(239,68,68,0.15); color:#EF4444; border:1px solid rgba(239,68,68,0.3);">
+      + Open Incident
+    </button>
+  </div>
+
+  {# ── Open incident alert banner (if any open) ─────────────────────────── #}
+  <div class="rounded-xl px-5 py-3.5 flex items-center gap-4"
+       style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25);">
+    <span class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+          style="background:rgba(239,68,68,0.15);">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#EF4444" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+    </span>
+    <div class="flex-1">
+      <p class="text-sm font-semibold" style="color:#FCA5A5;">
+        1 Active Incident — P1: Elevated API latency (South region)
+      </p>
+      <p class="text-xs mt-0.5" style="color:#64748B;">
+        Opened 14:15 today · 17 minutes ago · Assigned to Platform Ops
+      </p>
+    </div>
+    <a href="/exec/incidents/INC-2026-0312/"
+       class="flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg"
+       style="background:rgba(239,68,68,0.2); color:#EF4444; border:1px solid rgba(239,68,68,0.4);">
+      View →
+    </a>
+  </div>
+
+  {# ── MTTR + Incident stats ─────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="rounded-xl p-5" style="background:#0D1526; border:1px solid #EF444433;">
+      <p class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">Open</p>
+      <p class="font-mono text-3xl font-bold" style="color:#EF4444;">1</p>
+      <p class="text-xs mt-1" style="color:#64748B;">P1: 1 · P2: 0</p>
+    </div>
+    <div class="rounded-xl p-5" style="background:#0D1526; border:1px solid #1E293B;">
+      <p class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">This Month</p>
+      <p class="font-mono text-3xl font-bold" style="color:#F1F5F9;">6</p>
+      <p class="text-xs mt-1" style="color:#64748B;">↓ 2 from last month</p>
+    </div>
+    <div class="rounded-xl p-5" style="background:#0D1526; border:1px solid #1E293B;">
+      <p class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">Avg MTTR</p>
+      <p class="font-mono text-3xl font-bold" style="color:#F1F5F9;">21m</p>
+      <p class="text-xs mt-1" style="color:#10B981;">↓ 4m vs last month</p>
+    </div>
+    <div class="rounded-xl p-5" style="background:#0D1526; border:1px solid #1E293B;">
+      <p class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">SLA Breaches</p>
+      <p class="font-mono text-3xl font-bold" style="color:#10B981;">0</p>
+      <p class="text-xs mt-1" style="color:#10B981;">30-day window</p>
+    </div>
+  </div>
+
+  {# ── Incident table ────────────────────────────────────────────────────── #}
+  <div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-center gap-2 px-5 py-3.5" style="border-bottom:1px solid #1E293B;">
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[200px]">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+             fill="none" viewBox="0 0 24 24" stroke="#64748B" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" name="q" placeholder="Search incidents…"
+               hx-get="/exec/incidents/?part=table"
+               hx-target="#incidents-table" hx-swap="innerHTML"
+               hx-trigger="keyup changed delay:300ms"
+               hx-include="[name='severity'],[name='status']"
+               class="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg outline-none"
+               style="background:#131F38; border:1px solid #1E293B; color:#F1F5F9;">
+      </div>
+
+      <!-- Severity chips -->
+      {% for s_val, s_label in "all,All;P0,P0;P1,P1;P2,P2;P3,P3"|split:";" %}
+      <button name="severity" value="{{ s_val }}"
+              hx-get="/exec/incidents/?part=table"
+              hx-target="#incidents-table" hx-swap="innerHTML"
+              hx-include="[name='q'],[name='status']"
+              class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase"
+              style="background:#131F38; color:#64748B; border:1px solid #1E293B;">
+        {{ s_label }}
+      </button>
+      {% endfor %}
+
+      <!-- Status filter -->
+      <select name="status"
+              hx-get="/exec/incidents/?part=table"
+              hx-target="#incidents-table" hx-swap="innerHTML"
+              hx-include="[name='q'],[name='severity']"
+              hx-trigger="change"
+              class="text-xs px-3 py-1.5 rounded-lg outline-none"
+              style="background:#131F38; border:1px solid #1E293B; color:#94A3B8;">
+        <option value="">All Status</option>
+        <option value="open">Open</option>
+        <option value="resolved">Resolved</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div id="incidents-table"
+         hx-get="/exec/incidents/?part=table"
+         hx-trigger="load, every 30s"
+         hx-swap="innerHTML">
+      <!-- Skeleton -->
+      <div class="animate-pulse">
+        {% for _ in "123456" %}
+        <div class="flex gap-4 px-5 py-3" style="border-bottom:1px solid #0F1A2E;">
+          <div class="h-3 rounded flex-1" style="background:#131F38;"></div>
+          <div class="h-3 rounded w-12"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-20"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-24"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-16"   style="background:#131F38;"></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

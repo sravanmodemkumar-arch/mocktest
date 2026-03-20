@@ -1,0 +1,176 @@
+{# Exam Ops full-page table partial — paginated, searched, filtered. #}
+{# Context: exams, search, active_filter, status_options, type_options, #}
+{#          page, total_pages, total_count, has_prev, has_next,          #}
+{#          page_start, page_end                                          #}
+
+{% load humanize %}
+
+<div class="overflow-x-auto">
+  <table class="w-full text-xs">
+    <thead>
+      <tr style="background:#0A1020; border-bottom:1px solid #1E293B;">
+        <th class="px-5 py-3 text-left font-bold uppercase tracking-widest" style="color:#475569;">
+          <button hx-get="/exec/exam-ops/?part=table&sort=name&q={{ search }}&status={{ active_filter }}"
+                  hx-target="#eo-table" hx-swap="innerHTML"
+                  class="inline-flex items-center gap-1 hover:text-[#94A3B8]">
+            Exam ↕
+          </button>
+        </th>
+        <th class="px-4 py-3 text-left font-bold uppercase tracking-widest" style="color:#475569;">Institution</th>
+        <th class="px-4 py-3 text-right font-bold uppercase tracking-widest" style="color:#475569;">
+          <button hx-get="/exec/exam-ops/?part=table&sort=students&q={{ search }}&status={{ active_filter }}"
+                  hx-target="#eo-table" hx-swap="innerHTML"
+                  class="inline-flex items-center gap-1 hover:text-[#94A3B8] ml-auto">
+            Students ↕
+          </button>
+        </th>
+        <th class="px-4 py-3 text-right font-bold uppercase tracking-widest" style="color:#475569;">Live Users</th>
+        <th class="px-4 py-3 text-center font-bold uppercase tracking-widest" style="color:#475569;">Type</th>
+        <th class="px-4 py-3 text-center font-bold uppercase tracking-widest" style="color:#475569;">Status</th>
+        <th class="px-4 py-3 text-right font-bold uppercase tracking-widest" style="color:#475569;">Load</th>
+        <th class="px-4 py-3 text-center font-bold uppercase tracking-widest" style="color:#475569;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for exam in exams %}
+      <tr style="border-bottom:1px solid #0F1A2E;"
+          onmouseover="this.style.background='#131F38'"
+          onmouseout="this.style.background=''">
+
+        <!-- Exam name + subject -->
+        <td class="px-5 py-3">
+          <p class="font-medium" style="color:#F1F5F9;">{{ exam.name }}</p>
+          <p class="text-[10px] mt-0.5" style="color:#64748B;">
+            {{ exam.subject|default:"General" }} · {{ exam.duration_min|default:180 }}m
+          </p>
+        </td>
+
+        <!-- Institution -->
+        <td class="px-4 py-3">
+          <p class="truncate max-w-[160px]" style="color:#94A3B8;">{{ exam.institution }}</p>
+        </td>
+
+        <!-- Students -->
+        <td class="px-4 py-3 text-right font-mono" style="color:#94A3B8;">
+          {{ exam.students|intcomma }}
+        </td>
+
+        <!-- Live users -->
+        <td class="px-4 py-3 text-right">
+          <span class="font-mono" style="color:#F1F5F9;">{{ exam.live_users|intcomma }}</span>
+        </td>
+
+        <!-- Type badge -->
+        <td class="px-4 py-3 text-center">
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                style="background:{% if exam.type == 'MCQ' %}rgba(99,102,241,0.15){% elif exam.type == 'Descriptive' %}rgba(16,185,129,0.15){% else %}rgba(245,158,11,0.15){% endif %};
+                       color:{% if exam.type == 'MCQ' %}#818CF8{% elif exam.type == 'Descriptive' %}#34D399{% else %}#FCD34D{% endif %};">
+            {{ exam.type }}
+          </span>
+        </td>
+
+        <!-- Status -->
+        <td class="px-4 py-3 text-center">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                style="{% if exam.status == 'RUNNING' or exam.status == 'live' %}
+                         background:rgba(16,185,129,0.15); color:#34D399; border:1px solid rgba(16,185,129,0.3);
+                       {% elif exam.status == 'paused' %}
+                         background:rgba(245,158,11,0.15); color:#FCD34D; border:1px solid rgba(245,158,11,0.3);
+                       {% elif exam.status == 'scheduled' %}
+                         background:rgba(99,102,241,0.15); color:#818CF8; border:1px solid rgba(99,102,241,0.3);
+                       {% else %}
+                         background:rgba(100,116,139,0.15); color:#94A3B8; border:1px solid #1E293B;
+                       {% endif %}">
+            {% if exam.status == 'RUNNING' or exam.status == 'live' %}
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>
+            {% endif %}
+            {{ exam.status|upper }}
+          </span>
+        </td>
+
+        <!-- Load bar -->
+        <td class="px-4 py-3 text-right">
+          <div class="flex items-center justify-end gap-2">
+            <div class="w-16 h-1.5 rounded-full overflow-hidden" style="background:#131F38;">
+              <div class="h-full rounded-full"
+                   style="width:{{ exam.live_pct|default:0 }}%;
+                          background:{% if exam.live_pct > 90 %}#EF4444{% elif exam.live_pct > 70 %}#F59E0B{% else %}#10B981{% endif %};"></div>
+            </div>
+            <span class="font-mono text-[10px] w-8 text-right"
+                  style="color:{% if exam.live_pct > 90 %}#EF4444{% elif exam.live_pct > 70 %}#F59E0B{% else %}#10B981{% endif %};">
+              {{ exam.live_pct|default:0 }}%
+            </span>
+          </div>
+        </td>
+
+        <!-- Actions -->
+        <td class="px-4 py-3 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <button hx-get="/exec/dashboard/exam/{{ exam.id }}/"
+                    hx-target="#drawer-container"
+                    hx-swap="innerHTML"
+                    class="p-1 rounded hover:bg-[#1E293B] transition-colors"
+                    title="View" style="color:#6366F1;">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            {% if exam.status == 'RUNNING' or exam.status == 'live' %}
+            <button class="p-1 rounded hover:bg-[#1E293B] transition-colors"
+                    title="Pause" style="color:#F59E0B;">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+              </svg>
+            </button>
+            {% endif %}
+            <button class="p-1 rounded hover:bg-[#1E293B] transition-colors"
+                    style="color:#64748B;">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="px-5 py-16 text-center">
+          <svg class="w-8 h-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="#1E293B" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+          </svg>
+          <p class="text-sm font-medium mb-1" style="color:#475569;">No exams found</p>
+          <p class="text-xs" style="color:#334155;">
+            {% if search %}No results for "{{ search }}"{% else %}No exams match the selected filters{% endif %}
+          </p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Pagination #}
+{% if total_pages > 1 %}
+<div class="flex items-center justify-between px-5 py-3" style="border-top:1px solid #1E293B;">
+  <p class="text-[10px]" style="color:#475569;">
+    {{ page_start }}–{{ page_end }} of {{ total_count }} exams
+  </p>
+  <div class="flex items-center gap-1">
+    <button {% if has_prev %}
+            hx-get="/exec/exam-ops/?part=table&page={{ page|add:'-1' }}&q={{ search }}&status={{ active_filter }}"
+            hx-target="#eo-table" hx-swap="innerHTML"
+            {% else %}disabled{% endif %}
+            class="px-2.5 py-1 text-xs rounded-lg {% if not has_prev %}opacity-40 cursor-not-allowed{% endif %}"
+            style="background:#131F38; border:1px solid #1E293B; color:#94A3B8;">←</button>
+    <span class="px-3 py-1 text-xs" style="color:#64748B;">{{ page }} / {{ total_pages }}</span>
+    <button {% if has_next %}
+            hx-get="/exec/exam-ops/?part=table&page={{ page|add:'1' }}&q={{ search }}&status={{ active_filter }}"
+            hx-target="#eo-table" hx-swap="innerHTML"
+            {% else %}disabled{% endif %}
+            class="px-2.5 py-1 text-xs rounded-lg {% if not has_next %}opacity-40 cursor-not-allowed{% endif %}"
+            style="background:#131F38; border:1px solid #1E293B; color:#94A3B8;">→</button>
+  </div>
+</div>
+{% endif %}

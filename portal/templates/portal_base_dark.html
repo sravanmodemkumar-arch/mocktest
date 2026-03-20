@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{# Dark-theme authenticated shell — used by the Executive (Group 1 Division A) portal.   #}
+{# Overrides the light sidebar + topnav in portal_base.html with the admin dark palette. #}
+
+{% block head %}
+  <!-- JetBrains Mono — for all metric/numeric values -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Admin dark palette ── */
+    :root {
+      --bg-base:      #070C18;
+      --bg-s1:        #0D1526;
+      --bg-s2:        #131F38;
+      --border-sub:   #1E293B;
+      --border-def:   #334155;
+      --text-pri:     #F1F5F9;
+      --text-sec:     #94A3B8;
+      --text-muted:   #64748B;
+      --primary:      {{ primary_color|default:"#6366F1" }};
+    }
+
+    /* Body bg override */
+    body { background-color: var(--bg-base) !important; color: var(--text-pri); }
+
+    /* Mono font for numbers */
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Live pulse dot */
+    @keyframes live-pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.4; transform:scale(0.8); }
+    }
+    .live-dot { animation: live-pulse 1.5s ease-in-out infinite; }
+
+    /* Skeleton shimmer */
+    @keyframes shimmer {
+      0%   { background-position: -200% center; }
+      100% { background-position:  200% center; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-s2) 25%, #1f3054 50%, var(--bg-s2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+      border-radius: 4px;
+      color: transparent;
+    }
+
+    /* HTMX loading indicator */
+    .htmx-indicator { opacity: 0; transition: opacity 200ms; }
+    .htmx-request .htmx-indicator,
+    .htmx-request.htmx-indicator { opacity: 1; }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-def); border-radius: 2px; }
+
+    /* Stat card hover */
+    .stat-card { transition: border-color 150ms, box-shadow 150ms; }
+    .stat-card:hover { border-color: var(--primary) !important; }
+
+    /* Allow HTMX scripts to run (charts init) */
+  </style>
+  {% block dark_head %}{% endblock %}
+{% endblock %}
+
+{% block body %}
+{# Override body bg set in base.html #}
+<div class="min-h-screen flex" style="background:#070C18;">
+
+  <!-- ── Sidebar ────────────────────────────────────────────────────────── -->
+  <aside id="sidebar"
+         class="fixed inset-y-0 left-0 z-40 w-60 flex flex-col
+                transition-all duration-300 lg:relative lg:translate-x-0 -translate-x-full"
+         style="background:#0D1526; border-right:1px solid #1E293B;"
+         aria-label="Executive navigation">
+
+    <!-- Logo -->
+    <div class="flex items-center gap-3 h-14 px-5 flex-shrink-0"
+         style="border-bottom:1px solid #1E293B;">
+      <img src="{{ logo_url|default:'' }}" alt="{{ tenant_name|default:'EduForge' }}"
+           class="h-7 w-auto object-contain max-w-[110px]"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+      <span class="hidden text-base font-bold" style="color:#F1F5F9;">
+        {{ tenant_name|default:"EduForge" }}
+      </span>
+      <!-- Indigo dot identity -->
+      <span class="ml-auto w-2 h-2 rounded-full" style="background:#6366F1;"></span>
+    </div>
+
+    <!-- Nav (HTMX loads exec-specific dark nav) -->
+    <nav class="flex-1 overflow-y-auto py-3 px-2"
+         hx-get="/exec/nav/"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <!-- Skeleton placeholder -->
+      <div class="space-y-1 px-1 animate-pulse">
+        {% for _ in "12345678" %}
+        <div class="h-8 rounded-lg skeleton"></div>
+        {% endfor %}
+      </div>
+    </nav>
+
+    <!-- User card -->
+    <div class="p-3 flex-shrink-0" style="border-top:1px solid #1E293B;">
+      <div class="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-[#131F38]">
+        <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center
+                    text-xs font-bold text-white"
+             style="background:{{ primary_color|default:'#6366F1' }};">
+          {{ user.name|first|upper|default:"U" }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium truncate" style="color:#F1F5F9;">
+            {{ user.name|default:"Executive" }}
+          </div>
+          <div class="text-xs truncate" style="color:#64748B;">
+            {{ user.role|default:"" }}
+          </div>
+        </div>
+      </div>
+      <a href="/logout/"
+         class="flex items-center gap-2 mt-1 px-2 py-1.5 text-sm rounded-lg w-full
+                hover:bg-[#1A2744] transition-colors"
+         style="color:#64748B;">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Sidebar overlay (mobile) -->
+  <div id="sidebar-overlay"
+       class="fixed inset-0 z-30 bg-black/60 lg:hidden hidden"
+       onclick="document.getElementById('sidebar').classList.add('-translate-x-full');
+                this.classList.add('hidden');"></div>
+
+  <!-- ── Main area ──────────────────────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+    <!-- Top nav bar -->
+    <header class="sticky top-0 z-30 flex items-center h-14 px-5 gap-4 flex-shrink-0"
+            style="background:#0D1526; border-bottom:1px solid #1E293B;">
+
+      <!-- Mobile hamburger -->
+      <button onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full');
+                       document.getElementById('sidebar-overlay').classList.toggle('hidden');"
+              class="lg:hidden p-2 rounded-lg hover:bg-[#131F38]">
+        <svg class="w-5 h-5" style="color:#94A3B8;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+
+      <!-- Breadcrumb -->
+      <nav class="flex-1 hidden sm:flex items-center gap-1 text-sm" style="color:#64748B;">
+        <a href="/exec/dashboard/" style="color:#64748B;" class="hover:text-indigo-400 transition-colors">
+          Executive
+        </a>
+        {% block breadcrumb %}{% endblock %}
+      </nav>
+
+      <!-- Right actions -->
+      <div class="flex items-center gap-1 ml-auto">
+
+        <!-- ⌘K command palette trigger -->
+        <button class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm
+                       hover:bg-[#131F38] transition-colors"
+                style="color:#64748B; border:1px solid #334155;"
+                onclick="document.getElementById('cmd-palette').classList.remove('hidden')"
+                title="Command palette">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+          </svg>
+          <span class="text-xs">⌘K</span>
+        </button>
+
+        <!-- Notifications -->
+        <div class="relative">
+          <button class="p-2 rounded-lg hover:bg-[#131F38] relative transition-colors"
+                  style="color:#64748B;"
+                  hx-get="/home/notifications/"
+                  hx-target="#notif-dropdown"
+                  hx-swap="innerHTML"
+                  title="Notifications">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            {% if notification_count %}
+            <span class="absolute top-1 right-1 w-4 h-4 text-xs font-bold text-white rounded-full
+                         flex items-center justify-center" style="background:#6366F1;">
+              {{ notification_count }}
+            </span>
+            {% endif %}
+          </button>
+          <div id="notif-dropdown"
+               class="absolute right-0 mt-1 w-80 rounded-xl shadow-2xl overflow-hidden z-50 hidden"
+               style="background:#0D1526; border:1px solid #334155;">
+          </div>
+        </div>
+
+        <!-- Theme toggle -->
+        <button id="theme-btn"
+                onclick="toggleTheme()"
+                class="p-2 rounded-lg hover:bg-[#131F38] transition-colors"
+                style="color:#64748B;" title="Toggle theme">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+        </button>
+
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="flex-1 overflow-auto" id="main-content"
+          style="background:#070C18;">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <!-- ── Command palette overlay ─────────────────────────────────────────── -->
+  <div id="cmd-palette"
+       class="hidden fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
+       style="background:rgba(7,12,24,0.7); backdrop-filter:blur(4px);"
+       onclick="if(event.target===this) this.classList.add('hidden')">
+    <div class="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl"
+         style="background:#0D1526; border:1px solid #334155;">
+      <div class="flex items-center gap-3 px-4 py-3" style="border-bottom:1px solid #1E293B;">
+        <svg class="w-4 h-4 flex-shrink-0" style="color:#64748B;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+        </svg>
+        <input id="cmd-input" type="text" placeholder="Search pages, actions, institutions..."
+               class="flex-1 bg-transparent border-none outline-none text-sm"
+               style="color:#F1F5F9; caret-color:#6366F1;"
+               autofocus />
+        <kbd class="text-xs px-2 py-0.5 rounded" style="color:#64748B; background:#131F38; border:1px solid #334155;">Esc</kbd>
+      </div>
+      <div class="py-2 px-2 max-h-72 overflow-y-auto">
+        {% block cmd_results %}
+        <div class="px-2 py-1.5 text-xs font-bold uppercase tracking-widest" style="color:#64748B;">RECENT</div>
+        {% for item in cmd_recent|default:'' %}
+        <a href="{{ item.url }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#131F38] transition-colors">
+          <span class="text-sm font-medium" style="color:#F1F5F9;">{{ item.label }}</span>
+          <span class="text-xs ml-auto font-mono" style="color:#64748B;">{{ item.url }}</span>
+        </a>
+        {% endfor %}
+        {% endblock %}
+      </div>
+      <div class="flex items-center gap-4 px-4 py-2 text-xs" style="color:#64748B; border-top:1px solid #1E293B;">
+        <span><kbd class="font-mono">↑↓</kbd> Navigate</span>
+        <span><kbd class="font-mono">↵</kbd> Open</span>
+        <span><kbd class="font-mono">Esc</kbd> Close</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session expired modal slot -->
+  <div id="session-modal-container"></div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Sidebar + 401 handling (same as portal_base.html) ──────────────────
+  document.addEventListener('htmx:responseError', function(e) {
+    if (e.detail.xhr.status === 401) {
+      fetch('/partials/session-expired/')
+        .then(r => r.text())
+        .then(html => { document.getElementById('session-modal-container').innerHTML = html; });
+    }
+  });
+
+  // ── Allow scripts in HTMX-swapped content (needed for chart init) ──────
+  htmx.config.allowScriptTags = true;
+
+  // ── Theme toggle ────────────────────────────────────────────────────────
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isLight = html.getAttribute('data-theme') === 'light';
+    html.setAttribute('data-theme', isLight ? 'dark' : 'light');
+    // Persist preference
+    fetch('/api/user/preferences/', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+      body: JSON.stringify({ theme: isLight ? 'dark' : 'light' }),
+    }).catch(() => {});
+  }
+
+  // ── ⌘K shortcut ─────────────────────────────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      const p = document.getElementById('cmd-palette');
+      p.classList.toggle('hidden');
+      if (!p.classList.contains('hidden')) {
+        setTimeout(() => document.getElementById('cmd-input').focus(), 50);
+      }
+    }
+    if (e.key === 'Escape') {
+      document.getElementById('cmd-palette').classList.add('hidden');
+    }
+  });
+</script>
+{% block dark_scripts %}{% endblock %}
+{% endblock %}

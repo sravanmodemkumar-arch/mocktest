@@ -1,0 +1,219 @@
+{# Exam Operations panel — search + filter + table. Polled every 5s. #}
+{# Context: exams, search, status_f, type_f, total_active, total_students, #}
+{#          peak_concurrent, status_counts                                  #}
+
+{% load humanize %}
+
+<div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+  <!-- Panel header -->
+  <div class="flex items-center justify-between px-5 py-3.5" style="border-bottom:1px solid #1E293B;">
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold" style="color:#F1F5F9;">Exam Operations</h2>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+            style="color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>LIVE
+      </span>
+    </div>
+    <a href="/exec/exam-ops/" class="text-xs font-medium" style="color:#818CF8;">View all →</a>
+  </div>
+
+  <!-- Mini stats strip -->
+  <div class="grid grid-cols-3 gap-0" style="border-bottom:1px solid #1E293B;">
+    <div class="px-5 py-3 text-center" style="border-right:1px solid #1E293B;">
+      <p class="font-mono text-xl font-bold leading-none" style="color:#F1F5F9;">{{ total_active }}</p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#64748B;">Active Exams</p>
+    </div>
+    <div class="px-5 py-3 text-center" style="border-right:1px solid #1E293B;">
+      <p class="font-mono text-xl font-bold leading-none" style="color:#F1F5F9;">{{ total_students|intcomma }}</p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#64748B;">Students Live</p>
+    </div>
+    <div class="px-5 py-3 text-center">
+      <p class="font-mono text-xl font-bold leading-none"
+         style="color:{% if peak_concurrent > 80 %}#EF4444{% elif peak_concurrent > 60 %}#F59E0B{% else %}#10B981{% endif %};">
+        {{ peak_concurrent }}%
+      </p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#64748B;">Peak Load</p>
+    </div>
+  </div>
+
+  <!-- Search + filters -->
+  <div class="px-5 py-3 flex flex-wrap items-center gap-2" style="border-bottom:1px solid #1E293B;">
+    <!-- Search input -->
+    <div class="relative flex-1 min-w-[180px]">
+      <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+           stroke="#64748B" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text"
+             name="q"
+             value="{{ search }}"
+             placeholder="Search exams or institutions…"
+             hx-get="/exec/dashboard/?part=exams"
+             hx-target="#exam-ops"
+             hx-swap="innerHTML"
+             hx-trigger="keyup changed delay:300ms"
+             hx-include="[name='status_f'],[name='type_f']"
+             class="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg outline-none"
+             style="background:#131F38; border:1px solid #1E293B; color:#F1F5F9;">
+    </div>
+
+    <!-- Status filter chips -->
+    <div class="flex items-center gap-1 flex-wrap">
+      {% for chip_val, chip_label in status_options %}
+      <button name="status_f"
+              value="{{ chip_val }}"
+              hx-get="/exec/dashboard/?part=exams"
+              hx-target="#exam-ops"
+              hx-swap="innerHTML"
+              hx-include="[name='q'],[name='type_f']"
+              class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wide transition-colors"
+              style="{% if status_f == chip_val %}background:rgba(99,102,241,0.2); color:#818CF8; border:1px solid #6366F1;
+                     {% else %}background:#131F38; color:#64748B; border:1px solid #1E293B;{% endif %}">
+        {{ chip_label }}
+        {% if chip_val and chip_val in status_counts %}
+          ({{ status_counts|get_item:chip_val }})
+        {% endif %}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr style="border-bottom:1px solid #1E293B;">
+          <th class="px-5 py-2.5 text-left font-bold uppercase tracking-widest" style="color:#475569;">Exam</th>
+          <th class="px-4 py-2.5 text-left font-bold uppercase tracking-widest" style="color:#475569;">Institution</th>
+          <th class="px-4 py-2.5 text-right font-bold uppercase tracking-widest" style="color:#475569;">Students</th>
+          <th class="px-4 py-2.5 text-right font-bold uppercase tracking-widest" style="color:#475569;">Live Users</th>
+          <th class="px-4 py-2.5 text-center font-bold uppercase tracking-widest" style="color:#475569;">Status</th>
+          <th class="px-4 py-2.5 text-center font-bold uppercase tracking-widest" style="color:#475569;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for exam in exams %}
+        <tr class="exam-row transition-colors"
+            style="border-bottom:1px solid #0F1A2E;"
+            onmouseover="this.style.background='#131F38'"
+            onmouseout="this.style.background=''">
+
+          <!-- Exam name + type badge -->
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-2">
+              <div>
+                <p class="font-medium truncate max-w-[160px]" style="color:#F1F5F9;">{{ exam.name }}</p>
+                <p class="text-[10px] mt-0.5" style="color:#64748B;">{{ exam.subject }} · {{ exam.duration_min }}m</p>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0"
+                    style="background:{% if exam.type == 'MCQ' %}rgba(99,102,241,0.15){% elif exam.type == 'Descriptive' %}rgba(16,185,129,0.15){% else %}rgba(245,158,11,0.15){% endif %};
+                           color:{% if exam.type == 'MCQ' %}#818CF8{% elif exam.type == 'Descriptive' %}#34D399{% else %}#FCD34D{% endif %};">
+                {{ exam.type }}
+              </span>
+            </div>
+          </td>
+
+          <!-- Institution -->
+          <td class="px-4 py-3">
+            <p class="truncate max-w-[140px]" style="color:#94A3B8;">{{ exam.institution }}</p>
+          </td>
+
+          <!-- Students enrolled -->
+          <td class="px-4 py-3 text-right font-mono" style="color:#94A3B8;">
+            {{ exam.students|intcomma }}
+          </td>
+
+          <!-- Live users with load indicator -->
+          <td class="px-4 py-3 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <span class="w-2 h-2 rounded-full flex-shrink-0"
+                    style="background:{% if exam.load_pct > 80 %}#EF4444{% elif exam.load_pct > 60 %}#F59E0B{% else %}#10B981{% endif %};"></span>
+              <span class="font-mono" style="color:#F1F5F9;">{{ exam.live_users|intcomma }}</span>
+            </div>
+          </td>
+
+          <!-- Status badge -->
+          <td class="px-4 py-3 text-center">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  style="{% if exam.status == 'live' %}background:rgba(16,185,129,0.15); color:#34D399; border:1px solid rgba(16,185,129,0.3);
+                         {% elif exam.status == 'scheduled' %}background:rgba(99,102,241,0.15); color:#818CF8; border:1px solid rgba(99,102,241,0.3);
+                         {% elif exam.status == 'paused' %}background:rgba(245,158,11,0.15); color:#FCD34D; border:1px solid rgba(245,158,11,0.3);
+                         {% else %}background:rgba(100,116,139,0.15); color:#94A3B8; border:1px solid #1E293B;{% endif %}">
+              {% if exam.status == 'live' %}<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>{% endif %}
+              {{ exam.status|upper }}
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td class="px-4 py-3 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <!-- View detail -->
+              <button hx-get="/exec/dashboard/exam/{{ exam.id }}/"
+                      hx-target="#drawer-container"
+                      hx-swap="innerHTML"
+                      class="p-1 rounded transition-colors hover:bg-[#1E293B]"
+                      title="View detail"
+                      style="color:#6366F1;">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+              <!-- Pause / resume -->
+              {% if exam.status == 'live' %}
+              <button class="p-1 rounded transition-colors hover:bg-[#1E293B]"
+                      title="Pause exam"
+                      style="color:#F59E0B;">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+                </svg>
+              </button>
+              {% elif exam.status == 'paused' %}
+              <button class="p-1 rounded transition-colors hover:bg-[#1E293B]"
+                      title="Resume exam"
+                      style="color:#10B981;">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </button>
+              {% endif %}
+              <!-- More -->
+              <button class="p-1 rounded transition-colors hover:bg-[#1E293B]"
+                      style="color:#64748B;">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <!-- Empty state -->
+        <tr>
+          <td colspan="6" class="px-5 py-12 text-center">
+            <svg class="w-8 h-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="#1E293B" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <p class="text-sm font-medium mb-1" style="color:#475569;">No active exams</p>
+            <p class="text-xs" style="color:#334155;">
+              {% if search %}No results for "{{ search }}"{% else %}Exams will appear here when they go live{% endif %}
+            </p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Table footer: row count -->
+  {% if exams %}
+  <div class="px-5 py-2.5 flex items-center justify-between" style="border-top:1px solid #1E293B;">
+    <p class="text-[10px]" style="color:#475569;">
+      Showing {{ exams|length }} exam{{ exams|length|pluralize }}
+      {% if search %} matching "{{ search }}"{% endif %}
+    </p>
+    <p class="text-[10px]" style="color:#475569;">Auto-refresh every 5s</p>
+  </div>
+  {% endif %}
+</div>

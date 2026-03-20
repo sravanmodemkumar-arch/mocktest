@@ -1,0 +1,53 @@
+{# Financial chart panel — MTD / YTD / Forecast tabs. Context: tab, rev_labels_json etc. #}
+
+<div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+  <!-- Tabs -->
+  <div class="flex gap-0 px-5 pt-3" style="border-bottom:1px solid #1E293B;">
+    {% for t_val, t_label in "mtd,MTD;ytd,YTD;forecast,Forecast"|split:";" %}
+    <button hx-get="/exec/financial-overview/?part=chart&tab={{ t_val }}"
+            hx-target="#fin-chart-panel" hx-swap="innerHTML"
+            class="px-4 py-2 text-xs font-medium border-b-2 transition-colors -mb-px"
+            style="{% if tab == t_val %}border-color:#6366F1; color:#818CF8;
+                   {% else %}border-color:transparent; color:#64748B;{% endif %}">
+      {{ t_label }}
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- Chart -->
+  <div class="px-5 pt-4 pb-3" style="height:200px;">
+    <canvas id="fin-main-chart"
+            class="w-full h-full"
+            data-type="{% if tab == 'ytd' %}bar{% else %}area{% endif %}"
+            data-labels="{{ rev_labels_json|default:'[]' }}"
+            data-values="{{ mtd_this_json|default:'[]' }}">
+    </canvas>
+  </div>
+
+  <!-- Footer: MTD vs Target -->
+  <div class="grid grid-cols-3 gap-0 px-5 py-3" style="border-top:1px solid #1E293B;">
+    <div class="text-center">
+      <p class="font-mono text-base font-bold" style="color:#F1F5F9;">{{ mtd_total|default:"₹4.82 Cr" }}</p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#475569;">
+        {% if tab == 'ytd' %}YTD Revenue{% else %}MTD Revenue{% endif %}
+      </p>
+    </div>
+    <div class="text-center" style="border-left:1px solid #1E293B; border-right:1px solid #1E293B;">
+      <p class="font-mono text-base font-bold" style="color:#6366F1;">{{ mtd_target|default:"₹5.2 Cr" }}</p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#475569;">Target</p>
+    </div>
+    <div class="text-center">
+      <p class="font-mono text-base font-bold"
+         style="color:{% if mtd_pct >= 90 %}#10B981{% elif mtd_pct >= 70 %}#F59E0B{% else %}#EF4444{% endif %};">
+        {{ mtd_pct|default:92.7 }}%
+      </p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#475569;">Achieved</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  requestAnimationFrame(function() {
+    if (typeof initFinChart !== 'undefined') initFinChart();
+  });
+</script>

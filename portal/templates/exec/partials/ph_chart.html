@@ -1,0 +1,84 @@
+{# Platform Health full-page chart partial. Context: range, labels_json, uptime_json, #}
+{# latency_json, error_rate_json, services, active_metric                              #}
+
+<div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+  <!-- Header: metric tabs + time range -->
+  <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5"
+       style="border-bottom:1px solid #1E293B;">
+
+    <!-- Metric selector tabs -->
+    <div class="flex gap-1">
+      {% for m_val, m_label, m_color in metric_tabs %}
+      <button hx-get="/exec/platform-health/?part=chart&range={{ range }}&metric={{ m_val }}"
+              hx-target="#ph-chart-panel"
+              hx-swap="innerHTML"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+              style="{% if active_metric == m_val %}
+                       background:{{ m_color }}22; color:{{ m_color }}; border:1px solid {{ m_color }}55;
+                     {% else %}
+                       background:transparent; color:#64748B; border:1px solid transparent;
+                     {% endif %}">
+        {{ m_label }}
+      </button>
+      {% empty %}
+      {% for m_val, m_label, m_color in "uptime,Uptime %,#10B981;latency,Latency,#6366F1;errors,Error Rate,#EF4444"|split:";" %}
+      <button class="px-3 py-1.5 text-xs font-semibold rounded-lg"
+              style="background:rgba(16,185,129,0.1); color:#10B981; border:1px solid rgba(16,185,129,0.3);">
+        All Metrics
+      </button>
+      {% endfor %}
+      {% endfor %}
+    </div>
+
+    <!-- Time range selector -->
+    <div class="flex items-center gap-1">
+      {% for r in "1h,6h,24h,7d,30d"|split:"," %}
+      <button hx-get="/exec/platform-health/?part=chart&range={{ r }}"
+              hx-target="#ph-chart-panel"
+              hx-swap="innerHTML"
+              class="px-2.5 py-1 text-xs rounded-md font-medium transition-colors"
+              style="{% if range == r %}
+                       background:rgba(99,102,241,0.15); color:#818CF8; border:1px solid #6366F1;
+                     {% else %}
+                       background:transparent; color:#64748B; border:1px solid transparent;
+                     {% endif %}">
+        {{ r }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="px-5 pt-4 pb-3" style="height:240px;">
+    <canvas id="ph-main-chart"
+            class="w-full h-full"
+            data-labels="{{ labels_json }}"
+            data-uptime="{{ uptime_json }}"
+            data-latency="{{ latency_json }}"
+            data-err-rate="{{ error_rate_json }}">
+    </canvas>
+  </div>
+
+  <!-- Current values strip -->
+  <div class="grid grid-cols-3 gap-0 px-5 pb-4 pt-2" style="border-top:1px solid #1E293B;">
+    <div class="text-center">
+      <p class="font-mono text-lg font-bold" style="color:#10B981;">99.1%</p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#475569;">Uptime</p>
+    </div>
+    <div class="text-center" style="border-left:1px solid #1E293B; border-right:1px solid #1E293B;">
+      <p class="font-mono text-lg font-bold" style="color:#6366F1;">142ms</p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#475569;">P99 Latency</p>
+    </div>
+    <div class="text-center">
+      <p class="font-mono text-lg font-bold" style="color:#F1F5F9;">0.01%</p>
+      <p class="text-[10px] uppercase tracking-widest mt-0.5" style="color:#475569;">Error Rate</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  requestAnimationFrame(function() {
+    if (typeof initPhChart !== 'undefined') initPhChart();
+  });
+</script>
