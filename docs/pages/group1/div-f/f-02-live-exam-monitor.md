@@ -133,14 +133,40 @@ Each card = one active exam schedule.
 - **[···]:** Force Close · Override Session · Refresh Snapshot · View in War Room
 
 **[···] — Force Close:**
-- Closes exam immediately (sets status = COMPLETED, closes all active sessions)
-- Requires reason
-- Confirmation modal: "Force-close exam? All active sessions will be terminated immediately. This cannot be undone."
+- Closes exam immediately (sets `exam_schedule.status = COMPLETED`)
+- All `IN_PROGRESS` sessions in tenant schema set to `TIMED_OUT` (scores computed on current state — partial answers count)
+- Requires reason. Confirmation modal shows exact active session count: "Force-close exam? **{N} students are still active.** Their current answers will be scored as-is. This cannot be undone."
+- Sessions mid-submit (status = `SUBMITTING`) are given a 30-second grace window before force-close finalises them. F-02 shows a countdown: "Waiting {N}s for in-flight submissions to complete…"
+
+**[···] — Override Session:**
+- Opens Override Session Modal (480px)
+- Allows Ops Manager to manually set a specific session's status in the tenant schema
+- Use case: a student's session is stuck in `IN_PROGRESS` and they cannot submit; Support Exec has already tried [Unlock Session] in F-03 and it failed
+- Fields: Session Ref (anonymised hash) · Override Action: Unlock (reset to IN_PROGRESS) / Force Submit (score current state) / Mark Timed Out
+- Requires reason. All overrides logged to `exam_ops_action_log` with action type `SESSION_OVERRIDE`.
+- DPDPA: session_ref is anonymised — Ops Manager never sees student names
 
 **[···] — Refresh Snapshot:**
 - Triggers `?part=snapshot-refresh&schedule_id={id}`
 - Forces Celery to run a snapshot update for just this exam immediately (outside the Beat schedule)
 - Shows spinner on card during refresh
+
+#### Starting Soon Panel (shown above the grid when ≥ 1 exam starts within 2 hours)
+
+Collapsible strip — `bg-[#0D1526] border border-[#1E2D4A] rounded-xl p-3 mb-4`
+
+"🕐 **{N} exams starting soon** — next: {Exam Name} at {Institution} in **{time}**"
+
+Expands to show a compact list:
+
+| Exam | Institution | Starts In | Config Status | Paper Assigned |
+|---|---|---|---|---|
+| SSC CGL Mock 5 | SR Coaching | 1h 42m | 🔒 Locked | ✅ SET-A |
+| NEET Mock 3 | VR Academy | 0h 58m | ⚠️ Not Locked | ✅ NEET-2026-A |
+
+**Purpose:** Ops Manager sees what's coming. ⚠️ "Not Locked" in this panel is an urgent flag — clicking it opens the F-01 Schedule Detail Drawer directly.
+
+**[Go to F-01 Schedule]** link per row. Panel auto-dismisses when exam becomes ACTIVE.
 
 #### Exam Monitor Table (alternate view)
 

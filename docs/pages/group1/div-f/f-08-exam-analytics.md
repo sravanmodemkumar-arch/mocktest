@@ -127,6 +127,10 @@ When ≥ 2 institutions selected (checkboxes in Section B table), shows overlaid
 
 **Available only when:** answer key is FINAL + result computation is COMPLETED.
 
+**D-09 taxonomy enrichment:** When question metadata is available from the question bank (Div D — D-09 Question Bank), F-08 joins it to show the question's pre-tagged difficulty, topic, and subject alongside the computed statistics. This enables calibration: comparing the question bank's expected difficulty against the exam-measured difficulty.
+
+If D-09 metadata is unavailable for a question (e.g., imported paper with no bank linkage), those columns show `—` with tooltip: "Metadata unavailable — question not linked to question bank."
+
 #### Section A — Difficulty Index (p-value)
 
 For each question, the proportion of students who answered correctly.
@@ -136,11 +140,32 @@ For each question, the proportion of students who answered correctly.
 - Y: p-value (0–1)
 - Colour: 0–0.3 = Hard (red) · 0.3–0.7 = Medium (blue) · 0.7–1.0 = Easy (green)
 - Reference lines: 0.3 and 0.7 boundaries shown as dashed
+- **Mismatch indicators:** Questions where the D-09 tagged difficulty diverges from the computed p-value range are marked with ⚠️ (e.g., tagged "Easy" but p-value = 0.18 → computed "Hard"). These are the most actionable items for the content team.
 
 **Interpretation guide (inline):**
 - p < 0.30: Too hard — review question for ambiguity or unfair difficulty
 - p > 0.80: Too easy — review for curriculum relevance or give-away wording
 - p > 0.95: Possibly leaked or very commonly known fact
+
+#### Item Difficulty Detail Table
+
+Tabular companion to the chart. Each row is one question:
+
+| Column | Notes |
+|---|---|
+| Q# | Question number |
+| p-value | Computed difficulty index (0–1) |
+| Computed Difficulty | Easy / Medium / Hard — derived from p-value ranges |
+| Tagged Difficulty (D-09) | Easy / Medium / Hard — from question bank taxonomy; `—` if unavailable |
+| Difficulty Match | ✅ Match / ⚠️ Mismatch — compares computed vs tagged |
+| Topic | From D-09 taxonomy (e.g. "Algebra", "Polity"); `—` if unavailable |
+| Subject | From D-09 taxonomy (e.g. "Mathematics", "GK"); `—` if unavailable |
+| Correct Option | From answer key |
+| Actions | [View Option Distribution] — expands Section C for this Q# |
+
+**Sort by:** p-value (default ASC — hardest first), Mismatch (⚠️ first), Topic.
+
+**Filter:** Show only mismatches toggle — "Show only difficulty-mismatch questions ({N})" — most useful starting point for content review.
 
 #### Section B — Discrimination Index
 
@@ -320,8 +345,13 @@ Celery task `compute_exam_analytics_aggregate` runs after `publish_exam_results`
 | `option_distribution` | jsonb | `{"A": 0.44, "B": 0.29, "C": 0.20, "D": 0.07}` |
 | `top_27_p_value` | decimal | For D computation |
 | `bottom_27_p_value` | decimal | For D computation |
+| `question_bank_id` | FK → question_bank (nullable) | Linked question bank entry from D-09; NULL if no bank linkage |
+| `tagged_difficulty` | varchar(10) | Nullable — from D-09: `EASY` · `MEDIUM` · `HARD` |
+| `topic` | varchar(100) | Nullable — from D-09 taxonomy (e.g. "Number System") |
+| `subject` | varchar(100) | Nullable — from D-09 taxonomy (e.g. "Mathematics") |
+| `difficulty_mismatch` | boolean | True when `tagged_difficulty` ≠ computed difficulty range from `p_value`; NULL if `tagged_difficulty` is NULL |
 
-Celery task `compute_item_analysis` runs after answer key is FINAL + results computed.
+Celery task `compute_item_analysis` runs after answer key is FINAL + results computed. When computing, it joins `exam_answer_key_entry → question_bank` (if linked) to populate D-09 metadata fields.
 
 ---
 
@@ -388,4 +418,4 @@ Celery task `compute_item_analysis` runs after answer key is FINAL + results com
 ---
 
 *Page spec complete.*
-*F-08 covers: score distribution analysis → item analysis (difficulty, discrimination, distractor) → institution comparison → trend over exam series. Read-only. Feeds back to Div D question quality review.*
+*F-08 covers: score distribution analysis → item analysis (difficulty, discrimination, distractor + D-09 tagged difficulty / topic mismatch detection) → institution comparison → trend over exam series. Read-only. Feeds back to Div D question quality review.*

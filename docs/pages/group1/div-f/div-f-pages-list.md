@@ -148,7 +148,9 @@ The central record linking a platform exam to a specific institution with timing
 | `pause_reason` | text | Nullable — set when Ops Manager pauses |
 | `paused_by_id` | FK → auth.User | Nullable |
 | `paused_at` | timestamptz | Nullable |
+| `resumed_at` | timestamptz | Nullable — set when status transitions from PAUSED back to ACTIVE |
 | `extended_by_minutes` | int | Default 0 — tracks cumulative extensions granted |
+| `rescheduled_from_id` | FK → `exam_schedule` (self) | Nullable — set when this schedule is a reschedule of a previous one. Preserves student registration continuity. |
 | `result_status` | varchar | Enum: `PENDING` · `COMPUTING` · `COMPUTED` · `REVIEWED` · `PUBLISHED` · `WITHHELD` |
 | `integrity_hold` | boolean | Default False — set by Integrity Officer; blocks result publish |
 | `created_by_id` | FK → auth.User | Exam Config Specialist or Ops Manager |
@@ -578,6 +580,26 @@ Division F is the primary notification-sending division. All outbound communicat
 | `check_support_ticket_sla` | Celery Beat — every 5 min | Flags overdue tickets; notifies Support Exec (35) and Ops Manager (34) | No retry |
 | `auto_escalate_integrity_flags` | Celery Beat — every 10 min | Checks flags with `flag_count ≥ integrity_flag_auto_escalate_threshold` → creates malpractice case draft | 3× at 60s |
 | `check_notification_quota` | Celery Beat — hourly | Compares daily send count vs quota limits → amber/red alerts in F-06 | No retry |
+| `auto_activate_exam` | Celery Beat — every 1 min | Detects `exam_schedule` with `status=SCHEDULED` and `scheduled_start ≤ now()` → sets `status=ACTIVE`; only fires if `auto_transition_to_active=True` in config | 3× at 30s |
+| `auto_complete_exam` | Celery Beat — every 1 min | Detects `status=ACTIVE` exams where `scheduled_end + grace_period_minutes ≤ now()` → sets `status=COMPLETED`; triggers `compute_exam_results` if `auto_compute_on_exam_complete=True` | 3× at 30s |
+| `auto_close_support_tickets` | Celery Beat — every 30 min | Sets `RESOLVED` tickets older than 24h to `CLOSED` | No retry |
+| `compute_exam_analytics_aggregate` | Celery chain after `publish_exam_results` COMPLETED | Aggregates score statistics (mean, median, std dev, distribution) into `exam_analytics_aggregate` — used by F-08 Tab 1 | 3× at 5min |
+| `compute_item_analysis` | Celery chain after answer key status → `FINAL` AND `exam_result_computation.status=COMPLETED` | Computes p-value and discrimination index per question into `exam_item_analysis` — used by F-08 Tab 2 | 3× at 5min |
+| `analyze_exam_integrity` | Manual trigger from F-07 Tab 3 [Run Analysis] | Runs IP clustering + answer similarity + submit-time distribution analysis; writes to `exam_integrity_analysis`; deduplicates: if analysis already exists for this exam_schedule, overwrites | 3× at 10min |
+| `deduplicate_malpractice_cases` | After `auto_escalate_integrity_flags` creates a case | Checks if an OPEN case already exists for the same `exam_schedule_id` and same `institution_id`; if yes, links flags to existing case instead of creating duplicate | 3× at 60s |
+
+**Task chain for post-exam workflow:**
+```
+exam_schedule.status → COMPLETED
+    ├── auto_compute_on_exam_complete=True?
+    │       └── compute_exam_results → compute_exam_ranks
+    │
+    └── (after coordinator approves + publish_exam_results PUBLISHED)
+            └── compute_exam_analytics_aggregate
+
+answer_key status → FINAL (F-05) + exam_result_computation.status=COMPLETED
+    └── compute_item_analysis  (F-08 Tab 2 now available)
+```
 
 ---
 

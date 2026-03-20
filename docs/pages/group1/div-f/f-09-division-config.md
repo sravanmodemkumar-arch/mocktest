@@ -83,8 +83,8 @@ Configuration for live exam operations (F-01, F-02 behaviour).
 | Max allowed extension per exam (minutes) | Number input | 30 | Maximum cumulative extension an Ops Manager can grant for one exam. Prevents runaway extensions. |
 | Config lock required before go-live | Toggle (locked ON) | ON | Platform policy — cannot be disabled. Exams without CONFIG_LOCKED status cannot be made ACTIVE. |
 | Config lock deadline (hours before start) | Number input | 24 | How many hours before `scheduled_start` the config must be locked. Shown as deadline in F-01. Min 1, max 72. |
-| Auto-transition to ACTIVE on start time | Toggle | ON | If ON: Celery automatically sets `exam_schedule.status → ACTIVE` at `scheduled_start`. If OFF: requires manual activation. |
-| Auto-transition to COMPLETED on end time | Toggle | ON | Celery auto-closes exam after `scheduled_end + grace_period`. |
+| Auto-transition to ACTIVE on start time | Toggle | ON | If ON: Celery task `auto_activate_exam` fires at `scheduled_start` and sets `exam_schedule.status → ACTIVE`. If OFF: `auto_activate_exam` is not queued for new exams — requires manual activation in F-01. |
+| Auto-transition to COMPLETED on end time | Toggle | ON | If ON: Celery task `auto_complete_exam` fires at `scheduled_end + grace_period_minutes` and sets `exam_schedule.status → COMPLETED`. If OFF: requires manual completion in F-01. |
 
 #### Section C — Integrity Defaults
 
@@ -95,6 +95,28 @@ Configuration for live exam operations (F-01, F-02 behaviour).
 | Auto-create integrity case on manual proctor flag | Toggle | OFF | If ON: any manual proctor flag automatically creates a draft case (aggressive setting). |
 
 **[Save Exam Day Settings]** → updates `exam_operational_config` singleton. Logs to change log. ✅ "Exam day settings saved" toast 4s.
+
+#### Section D — Automation Task Health (read-only)
+
+Live status of the critical Celery Beat tasks that power Division F automation. Refreshed on page load and every 60s via HTMX.
+
+| Task | Schedule | Last Run | Next Run | Status |
+|---|---|---|---|---|
+| `auto_activate_exam` | Per exam `scheduled_start` | {datetime or `—`} | {datetime or Disabled} | ✅ OK / ❌ FAILED / — Disabled |
+| `auto_complete_exam` | Per exam `scheduled_end + grace` | {datetime or `—`} | {datetime or Disabled} | ✅ OK / ❌ FAILED / — Disabled |
+| `update_exam_ops_snapshots` | Every {snapshot_frequency}s | {datetime} | {datetime} | ✅ OK / ❌ FAILED |
+| `close_answer_key_objection_window` | Per objection window close | {datetime or `—`} | {datetime or `—`} | ✅ OK / ❌ FAILED |
+| `auto_close_support_tickets` | Nightly 02:00 IST | {datetime} | Next midnight | ✅ OK / ❌ FAILED |
+
+**Status rules:**
+- `✅ OK` — last run completed successfully (Celery task result = SUCCESS)
+- `❌ FAILED` — last run raised an exception; red badge; in-app notification sent to Ops Manager (34) and Platform Admin (10) automatically
+- `— Disabled` — shown when the corresponding toggle (Section B) is OFF
+- `—` (dash) — task has not run yet (e.g., no exam scheduled today)
+
+**[View Celery Logs]** (Platform Admin only): opens read-only log drawer showing last 20 task executions with task_id, started_at, duration, and result/exception for the selected task row.
+
+**Note:** This section is **read-only** — it reflects the Celery worker's reported state. Task health issues require DevOps/Engineering (Div C) intervention if Celery workers are down. Ops Manager can toggle tasks on/off (Section B) but cannot directly restart Celery workers from F-09.
 
 ---
 
@@ -239,6 +261,8 @@ Pagination: 25 rows. **Export:** [Download Change Log CSV].
 | Read-only | Config Specialist (90) |
 | "You have read-only access" banner | Config Specialist (90) |
 | Locked settings (platform policy) | Visible but non-editable for all roles. Tooltip: "This setting is a platform policy and cannot be changed." |
+| View Automation Task Health (Section D) | Ops Manager (34), Config Specialist (90), Platform Admin (10) |
+| [View Celery Logs] action in Section D | Platform Admin (10) only |
 
 ---
 
@@ -252,6 +276,9 @@ Pagination: 25 rows. **Export:** [Download Change Log CSV].
 | Two Ops Managers edit config simultaneously | Last write wins. "Config was updated by another session since you opened this page. Reload to see latest values before saving." |
 | Notification rate raised above API tier capacity | No server-side block — Engineering (Div C) must manage API tier. Warning inline: "Ensure Meta API tier supports this rate. Contact DevOps before raising." |
 | Config save during active exam | Settings saved immediately. Changes to snapshot frequency and grace period apply to new exam schedules only. Active exams retain original settings (documented in section save confirmation toast). |
+| `auto_activate_exam` task fails at scheduled start | Exam remains SCHEDULED. F-02 "Starting Soon" panel shows ⚠️ "Auto-activation failed — activate manually in F-01." In-app alert sent to Ops Manager (34). `❌ FAILED` shown in Section D. |
+| `auto_complete_exam` task fails at scheduled end | Exam remains ACTIVE beyond intended end time. F-02 shows the exam as overrunning. Ops Manager must manually complete in F-01. In-app alert sent. |
+| Both auto-transition toggles turned OFF | F-09 shows inline confirmation: "Disabling auto-transitions requires manual activation and completion for every exam. Confirm?" — prevents accidental disablement. |
 
 ---
 
@@ -290,4 +317,4 @@ Pagination: 25 rows. **Export:** [Download Change Log CSV].
 ---
 
 *Page spec complete.*
-*F-09 covers: exam day monitoring thresholds → exam defaults (grace period, config lock deadline) → integrity auto-escalation → result computation defaults → objection window → notification rate limits → support SLA targets → change log.*
+*F-09 covers: exam day monitoring thresholds → exam defaults (grace period, config lock deadline) → auto_activate_exam / auto_complete_exam Celery task toggles → Automation Task Health panel → integrity auto-escalation → result computation defaults → objection window → notification rate limits → support SLA targets → change log.*

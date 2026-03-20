@@ -113,10 +113,11 @@ Header: "Compute Results — {Exam Name} at {Institution}"
 
 | Field | Default | Notes |
 |---|---|---|
-| Computation Method | RAW_MARKS | Select: Raw Marks · Percentile · Normalized |
-| Apply Normalization | OFF | Toggle — only for exams with multiple question sets |
-| Normalization Notes | — | Text area (required if normalization ON) |
-| Include Timed-Out Sessions | OFF | Whether to score sessions that expired before submission |
+| Computation Method | RAW_MARKS | Select: **Raw Marks** (score = correct × marks_per_q - wrong × negative_factor) · **Percentile** (ranks within percentile bands) · **Normalized** (mean-shifted normalisation for multi-paper exams — requires normalization notes) |
+| Apply Normalization | OFF | Toggle — only valid when exam ran with multiple question papers (SET-A, SET-B). If ON: scores normalised before ranking. |
+| Normalization Notes | — | Text area (required if normalization ON) — explains normalisation method used |
+| Include Timed-Out Sessions | OFF | Whether to score sessions that expired before submission. If OFF: timed-out sessions get score = 0 and rank = last |
+| **Rank Scope** | Per Institution | Select: **Per Institution** (rank within this institution's cohort — default) · **Cross-Institution** (rank across all institutions running this same exam on the same day). Cross-Institution requires all institutions to have submitted results first. |
 
 **Pre-computation summary (read-only):**
 - Total submissions: {N}
@@ -130,19 +131,30 @@ Header: "Compute Results — {Exam Name} at {Institution}"
 
 ### Computation In-Progress View
 
-When a computation task is RUNNING, it displays a progress panel (polls every 10s via `?part=computation-progress&id={id}`):
+When a computation task is RUNNING, it displays a progress panel (polls every 10s via `?part=computation-progress&id={id}`).
+
+**Two-stage progress:**
 
 ```
-Computing results for: {Exam Name} at {Institution}
-[████████████░░░░░░░░░░░░░░░░] 42%  (218 / 520 submissions processed)
-
+STAGE 1 — Score Computation
+[████████████░░░░░░░░░░░░░░░░] 42%  (218 / 520 submissions scored)
 Method: Raw Marks  |  Negative Marking: 0.25
 Started: 10:32 AM  |  Elapsed: 1 min 23s
-
 Status: RUNNING
+
+STAGE 2 — Rank Computation
+[░░░░░░░░░░░░░░░░░░░░░░░░░░░░] waiting…
+Rank Scope: Per Institution  |  Status: PENDING (starts after Stage 1)
 ```
 
-**[Cancel Computation]** — available to Results Coordinator. Sets `status = CANCELLED`. Does not delete any already-computed rows (partial data is rolled back by Celery on cancel).
+After Stage 1 COMPLETED → Celery auto-chains `compute_exam_ranks`. Progress panel updates:
+```
+STAGE 1 — Score Computation  ✅ Done (218 students)
+STAGE 2 — Rank Computation
+[████████████████████████████] 100% — Ranks assigned  ✅
+```
+
+**[Cancel Computation]** — available to Results Coordinator. Cancels both stages. Celery rolls back any partial result records via `SELECT FOR UPDATE` — no partial data visible to students.
 
 ---
 
@@ -249,6 +261,12 @@ Any ❌: "Fix validation errors before approving" — [Recompute] button shown.
 **[Approve & Publish]** — sets status = APPROVED → triggers `publish_exam_results` Celery task → sets to PUBLISHED.
 - Opens Publish Confirmation Modal before executing.
 - IMPORTANT: Not available if `integrity_hold = True` — button disabled with tooltip: "Integrity hold active — contact Exam Integrity Officer (91)"
+- After `publish_exam_results` COMPLETED: Celery chain triggers `compute_exam_analytics_aggregate` for F-08. No action needed by coordinator.
+
+**Result notification:**
+- If `auto_send_result_notification_on_publish = True` (F-09 config): Celery automatically triggers `send_notification_broadcast` using the template with `category = RESULT_RELEASE` and the activated ACTIVE template in F-06. If no ACTIVE result notification template exists, a warning is logged but publish proceeds.
+- If `auto_send_result_notification_on_publish = False`: A prompt appears after publish: "Results published. Send result notification to students? [Send Now via F-06] [Skip]"
+  - [Send Now via F-06]: opens F-06 Broadcast wizard in a new tab with `exam_schedule_id` pre-filled and `RESULT_RELEASE` template pre-selected.
 
 **[Withhold Results]** — opens Withhold Modal. Sets `exam_result_publication.status = WITHHELD`.
 

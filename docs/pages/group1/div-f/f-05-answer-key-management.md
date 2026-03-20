@@ -96,17 +96,27 @@ Exams completed (or ACTIVE with answer key ready for pre-staging) that do not ha
 
 #### Section A — Answer Key Grid
 
-One row per question in the paper.
+One row per question in the paper. **If the paper has sections, questions are grouped by section** (collapsible section headers, matching the paper's `sections_config`):
+
+```
+▼ Section 1 — General Intelligence (25 questions · 50 marks)
+  Q1 · Q2 · Q3 … Q25
+
+▼ Section 2 — General Awareness (25 questions · 50 marks)
+  Q26 · Q27 … Q50
+```
+
+Each section header shows: section name · question count · total marks · section-level average (read-only, post-computation).
 
 | Column | Notes |
 |---|---|
-| Q# | Question number |
+| Q# | Question number (continuous across sections, e.g. Q1–Q200) |
 | Correct Option | Select: A · B · C · D · E (or custom options) — editable |
 | Marks Awarded | Number (default from paper config; editable per question) |
 | Marks for Wrong | Number (negative marking — default from exam schedule config) |
 | Marks if No Attempt | Number (default 0) |
 | Status | `DRAFT` · `CONFIRMED` |
-| Objection Count | Count of objections for this question (shown when published) |
+| Objection Count | Count of filed objections for this question (shown after key published; amber badge if > 0) |
 | Actions | [Mark Confirmed] · [Flag for Review] |
 
 **Bulk actions:** Select all → [Set All Marks to {X}] · [Set All Negative to {Y}]
@@ -135,6 +145,15 @@ One row per question in the paper.
 **[Mark as Final]:** available when `status = PROVISIONAL` and objection window closed. Opens confirmation modal. After marking FINAL, no new objections accepted.
 
 **[Publish Revised Key]:** available when `status = FINAL` and a new draft was prepared (due to accepted objection). Reopens objection window for {N} hours (configurable). Triggers rescoring task.
+
+**[View Key Diff]** — available when status = REVISED or when a draft exists alongside a published key. Opens a 560px modal showing a diff table:
+
+| Q# | Previous Answer | New Answer | Change Reason |
+|---|---|---|---|
+| Q15 | B | C | Objection accepted — option B incorrect as per NCERT reference |
+| Q32 | A | CANCELLED | Question had printing error — full marks to all |
+
+Green = new (added/changed); red = previous. Useful for audit and institution communication.
 
 ---
 
@@ -236,10 +255,11 @@ All unresolved objections across all published answer keys.
 **[Submit Decision]** → sets `exam_answer_key_objection.status = ACCEPTED / REJECTED`. Triggers rescoring workflow if ACCEPTED. ✅ "Objection {accepted/rejected}" toast 4s.
 
 **Rescoring workflow on ACCEPT:**
-1. Updates `exam_answer_key` for the affected question
-2. Queues `compute_exam_results` recompute task (Celery) — recomputes scores for all students
-3. Notification sent to Results Coordinator (36) in F-04 that rescoring is ready for review
-4. Result publication status → DRAFT (forces re-review before republishing)
+1. Updates `exam_answer_key_entry` for the affected question (correct_option or is_cancelled set)
+2. Celery task `compute_exam_results` queued via `apply_async(countdown=10)` for this exam schedule
+3. **De-duplication:** If a rescoring task for this `exam_schedule_id` is already PENDING or RUNNING in `exam_result_computation`, the new ACCEPT does not queue a duplicate — instead it sets a `rescoring_pending_additional_changes = True` flag on the running computation. After that computation completes, a follow-up task automatically re-runs to pick up any additional accepted objections. This ensures all accepted objections in a batch are captured in one final recomputed result.
+4. `exam_result_publication.status → DRAFT` (forces re-review in F-04 before republishing)
+5. In-app notification sent to Results Coordinator (36): "Answer key updated for {Exam} — rescoring triggered. Review and re-approve results in F-04 before republishing to students."
 
 ---
 
