@@ -16,16 +16,16 @@
 | Total PostgreSQL schemas | 2,051 (2,050 tenant + 1 shared platform schema) |
 | Peak concurrent users | **74,000 simultaneous exam submissions** |
 | Lambda functions | ~60–80 across all services |
-| Redis keyspace at peak | ~40M keys |
 | Total students | 2.4M–7.6M |
 | Mobile installs | 3M+ (Flutter iOS + Android) |
 | Questions in bank | 2M+ |
 | AWS primary region | ap-south-1 (Mumbai) · DR: ap-southeast-1 (Singapore) |
 | Active CI/CD repos | ~12 (portal · mobile · infra · content · AI pipeline) |
 | RDS instance | PostgreSQL 15 · Multi-AZ · db.r6g.2xlarge + 2 read replicas |
-| ElastiCache | Redis 7.x · cluster mode · 3 shards × 2 nodes |
+| Cache layer | Memcached (django.core.cache) — no Redis |
 | CloudFront distributions | 3 (portal · static assets · API edge) |
 | Monthly AI API spend | ₹8L–₹15L (LLM for MCQ generation) |
+| Monthly AWS infra spend | ₹70K–₹90K (Lambda + RDS + CloudFront + ECS) |
 | CERT-In breach reporting window | **6 hours** from discovery |
 | DPDPA 2023 breach notification | **72 hours** to Data Protection Board |
 
@@ -36,13 +36,13 @@
 | # | Role | Level | Owns | Cannot Do |
 |---|---|---|---|---|
 | 10 | Platform Admin | 5 | All tenant mgmt · user provisioning · system config · emergency overrides | Nothing blocked |
-| 11 | Backend Engineer | 4 | API config · Lambda deployments · DB migrations · service health | Billing config |
-| 12 | Frontend Engineer | 4 | HTMX templates · CDN cache invalidation · R2/S3 static assets | DB access |
-| 13 | Mobile Engineer — Flutter | 4 | Flutter builds · Hive encryption · FCM server config · App Store submission | DB access |
-| 14 | DevOps / SRE Engineer | 4 | AWS Lambda · ECS · RDS · ElastiCache · CI/CD · auto-scaling · rollbacks · on-call | Content · billing |
-| 15 | Database Administrator | 4 | PostgreSQL all 2,051 schemas · backups · migrations · query tuning · PITR | Business config |
-| 16 | Security Engineer | 4 | JWT secrets · KMS · WAF rules · CERT-In reports · DPDPA breach · VAPT coordination | Content · billing |
-| 17 | AI / ML Engineer | 4 | MCQ generation pipeline · LLM model config · prompt versioning · AI API cost | Content approval |
+| 11 | Backend Engineer | 4 | API config · Lambda deployments · env vars · DB migrations · Celery beat · service health | Billing config |
+| 12 | Frontend Engineer | 4 | HTMX templates · CDN cache invalidation · R2/S3 static assets · Core Web Vitals | DB access |
+| 13 | Mobile Engineer — Flutter | 4 | Flutter builds · Hive encryption · FCM server config · App Store submission · Hive key schedule (read) | DB access · secret rotation |
+| 14 | DevOps / SRE Engineer | 4 | AWS Lambda · ECS · RDS · CI/CD · auto-scaling · rollbacks · on-call · AWS costs · DNS/SSL | Content · billing |
+| 15 | Database Administrator | 4 | PostgreSQL all 2,051 schemas · backups · migrations · query tuning · PITR · RDS params · PgBouncer config | Business config |
+| 16 | Security Engineer | 4 | JWT secrets · KMS · WAF rules · CERT-In reports · DPDPA breach · VAPT scheduling · OAuth app registry | Content · billing |
+| 17 | AI / ML Engineer | 4 | MCQ generation pipeline · LLM model config · prompt versioning · AI API cost · rejection thresholds | Content approval |
 
 ---
 
@@ -54,7 +54,7 @@
 |---|---|---|---|---|---|---|
 | C-01 | Tenant Manager | `/engineering/tenants/` | `c-01-tenant-manager.md` | P0 | ✅ | Full CRUD for all 2,050 institution tenants: schema provisioning · plan assignment · suspension (read-only mode) · hard delete with 30-day grace period · emergency data wipe · Celery async provisioning with live progress bar · schema health check · tenant impersonation (Platform Admin only) |
 | C-02 | Staff Account Manager | `/engineering/staff/` | `c-02-staff-accounts.md` | P1 | ✅ | All 81 platform staff accounts across 15 divisions: role assignment · 2FA enforcement per level · account suspension · login history · failed login tracking · quarterly access review workflow · SSO (Google Workspace SAML) config · emergency account lock |
-| C-03 | System Configuration | `/engineering/system-config/` | `c-03-system-config.md` | P1 | ✅ | Global platform settings: maintenance mode toggle (affects all 2,050 portals simultaneously) · session timeouts per access level · global rate limit overrides · CORS allowed origins · AWS SES sender domain config · Redis cache TTL defaults · emergency master kill switches · feature flag master override |
+| C-03 | System Configuration | `/engineering/system-config/` | `c-03-system-config.md` | P1 | ⬜ | Global platform settings: maintenance mode toggle (affects all 2,050 portals simultaneously) · session timeouts per access level · global rate limit overrides · CORS allowed origins · AWS SES sender domain config · cache TTL defaults · emergency master kill switches · feature flag master override |
 
 ---
 
@@ -83,15 +83,17 @@
 
 ---
 
-## DevOps / SRE Engineer — Pages (Role 14) · 3 pages
+## DevOps / SRE Engineer — Pages (Role 14) · 5 pages
 
 > Most operationally critical role. Owns the platform at 74K peak exam day.
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| C-08 | Infrastructure Monitor | `/engineering/infrastructure/` | `c-08-infrastructure.md` | P0 | ✅ | Real-time AWS: Lambda total + reserved concurrency per function · ECS cluster CPU/memory/task count · RDS primary + replicas (CPU · connections · IOPS · storage · replica lag) · ElastiCache memory/hit-rate/evictions · ALB request rate + 5xx · CloudFront bandwidth + cache ratio · S3 bucket sizes · All with WRITE controls: change concurrency · restart ECS tasks · promote read replica · drain ALB target |
-| C-09 | CI/CD Pipeline Manager | `/engineering/cicd/` | `c-09-cicd.md` | P0 | ✅ | GitHub Actions runs across all 12 repos · pipeline stages (Test → Lint → Build → Deploy Staging → QA Gate → Pre-Prod → Prod) · manual approval gate for production · parallel pipeline grid view · rollback (re-run last passing workflow) · failed pipeline log tail · integration with QA sign-off (Div B page 21) and Release Manager (Div B page 03) · deployment frequency + DORA metrics |
-| C-10 | Auto-scaling & Capacity Planner | `/engineering/scaling/` | `c-10-scaling.md` | P1 | ✅ | Lambda reserved + provisioned concurrency config per function · scheduled scaling rules (pre-warm 30 min before exam start) · ECS task min/max per service · RDS read replica add/remove · ElastiCache shard/node scaling · exam calendar integration: upcoming peak events with estimated load · capacity simulation: "at 80K VUs — which service throttles first?" · cost impact of scaling decisions |
+| C-08 | Infrastructure Monitor | `/engineering/infrastructure/` | `c-08-infrastructure.md` | P0 | ⬜ | Real-time AWS: Lambda total + reserved concurrency per function · ECS cluster CPU/memory/task count · RDS primary + replicas (CPU · connections · IOPS · storage · replica lag) · Memcached hit-rate/evictions · ALB request rate + 5xx · CloudFront bandwidth + cache ratio · S3 bucket sizes · All with WRITE controls: change concurrency · restart ECS tasks · promote read replica · drain ALB target |
+| C-09 | CI/CD Pipeline Manager | `/engineering/cicd/` | `c-09-cicd.md` | P0 | ⬜ | GitHub Actions runs across all 12 repos · pipeline stages (Test → Lint → Build → Deploy Staging → QA Gate → Pre-Prod → Prod) · manual approval gate for production · parallel pipeline grid view · rollback (re-run last passing workflow) · failed pipeline log tail · integration with QA sign-off (Div B page 21) and Release Manager (Div B page 03) · deployment frequency + DORA metrics |
+| C-10 | Auto-scaling & Capacity Planner | `/engineering/scaling/` | `c-10-scaling.md` | P1 | ⬜ | Lambda reserved + provisioned concurrency config per function · scheduled scaling rules (pre-warm 30 min before exam start) · ECS task min/max per service · RDS read replica add/remove · cache node scaling · exam calendar integration: upcoming peak events with estimated load · capacity simulation: "at 80K VUs — which service throttles first?" · cost impact of scaling decisions |
+| C-19 | AWS Infrastructure Cost Monitor | `/engineering/aws-costs/` | `c-19-aws-costs.md` | P1 | ⬜ | Per-service monthly AWS spend via Cost Explorer API: Lambda invocations · RDS storage + I/O · CloudFront egress · ECS compute · S3 storage · SES · ACM · month-over-month trend · budget vs actual · cost anomaly alerts · Reserved Instance coverage % · cost breakdown per exam peak event · ₹ spend forecast |
+| C-20 | DNS & Certificate Manager | `/engineering/dns-certs/` | `c-20-dns-certs.md` | P1 | ⬜ | Route53 DNS record management (A · CNAME · TXT · MX) for platform domains + 2,050 institution custom subdomains · ACM SSL certificate inventory (domain · expiry date · auto-renewal status · validation method) · expiry calendar (30/14/7 day alerts) · DNS propagation checker · certificate request workflow · CloudFront distribution ↔ cert mapping · Security Engineer read access |
 
 ---
 
@@ -148,11 +150,13 @@
 | C-11 Database Admin | ✅ Full | 👁 Read | — | — | 👁 Read | ✅ Full | — | — |
 | C-12 DB Migrations | ✅ Full | ✅ Full | — | — | 👁 Read | ✅ Full | — | — |
 | C-13 Security Ops | ✅ Full | — | — | — | 👁 Read | — | ✅ Full | — |
-| C-14 Secrets | ✅ Full | — | — | — | ✅ Full | — | ✅ Full | — |
+| C-14 Secrets | ✅ Full | — | — | 👁 Mobile tab only | ✅ Full | — | ✅ Full | — |
 | C-15 AI Pipeline | ✅ Full | 👁 Read | — | — | 👁 Read | — | — | ✅ Full |
 | C-16 AI Costs | ✅ Full | — | — | — | 👁 Read | — | — | ✅ Full |
 | C-17 Log Viewer | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
 | C-18 Incidents | ✅ Full | 👁 Read | — | — | ✅ Full | 👁 Read | ✅ Full | — |
+| C-19 AWS Costs | ✅ Full | — | — | — | ✅ Full | — | 👁 Read | — |
+| C-20 DNS & Certs | ✅ Full | — | — | — | ✅ Full | — | 👁 Read | — |
 
 > ✅ Full = read + write + destructive · 👁 Read = read-only · — = no access
 
@@ -180,24 +184,36 @@ P0 — Before any institution goes live
   C-01  Tenant Manager          (platform cannot run without tenant provisioning)
   C-04  API Health Monitor      (exam submit < 200ms SLA — must track from day 1)
   C-08  Infrastructure Monitor  (74K exam day — real-time AWS with write controls)
+                                 + G4 amendment: Celery Queues tab
   C-09  CI/CD Pipeline Manager  (every deploy goes through this)
   C-11  Database Admin          (2,051 schemas — DBA needs live monitoring)
+                                 + G5 amendment: DB Configuration tab
   C-13  Security Operations     (WAF · CERT-In 6h · DPDPA 72h — compliance from day 1)
+                                 + G6 amendment: VAPT Schedule tab
   C-14  Secret & Key Manager    (JWT rotation · KMS — security foundation)
+                                 + G7 amendment: OAuth App Registry tab
+                                 + G8 amendment: Mobile Keys tab
   C-18  Incident Manager        (P0 incidents need runbooks before first exam)
+                                 + G10 amendment: Alert Rules tab
 
 P1 — Sprint 2
   C-02  Staff Account Manager   (all 81 roles need accounts before platform opens)
   C-03  System Configuration    (maintenance mode · rate limits · session config)
   C-05  Service Deployment Mgr  (Lambda version control and rollback)
+                                 + G1 amendment: Environment Variables tab
+                                 + G2 amendment: Scheduled Jobs tab (Celery beat)
   C-10  Auto-scaling Planner    (pre-warm for exam peaks — needed before first 74K event)
   C-12  Backup & Migration Mgr  (snapshot + PITR before data grows large)
   C-17  Log Viewer              (debugging needs logs from day 1)
+  C-19  AWS Infrastructure Cost Monitor  (track ₹70K–90K/month infra spend)
+  C-20  DNS & Certificate Manager        (2,050+ custom domain SSL expiry management)
 
 P2 — Sprint 3
   C-06  CDN & Asset Manager     (when static assets are significant in scale)
+                                 + G3 amendment: Performance Monitor tab (Core Web Vitals)
   C-07  Mobile Build Pipeline   (when Flutter app goes to stores)
   C-15  AI Pipeline Dashboard   (when MCQ AI generation is active)
+                                 + G9 amendment: Pipeline Config tab (rejection thresholds)
   C-16  AI Cost Monitor         (when AI spend reaches ₹8L+/month)
 ```
 
@@ -212,7 +228,7 @@ P2 — Sprint 3
 | Provisioned concurrency on exam endpoints | Warm Lambdas always ready | Cold starts at 74K = 3–5s delay for first request; provisioned concurrency guarantees < 200ms response |
 | Multi-AZ RDS + 2 read replicas | High availability | Primary failure during exam → 74K students lose connection; Multi-AZ auto-failover < 60s |
 | Shared RDS, separate schemas | Cost vs isolation balance | 2,050 separate RDS instances = ₹3 Cr/month; shared RDS with schema isolation = ₹80K/month |
-| Redis cluster (3 shards × 2 nodes) | Horizontal Redis scaling | Single node bottlenecks at ~40M keys during peak exam; cluster distributes keys across shards |
+| Memcached (django.core.cache) | Application-level cache | ORM-first approach; Memcached added only where ORM query latency is unacceptable at scale |
 | PgBouncer transaction-mode pooling | Connection management | 2,050 tenants × 10 Django workers = 20,500 potential connections; PostgreSQL max_connections ≈ 500 |
 | Celery for async tenant provisioning | Non-blocking | Provisioning 15,000 students takes 15–25 min; Celery offloads to workers, HTTP responds immediately |
 | Prompt versioning for AI | Git-tracked, A/B testable | Prompt changes directly affect question quality; bad prompts increase hallucination; rollback must be instant |
@@ -231,7 +247,65 @@ P2 — Sprint 3
 
 ---
 
+---
+
+## Functional Coverage Matrix — All 8 Roles
+
+| # | Job to Be Done | Role | Pages Covering It |
+|---|---|---|---|
+| 1 | Create, suspend, delete institution tenants | Platform Admin | C-01 |
+| 2 | Provision and manage all 81 staff accounts | Platform Admin | C-02 |
+| 3 | Configure global platform settings + kill switches | Platform Admin | C-03 |
+| 4 | Monitor Lambda SLA: exam submit < 200ms | Backend + DevOps | C-04 |
+| 5 | Deploy Lambda versions, canary routing, rollback | Backend + DevOps | C-05 |
+| 6 | Manage Lambda environment variables | Backend | C-05 (G1) |
+| 7 | View and control Celery beat scheduled jobs | Backend | C-05 (G2) |
+| 8 | Invalidate CDN cache, manage static assets | Frontend | C-06 |
+| 9 | Monitor Core Web Vitals and JS error rate | Frontend | C-06 (G3) |
+| 10 | Build Flutter iOS/Android, manage code signing | Mobile | C-07 |
+| 11 | Submit to App Store / Google Play | Mobile | C-07 |
+| 12 | View Hive AES-256 key rotation schedule | Mobile | C-14 (G8) |
+| 13 | Monitor all AWS infrastructure in real-time with write controls | DevOps | C-08 |
+| 14 | Monitor Celery queue depth and worker health | DevOps | C-08 (G4) |
+| 15 | Manage CI/CD pipeline across 12 repos | DevOps | C-09 |
+| 16 | Configure auto-scaling and pre-warm for exam peaks | DevOps | C-10 |
+| 17 | Track AWS infrastructure spend per service | DevOps | C-19 |
+| 18 | Manage DNS records and SSL certificate inventory | DevOps | C-20 |
+| 19 | Configure metric alert thresholds → PagerDuty routing | DevOps | C-18 (G10) |
+| 20 | Monitor 2,051 schema health, slow queries, locks | DBA | C-11 |
+| 21 | Change RDS parameter groups and PgBouncer config | DBA | C-11 (G5) |
+| 22 | Manage backups, PITR, Django migrations, archival | DBA | C-12 |
+| 23 | Manage WAF rules, CERT-In incidents, DPDPA breach | Security | C-13 |
+| 24 | Schedule and track VAPT engagements | Security | C-13 (G6) |
+| 25 | Rotate JWT keys, KMS CMKs, API credentials | Security | C-14 |
+| 26 | Manage OAuth app registry (scopes, redirect URIs) | Security | C-14 (G7) |
+| 27 | Manage MCQ AI generation pipeline and prompt versions | AI/ML | C-15 |
+| 28 | Configure auto-rejection thresholds | AI/ML | C-15 (G9) |
+| 29 | Monitor AI API token spend and budget | AI/ML | C-16 |
+| 30 | Search and trace logs across all services | All roles | C-17 |
+| 31 | Manage P0–P2 incidents with runbooks | Admin + DevOps + Security | C-18 |
+
+---
+
+## Known Functional Gaps — Amendment Required
+
+| Gap ID | Gap Description | Severity | Resolution |
+|---|---|---|---|
+| G1 | **Lambda Env Vars missing** — Backend Engineer cannot view or edit Lambda environment variables (DB connection strings, API key refs, feature toggles). C-05 covers version/routing only | High | Add "Environment Variables" tab to C-05 |
+| G2 | **Celery Beat Schedule missing** — No page shows scheduled background jobs (nightly aggregations, health checks, archival). Nobody can pause, trigger, or audit beat tasks | High | Add "Scheduled Jobs" tab to C-05 |
+| G3 | **Frontend Performance Monitor missing** — Frontend Engineer has no view of Core Web Vitals (LCP/FID/CLS), JS error rate, or real-user latency percentiles | Medium | Add "Performance Monitor" tab to C-06 |
+| G4 | **Celery Queue Health missing** — DevOps has no visibility into worker count per queue, queue depth, failed task rate, dead-letter queue items, or worker restart | High | Add "Celery Queues" tab to C-08 |
+| G5 | **DB Configuration missing** — DBA can monitor but cannot change RDS parameter groups (work_mem, max_connections, autovacuum settings) or PgBouncer pool sizes | High | Add "DB Configuration" tab to C-11 |
+| G6 | **VAPT Scheduling missing** — C-13 shows VAPT results but Security Engineer cannot schedule engagements, track scope, or log vendor communications | Medium | Add "VAPT Schedule" tab to C-13 |
+| G7 | **OAuth App Registry missing** — C-14 stores OAuth client secrets but has no registry of OAuth apps (scopes, redirect URIs, owner, last used, revoke) | Medium | Add "OAuth App Registry" tab to C-14 |
+| G8 | **Mobile Engineer locked out of key schedule** — Access matrix gives Mobile Engineer zero access to C-14 but they own Hive AES-256 and FCM keys. Must see rotation dates to plan releases | Medium | Add "Mobile Keys" read-only tab to C-14 + grant Mobile Eng access to that tab only |
+| G9 | **AI rejection thresholds read-only** — C-15 shows the rejection funnel but AI/ML Engineer cannot configure hallucination score cutoff, duplicate similarity %, or formatting rules | Medium | Add "Pipeline Config" tab to C-15 |
+| G10 | **Alert rules config missing** — C-18 has on-call schedule and PagerDuty integration but nobody can configure metric alert thresholds (e.g. Lambda error rate > 5% → P1) | High | Add "Alert Rules" tab to C-18 |
+
+---
+
 *Last updated: 2026-03-20*
-*Total pages: 18 (C-01 to C-18)*
+*Total pages: 20 (C-01 to C-18 original + C-19 AWS Costs + C-20 DNS & Certs)*
 *Roles covered: 8 (Roles 10–17)*
-*Status: Pages list complete — individual page specs pending*
+*Functional gaps identified: 10 · All 10 assigned as amendments (G1–G10) to existing pages*
+*New pages added: 2 (C-19, C-20)*
