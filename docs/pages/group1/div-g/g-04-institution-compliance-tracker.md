@@ -276,7 +276,10 @@ Row-level errors shown inline. Cannot proceed if any ❌ errors exist.
 | All staff CLEAR but some expired | Status = AT_RISK even if coverage_pct = 100%, because `bgv_expired > 0`. |
 | Escalation of already-COMPLIANT institution | System allows escalation (e.g. for POCSO-related concerns not reflected in coverage %). Warning: "This institution is currently COMPLIANT. Are you sure you want to escalate?" |
 | Bulk reminder sent to compliant institution | Filtered out automatically. Warning: "{N} compliant institutions excluded from bulk reminder." |
-| Institution deactivated on platform | Row persists in tracker with "DEACTIVATED" badge. BGV records retained per legal retention policy (7 years). No new BGV requests can be created for deactivated institutions. |
+| Institution deactivated on platform | Row persists in tracker with "DEACTIVATED" badge. BGV records retained per legal retention policy (7 years). No new BGV requests can be created for deactivated institutions. Institution deactivation status sourced from institution master (Div C); `bgv_institution_compliance` does not store a deactivated flag — deactivated status shown via join on institution master at query time. |
+| Compliance percentage display after real-time update | When a verification completes (final_result set), `bgv_institution_compliance` record is updated within seconds via post-save signal. G-04 institution table reads from Memcached (5-min TTL). For immediate accuracy, BGV Manager can use `?nocache=true` to force fresh read. |
+| CSV import > 500 rows | Upload blocked: "CSV contains {N} rows. Maximum is 500 rows per import. Split into multiple imports." |
+| CSV import with name matching existing person at another institution | After import, system runs `person_id` deduplication check (name_hash + DOB). If match found: BGV Executive receives in-app task: "Possible duplicate staff across institutions — review and link if same person." |
 
 ---
 

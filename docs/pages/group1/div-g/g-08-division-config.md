@@ -19,6 +19,7 @@
 - `/bgv/config/?part=sla-config` — SLA configuration tab
 - `/bgv/config/?part=notification-config` — notification defaults tab
 - `/bgv/config/?part=compliance-thresholds` — compliance thresholds tab
+- `/bgv/config/?part=data-retention` — data retention & SCWC config tab
 - `/bgv/config/?part=change-log` — change log tab
 
 ---
@@ -50,7 +51,8 @@ G-08 is the settings page for Division G's operational policies. It controls the
 | 3 | SLA Configuration |
 | 4 | Notification Config |
 | 5 | Compliance Thresholds |
-| 6 | Change Log |
+| 6 | Data Retention & SCWC Config |
+| 7 | Change Log |
 
 ---
 
@@ -244,6 +246,27 @@ Stale detection: if `last_run` > 2× expected interval and task hasn't run: ⚠�
 Refreshed every 60s via HTMX.
 
 [View Celery Logs] (Platform Admin only): read-only log drawer, last 20 executions per task.
+
+#### Celery Task Reference
+
+**`notify_manager_flagged_pending`** — Hourly
+- **Inputs:** Verifications where `status = AWAITING_SUPERVISOR_REVIEW` and `updated_at < now() - result_review_sla_hours`
+- **Outputs:** In-app notification to BGV Manager (39): "FLAGGED verification {staff_ref} at {institution} has been awaiting Supervisor approval for {N}h. SLA: {flagged_notify_sla_hours}h."
+- **Dedup:** Only one notification per verification per 4-hour window. Clears when `status` transitions out of AWAITING_SUPERVISOR_REVIEW.
+
+**`retry_failed_vendor_submissions`** — Hourly
+- **Inputs:** Verifications where `status = VENDOR_SENT` AND `last_submission_error IS NOT NULL` AND `submission_attempt_count < 3`
+- **Outputs:** Retries vendor API call; on success: clears `last_submission_error`; on failure: increments `submission_attempt_count`. If `submission_attempt_count = 3`: status reverts to `READY_FOR_VENDOR`, in-app alert sent to assigned BGV Executive and BGV Ops Supervisor: "Vendor submission failed after 3 attempts for {staff_ref}. Manual resubmission required."
+- **Dedup:** Exponential backoff: attempt 1 at 1h, attempt 2 at 2h, attempt 3 at 4h from first failure.
+
+**`auto_create_bgv_renewals`** — Nightly 01:00 IST
+- **Inputs:** `bgv_staff` where `current_verification.expiry_date ≤ today + bgv_operational_config.renewal_lead_days` AND no active RENEWAL or RE_VERIFICATION in progress (`bgv_verification.status NOT IN (DOCUMENTS_PENDING, DOCUMENTS_RECEIVED, READY_FOR_VENDOR, VENDOR_SENT, VENDOR_RETURNED, AWAITING_SUPERVISOR_REVIEW)`)
+- **Outputs:** Creates `bgv_verification` (type: RENEWAL, status: DOCUMENTS_PENDING, assigned_to_id: NULL). Sends notification to institution admin. Sends in-app summary to BGV Ops Supervisor (92): "{N} renewal requests created tonight — {M} queued for assignment."
+
+**`update_bgv_institution_compliance`** — Nightly 23:00 IST + real-time triggers
+- **Real-time trigger:** Fires on `bgv_verification.final_result` change (CLEAR / FLAGGED / INCONCLUSIVE / CANCELLED) and on `bgv_staff.bgv_status` change. Recalculates only the affected institution's `bgv_institution_compliance` record.
+- **Nightly full pass:** Recalculates all institutions — catches expiry rollovers, deactivated staff, bulk imports from the day.
+- Memcached cache for G-04/G-01: invalidated on real-time trigger; TTL 5 min otherwise.
 
 ---
 

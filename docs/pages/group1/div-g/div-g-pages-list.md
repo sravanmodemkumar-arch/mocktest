@@ -165,6 +165,7 @@ The master record for a staff member requiring BGV.
 | `has_minor_access` | boolean | Whether this staff member has physical/digital access to minors |
 | `bgv_status` | varchar | Enum: `NOT_INITIATED` · `DOCUMENTS_REQUESTED` · `DOCUMENTS_RECEIVED` · `UNDER_REVIEW` · `VENDOR_SENT` · `VENDOR_RETURNED` · `CLEAR` · `FLAGGED` · `INCONCLUSIVE` · `EXPIRED` · `SUSPENDED` |
 | `current_verification_id` | FK → `bgv_verification` | Latest active verification |
+| `person_id` | UUID | Nullable — shared across multiple `bgv_staff` records if same individual works at multiple institutions. Dedup key: `full_name_hash + date_of_joining`. If two institutions submit the same person (name + DOB match), system prompts BGV Executive: "Possible duplicate: {institution_name} has a matching staff record. Link as same person?" Linking shares verification history but keeps institution-specific BGV. POCSO flag on any linked record: all linked records flagged. |
 | `institution_bgv_ref` | varchar(100) | Institution's own HR reference for this staff |
 | `created_at` | timestamptz | — |
 | `updated_at` | timestamptz | — |
@@ -198,7 +199,12 @@ One BGV run for a staff member. A staff member may have multiple verifications o
 | `reviewed_by_id` | FK → auth.User | BGV Ops Supervisor who approved final decision |
 | `reviewed_at` | timestamptz | Nullable |
 | `final_result` | varchar | Enum: `PENDING` · `CLEAR` · `CLEAR_OVERRIDE` · `FLAGGED` · `INCONCLUSIVE` · `CANCELLED`. `CLEAR_OVERRIDE` = supervisor overrode vendor FLAGGED to CLEAR; flagged in audit log. |
-| `sla_due_at` | timestamptz | `initiated_at + bgv_config.doc_collection_sla_days` (working days, Mon–Fri IST, excluding national holidays) |
+| `doc_collection_sla_due_at` | timestamptz | Set at initiation: `initiated_at + bgv_config.doc_collection_sla_days` (working days). Used for overdue alert in G-02 Docs Pending tab. |
+| `doc_review_sla_due_at` | timestamptz | Set when `status → DOCUMENTS_RECEIVED`: `+bgv_config.doc_review_sla_hours`. Used for overdue alert in G-02 Documents Received tab. |
+| `vendor_submission_sla_due_at` | timestamptz | Set when `status → READY_FOR_VENDOR`: `+bgv_config.vendor_submission_sla_hours`. |
+| `result_review_sla_due_at` | timestamptz | Set when `status → VENDOR_RETURNED`: `+bgv_config.result_review_sla_hours`. |
+| `flagged_notify_sla_due_at` | timestamptz | Set when `status → AWAITING_SUPERVISOR_REVIEW`: `+bgv_config.flagged_notify_sla_hours`. Used by `notify_manager_flagged_pending` task. |
+| `sla_due_at` | timestamptz | Overall end-to-end SLA: `initiated_at + sum of all stage SLAs + vendor.sla_hours`. Used for the SLA column in G-02 queue table countdown. |
 | `expiry_date` | date | Nullable — set when `final_result IN (CLEAR, CLEAR_OVERRIDE)`; `clear_date + bgv_config.validity_years` |
 | `renewal_notified` | boolean | Whether renewal reminder sent |
 | `renewal_notified_at` | timestamptz | Nullable |

@@ -149,6 +149,47 @@ Sensitive fields — masked by default. BGV Manager (39) only.
 
 **Warning:** "API credentials are encrypted at rest. Never share these credentials outside the BGV team. If you suspect a key has been compromised, [Rotate API Key] immediately and notify the vendor."
 
+#### API Key Rotation Workflow
+
+**[Rotate API Key]** — shown below API Key field. BGV Manager (39) and Platform Admin (10) only.
+
+Used when: (a) vendor proactively rotates key on schedule, (b) key is suspected compromised, (c) BGV Manager is offboarding.
+
+**Rotation modal:**
+1. "Enter new API key from vendor:" — password input (masked)
+2. "Confirm new API key:" — repeat field
+3. "Reason:" — text (required: SCHEDULED_ROTATION / COMPROMISE_SUSPECTED / STAFF_CHANGE / OTHER)
+4. [Test New Key] — mandatory before save. Sends health ping with new key. Must show ✅ before [Confirm Rotation] is enabled.
+5. [Confirm Rotation] — atomically replaces encrypted key; old key is NOT retained. Logs: `VENDOR_API_KEY_ROTATED` in `bgv_audit_log`.
+
+**During rotation (after [Confirm Rotation]):**
+- In-flight VENDOR_SENT verifications are unaffected — they use the vendor's tracking ref, not the API key, for status polling.
+- BGV Manager should notify DevOps (Div C) if webhook secret is also being rotated (requires server-side webhook endpoint secret update).
+
+**Compromised key protocol:**
+- Select reason: COMPROMISE_SUSPECTED
+- After rotation, page shows: "Previous key may still be active at vendor side for up to 10 minutes. All new submissions use the rotated key. If vendor confirms old key is still active, contact vendor support immediately."
+- BGV Manager should also notify Security Engineer (16) via out-of-band channel.
+
+#### Vendor Result Schema
+
+Different vendors return results in different formats. G-05 documents the normalized schema EduForge expects vendors to map to:
+
+| Normalized Field | Expected Values | Notes |
+|---|---|---|
+| `result` | `CLEAR` · `FLAGGED` · `INCONCLUSIVE` | Required |
+| `offense_found` | boolean | Required when result = FLAGGED |
+| `offense_type` | string | Required when offense_found = true |
+| `offense_date` | ISO 8601 date or null | Optional |
+| `pocso_flag` | boolean | Required — must explicitly state true/false |
+| `criminal_record_found` | boolean | For CRIMINAL check |
+| `address_verified` | boolean | For ADDRESS check |
+| `employment_verified` | boolean | For EMPLOYMENT check |
+| `confidence_score` | float 0–1 | Optional — vendor's confidence in result |
+| `report_url` | string (URL) | Optional — link to vendor's PDF report |
+
+**Vendor onboarding responsibility:** BGV Manager must confirm with vendor how their fields map to this schema. Document field mapping in vendor Notes field (Details Tab). Any vendor not supporting `pocso_flag` field must be manually reviewed by BGV Executive before CLEAR result is accepted.
+
 #### Performance Tab
 
 Vendor performance metrics and trends.

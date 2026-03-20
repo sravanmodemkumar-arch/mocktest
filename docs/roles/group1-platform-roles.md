@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 81 roles across 14 divisions.
+> Total: 90 roles across 15 divisions.
 
 ---
 
@@ -10,9 +10,9 @@
 |---|---|---|
 | Schools | 1,000 | ~12,00,000 |
 | Colleges | 800 | ~4,80,000 |
-| Coaching Centres | 100 | ~8,00,000 |
-| Online Exam Domains | 6 | ~30,000 |
-| **Total** | **1,900+ institutions** | **~25,00,000** |
+| Coaching Centres | 100 | ~10,00,000 |
+| Institution Groups | 150 | (child institutions counted above) |
+| **Total** | **2,050 institutions** | **~24L–76L (2.4M–7.6M)** |
 
 Peak concurrent exam load: **74,000 simultaneous submissions**
 
@@ -163,26 +163,30 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 > POCSO Act 2012 — mandatory BGV for all staff with minor access.
 > Any unverified staff found = legal liability for EduForge.
-> 1,900+ institutions · ~28,000 staff requiring BGV · NCPCR mandatory reporting.
+> 2,050 institutions · ~28,000 staff requiring BGV · NCPCR mandatory reporting within 24h.
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 39 | BGV Manager | 3 | BGV policy, vendor management, escalation to institutions, POCSO oversight |
-| 40 | BGV Executive | 3 | Process BGV requests, document review, vendor submission, status updates |
-| 41 | POCSO Compliance Officer | 1 | Audit BGV coverage across all institutions, NCPCR mandatory reporting |
-| 92 | BGV Operations Supervisor | 3 | Approve FLAGGED verification decisions; queue assignment; BGV Executive oversight |
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 39 | BGV Manager | 3 | BGV policy, vendor onboarding & config, API key rotation, escalation to institutions, institution compliance tracker, compliance report export, POCSO oversight | Cannot process individual verifications (Executive scope) |
+| 40 | BGV Executive | 3 | Process assigned BGV requests, document review & upload, vendor submission, result recording, notes | Cannot approve FLAGGED results; cannot view institution-level compliance; cannot configure vendors |
+| 41 | POCSO Compliance Officer | 1 | Read-only audit of BGV coverage across all institutions; NCPCR mandatory annual report generation | All writes blocked — cannot escalate, add staff, log communications, or approve any decision |
+| 92 | BGV Operations Supervisor | 3 | Approve FLAGGED/INCONCLUSIVE verification decisions; queue assignment across executives; SLA monitoring; bulk vendor submission | Cannot configure vendors or system settings; cannot self-approve decisions submitted by themselves |
 
 ---
 
 ## Division H — Data & Analytics (5 roles)
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 42 | Analytics Manager | 1 | Platform-wide MIS — usage, revenue, exam performance trends |
-| 43 | Data Engineer | 4 | EventBridge pipelines, aggregation jobs, data warehouse |
-| 44 | Data Analyst | 1 | Institution-level reports, dropout signals, rank analytics |
-| 45 | AI Generation Manager | 3 | Manage MCQ AI batch pipeline, review AI outputs before queue |
-| 46 | Report Designer | 1 | Design MIS report templates for institutions to export |
+> All analytics data lives in a separate pre-aggregated analytics schema.
+> Analytics pages always read from pre-computed tables — never live cross-tenant scans.
+> 7 Celery aggregation tasks run nightly across 2,050 tenant schemas.
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 42 | Analytics Manager | 1 | Platform-wide MIS; anomaly alerts; institution churn reporting; report template approval and publish; AI cost oversight | No data edits; cannot trigger pipeline runs; cannot create AI batches |
+| 43 | Data Engineer | 4 | Analytics schema DDL; Celery aggregation pipeline operations; manual re-runs; data freshness monitoring; SQL explorer; warehouse management | Cannot approve AI MCQs; cannot approve report templates; no business configuration |
+| 44 | Data Analyst | 1 | Student performance analysis; institution health investigation; question quality flagging; dropout signal analysis; export requests | No data edits; no pipeline management; no AI pipeline access; cannot send CSM notifications |
+| 45 | AI Generation Manager | 3 | AI MCQ batch creation; model config and prompt management; MCQ quality review before Division D; cost tracking | Cannot approve MCQs for publish (Division D Approver only); cannot modify existing question bank; cannot trigger analytics pipelines |
+| 46 | Report Designer | 1 | Institution-facing MIS report template design; section configuration; preview and testing; delivery scheduling | No data edits; cannot publish templates (Analytics Manager approval required); cannot trigger manual report deliveries |
 
 ---
 
