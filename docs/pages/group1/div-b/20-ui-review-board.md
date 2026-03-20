@@ -603,3 +603,65 @@ Escalation recipients: PM Institution Portal for institution surface reviews; PM
 | Design system compliance badge | Auto-calculated from token checklist | Surfaces compliance issues early in the review process before reaching engineering |
 | Multi-surface review linking | Related Reviews field in Context tab | Same user flow may need separate reviews for desktop + mobile; links keep them connected without merging |
 | P0 review SLA | 4h response / 1 business day approval | P0 priority designs (critical UX changes) need fast-track review to avoid blocking sprint delivery |
+
+---
+
+## Figma Design Handoff Tracker
+
+**Purpose:** Bridges the gap between design completion and engineering implementation. A design approved in the review board needs to be handed off to Engineering (Division C Frontend Engineer, Role 12). Without tracking, designs get "done" in Figma but implementation is never started, delayed, or done incorrectly. The UI/UX Designer (read-only in all other operations) uses this tracker to know the status of their delivered designs.
+
+**Who can update:** QA Engineer (confirming implementation verified) · Frontend Engineer (updating implementation status) · UI/UX Designer (uploading Figma link, read-only otherwise)
+
+---
+
+### Handoff Status Table
+
+| # | Feature / Screen | Figma Link | Review ID | Handoff Date | Engineer | Implementation Status | QA Verified |
+|---|---|---|---|---|---|---|---|
+| 1 | Exam Timer Redesign | [Figma ↗] | UIR-142 | Mar 18 | Ravi (FE) | ✅ Implemented | ✅ Verified Mar 20 |
+| 2 | Result Page v2 | [Figma ↗] | UIR-139 | Mar 10 | Priya (FE) | 🔨 In Progress | — |
+| 3 | Mobile Onboarding Flow | [Figma ↗] | UIR-136 | Feb 28 | Kiran (Mobile) | 🔨 In Progress | — |
+| 4 | Notification Settings Panel | [Figma ↗] | UIR-131 | Feb 15 | Ravi (FE) | ⬜ Not Started | — |
+| 5 | Dark Mode Token Update | [Figma ↗] | UIR-128 | Feb 5 | Design (global) | ✅ Implemented | ✅ Verified Feb 18 |
+
+**Implementation Status values:**
+- ⬜ Not Started — Handoff delivered but Engineering hasn't started
+- 🔨 In Progress — Engineering is actively implementing
+- 👁 Ready for Review — Implementation complete, awaiting QA verification
+- ✅ Implemented — QA verified against Figma spec
+- ❌ Deferred — Implementation postponed (reason required)
+
+**Stale alert:** If a handoff has been "Not Started" for > 10 working days, an amber badge appears on the row and the Designer is notified: "Handoff for 'Notification Settings Panel' has been pending for 12 days. Check with engineering."
+
+---
+
+### Figma Spec Compliance Check
+
+After Engineering marks an implementation "Ready for Review", QA runs a **pixel/behaviour comparison** against the Figma spec and marks each criterion:
+
+| Criterion | Status | Notes |
+|---|---|---|
+| Colours match design tokens | ✅ | — |
+| Typography scale matches | ✅ | — |
+| Spacing / padding correct | ⚠ | Result card padding is 16px, Figma shows 20px |
+| Hover/focus states match | ✅ | — |
+| Animation timing matches | ✅ | 300ms ease-in-out — confirmed |
+| Mobile breakpoint correct | ❌ | Mobile view wraps incorrectly at 375px |
+| Dark mode correct | ✅ | — |
+
+**Overall verdict:** Partial match → returned to Engineering with specific notes. QA marks status back to "In Progress" until all criteria pass.
+
+---
+
+### Design Debt Dashboard
+
+**Purpose:** Tracks designs that were approved in UI Review Board but are still NOT implemented after 30+ days. These represent design debt — accumulated gap between designed and built state.
+
+| Design | Age (days unimplemented) | Priority | Last nudge | Actions |
+|---|---|---|---|---|
+| Notification Settings Panel | 33 days | P2 | Mar 15 | [Escalate to PM] [Mark Deferred] |
+| Password Reset Flow Redesign | 28 days | P1 | Mar 18 | [Escalate to PM] |
+
+**[Escalate to PM]:** notifies PM Platform (Role 5) and the feature's assigned PM that a design is overdue for implementation. PM decides to prioritise, defer, or cancel.
+
+**Design debt threshold:** If total unimplemented approved designs > 15, the UI Review Board KPI strip card "Design Debt" turns amber.

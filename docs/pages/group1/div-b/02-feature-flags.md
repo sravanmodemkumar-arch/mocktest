@@ -763,7 +763,101 @@ class FeatureFlagAudit(models.Model):
 
 ---
 
-## 11. Security & Audit Requirements
+## 11. Webhook Event Catalog
+
+**Purpose:** Institutions on Professional and Enterprise plans can subscribe to platform events via webhooks — receiving real-time HTTP POST callbacks when events like `exam.result_published`, `student.enrolled`, or `institution.plan_changed` occur. PM Platform defines which events exist, what their payload looks like, and which plan tiers have access. This sits in Feature Flags because webhook access per event type is a feature-flag-like entitlement.
+
+**Why here and not in Plan Config (page 04):** Webhook events are platform capabilities that can be individually toggled — exactly like feature flags. A new event type (e.g., `exam.proctoring_flag_raised`) can be released gradually (to 10% of Enterprise institutions first) before going to 100%.
+
+---
+
+### Event Catalog Table
+
+| Event Type | Payload Fields | Trigger | Plan Access | Status | Rollout |
+|---|---|---|---|---|---|
+| `exam.result_published` | exam_id · institution_id · total_students · published_at | Results Coordinator publishes | Standard+ | ✅ Enabled | 100% |
+| `student.enrolled` | student_id · series_id · institution_id · enrolled_at | Student enrols in test series | Professional+ | ✅ Enabled | 100% |
+| `exam.started` | exam_id · institution_id · student_count · started_at | Exam session goes live | Professional+ | ✅ Enabled | 100% |
+| `exam.submitted` | exam_id · student_id · submitted_at · attempt_id | Student submits exam | Enterprise | ✅ Enabled | 100% |
+| `institution.plan_changed` | institution_id · old_plan · new_plan · effective_date | Plan upgrade/downgrade | Professional+ | ✅ Enabled | 100% |
+| `payment.overdue` | institution_id · amount · due_date · days_overdue | Invoice 30+ days overdue | Standard+ | ✅ Enabled | 100% |
+| `exam.proctoring_flag_raised` | exam_id · student_id · flag_type · timestamp | Proctoring detects anomaly | Enterprise | 🔨 Beta | 15% |
+| `student.result_downloaded` | student_id · result_id · downloaded_at | Student downloads result PDF | Professional+ | ⬜ Draft | 0% |
+| `institution.admin_changed` | institution_id · old_admin · new_admin · changed_at | Institution admin role reassigned | Standard+ | ⬜ Draft | 0% |
+
+**Plan access column:** Which plan tiers can subscribe to this event. Controlled by Plan Config (page 04) — the entitlement is configured there; the event definition lives here.
+
+**Status values:** Enabled (stable, all eligible institutions can subscribe) · Beta (rolling out, some eligible institutions) · Draft (defined but not yet released) · Deprecated (will be removed — existing subscribers warned)
+
+---
+
+### Webhook Event Detail Drawer (640px)
+
+**Trigger:** Row click in Event Catalog
+**Tabs: Definition · Subscribers · Payload Schema · Changelog**
+
+**Tab A — Definition:**
+- Event key (read-only, `font-mono`)
+- Display name
+- Description: plain text description of when this fires
+- Plan access: dropdown (Starter / Standard / Professional / Enterprise)
+- Rollout %: slider (same as feature flag rollout)
+- Status toggle: Draft → Enabled → Deprecated
+
+**Tab B — Subscribers:**
+Table of institutions currently subscribed to this event:
+
+| Institution | Plan | Endpoint URL | Added | Last delivery | Delivery health |
+|---|---|---|---|---|---|
+| Sri Chaitanya | Enterprise | `https://api.srichaitanya.in/hooks/edu` | Jan 5 | 2 min ago | ✅ 99.8% |
+| Narayana Group | Enterprise | `https://erp.narayana.in/webhook/` | Feb 1 | 5 min ago | ✅ 99.9% |
+| DPS Hyderabad | Professional | `https://dps-hyd.in/portal-hook` | Mar 10 | 8 hours ago | ⚠ 82% (degraded) |
+
+Delivery health: % of last 1,000 deliveries that returned HTTP 2xx within 10s.
+Degraded institutions (< 95% health) highlighted amber; PM can view failure logs.
+
+**Tab C — Payload Schema:**
+JSON schema definition of the event payload — read-only. Example:
+```
+exam.result_published payload:
+{
+  "event": "exam.result_published",
+  "version": "1.2",
+  "timestamp": "2026-03-20T14:30:00Z",
+  "institution_id": "INST-1234",
+  "data": {
+    "exam_id": "EXM-8891",
+    "total_students": 1240,
+    "published_at": "2026-03-20T14:29:58Z",
+    "result_url": "https://portal.srichaitanya.in/results/EXM-8891"
+  }
+}
+```
+**[Copy Schema]** · **[Download JSON Schema]**
+
+**Tab D — Changelog:**
+Version history of this event's payload schema:
+- v1.2 (Mar 2026): Added `result_url` field
+- v1.1 (Jan 2026): Added `total_students` field
+- v1.0 (Oct 2025): Initial release
+
+**Deprecation warning:** If PM marks an event as Deprecated, all subscriber institutions receive an email notification: "The event `exam.result_published` v1.0 will be retired on [date]. Migrate to v1.2 before [date]." A 90-day sunset period is mandatory.
+
+---
+
+### API Deprecation Lifecycle (flag-adjacent concern)
+
+Some features also have API endpoint lifecycles managed here — when PM Platform decides to retire a v1 API endpoint:
+
+1. PM adds a deprecation notice to the relevant feature flag: "API: `/v1/exams/list/` → sunset date: Jul 1, 2026"
+2. Flag description shows deprecation banner in the flag drawer
+3. All institutions using the deprecated endpoint appear in the Subscribers tab (detected from API gateway logs)
+4. Announcement Manager (page 07) auto-notified to send deprecation notice to affected institutions
+5. On sunset date: flag automatically kills the endpoint (kill-switch automation)
+
+---
+
+## 12. Security & Audit Requirements
 
 - **Every flag change** writes to `FeatureFlagAudit` — actor, IP, old/new values, reason
 - **Kill-switch actions** additionally write to the platform-wide Audit Log (div-a-17)

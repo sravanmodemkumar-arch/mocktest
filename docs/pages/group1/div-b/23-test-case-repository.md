@@ -515,3 +515,125 @@ New test case creation can start from a template for common patterns:
 | Priority on test cases | P0–P3 matching defect priority | Enables prioritising which tests run first in smoke/sanity suites |
 
 | Priority P0–P3 | Matches defect severity scale | Consistent terminology across QA Dashboard, Test Cases, and Defect Tracker |
+
+---
+
+## UAT (User Acceptance Testing) Program
+
+**Purpose:** Before every major release (e.g., v3.5.0), a set of 5–10 **beta institutions** validate real-world workflows in the Pre-Production environment. This is distinct from internal QA testing — UAT is performed by actual institution admins and teachers who encounter real usability issues that internal testers miss. QA Engineer owns coordination; PM Platform owns beta institution selection.
+
+**Why in Test Case Repository (not QA Dashboard):** UAT requires specific test scenarios (a subset of the full test case repository) to be packaged and shared with non-engineer users. The repository is the source of truth for which cases are included in any UAT plan.
+
+---
+
+### UAT Plan Table
+
+| UAT ID | Release | Beta Institutions | Test Scenarios | UAT Start | UAT End | Sign-offs | Status |
+|---|---|---|---|---|---|---|---|
+| UAT-v3.5.0 | v3.5.0 | 8 institutions | 42 scenarios | Apr 1 | Apr 7 | 6/8 | 🟡 In Progress |
+| UAT-v3.4.2 | v3.4.2 | 6 institutions | 28 scenarios | Feb 22 | Feb 28 | 6/6 | ✅ Complete |
+| UAT-v3.4.0 | v3.4.0 | 10 institutions | 56 scenarios | Jan 5 | Jan 12 | 9/10 | ✅ Complete |
+
+**[+ New UAT Plan]** button → opens UAT Plan Creation modal.
+
+---
+
+### UAT Plan Detail Drawer (720px)
+
+**Trigger:** Row click on UAT Plan Table
+**Header:** UAT-v3.5.0 · Release v3.5.0 · Status badge · `[×]`
+
+**Tab A — Beta Institutions:**
+
+Table of participating institutions:
+
+| Institution | Type | Plan | Contact | Test Tenant | Assigned Scenarios | Sign-off Status |
+|---|---|---|---|---|---|---|
+| Sri Chaitanya Coaching | Coaching | Enterprise | mgr@srichaitanya.in | SCH-TEST-01 | 12 scenarios | ✅ Signed off |
+| Delhi Public School (HYD) | School | Professional | admin@dps-hyd.in | DPS-TEST-01 | 8 scenarios | ✅ Signed off |
+| Narayana Junior College | College | Professional | it@narayana.in | NJC-TEST-01 | 9 scenarios | ⏳ Pending |
+| Resonance Coaching (RJP) | Coaching | Enterprise | qa@resonance.ac.in | RES-TEST-01 | 11 scenarios | ⏳ Pending |
+
+**[Add Institution]:** search institutions and invite them to UAT (they receive a CSM email with pre-prod credentials for their test tenant)
+**[Remove]:** removes institution from this UAT plan
+
+**Institution selection criteria:**
+- Mix of institution types (at least 1 School, 1 College, 1 Coaching)
+- Mix of plan tiers (at least 1 Standard, 1 Professional, 1 Enterprise)
+- Volunteer basis — institutions previously flagged as "UAT willing" in CSM system
+- Maximum 10 to keep coordination manageable
+
+**Tab B — Test Scenarios:**
+
+Table of all test cases included in this UAT plan:
+
+| # | Test Case ID | Feature Area | Priority | Steps | Expected Outcome | Institution | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | TC-4821 | Exam creation (new pattern) | P0 | 7 steps | Exam created, live, 500 students can submit | Sri Chaitanya | ✅ Pass |
+| 2 | TC-4822 | Result publish with rank | P1 | 5 steps | Rank list visible in 30s | Delhi PS | ⏳ Pending |
+| 3 | TC-4823 | WhatsApp result notification | P1 | 3 steps | 100% students receive WhatsApp | Narayana | ❌ Fail |
+| 4 | TC-4824 | Institution admin role change | P2 | 4 steps | Permission update < 30s | Resonance | ✅ Pass |
+
+**[Add from Repository]:** opens repository search to add test cases to this UAT plan
+**Scenario execution:** Institution contacts mark each scenario as Pass / Fail / Blocked via a simple form sent by QA (or via their test tenant portal's feedback widget)
+
+**Tab C — Issues Found:**
+
+Issues reported by beta institutions during UAT. Each issue is linked to a test case and auto-creates a draft defect in page 25 (Defect Tracker) for QA to validate.
+
+| Issue # | Reported By | Test Case | Description | Severity | QA Verdict | Defect ID |
+|---|---|---|---|---|---|---|
+| UAT-I-012 | Narayana Jr College | TC-4823 | WhatsApp notification delayed 45 min | P1 | Confirmed bug | DEF-2891 |
+| UAT-I-011 | Delhi PS | TC-4822 | Rank list shows wrong student name | P0 | Confirmed bug | DEF-2890 |
+| UAT-I-010 | Sri Chaitanya | TC-4821 | Exam creation takes 90s on slow network | P3 | Known limitation — documented | — |
+
+**Tab D — Sign-off:**
+
+Institution-wise sign-off status. Each institution's contact must explicitly sign off before the institution's UAT is considered complete.
+
+**Sign-off conditions:**
+- All assigned scenarios completed (Pass or accepted exception)
+- All P0/P1 issues resolved or deferred with documented reason
+- Institution contact clicks [Confirm Sign-off] in their test tenant portal OR QA receives email confirmation
+
+**Overall UAT completion rule:**
+- A release can proceed to production if ≥ 80% of beta institutions have signed off and zero P0 defects from UAT are open
+- If UAT sign-off rate < 80%: release blocked, flagged in Release Manager (page 03)
+
+**Tab E — Communication Log:**
+
+All communications with beta institutions:
+- Invitation emails sent (with pre-prod tenant links)
+- Scenario packages shared
+- Issue follow-up emails
+- Sign-off confirmations
+
+---
+
+### UAT Plan Creation Modal (4 steps)
+
+**Step 1 — Select Release:** dropdown from Release Manager (page 03) — only Pre-Production or Staging releases eligible
+
+**Step 2 — Select Beta Institutions:** search and add institutions · assign test tenants from Test Tenant Manager (page 22)
+
+**Step 3 — Select Test Scenarios:** search repository by feature area, priority, release tag → add to UAT plan
+
+**Step 4 — Schedule:** UAT start date · UAT end date · notification template for invitation email · [Create UAT Plan]
+
+---
+
+### Beta Institution Registry
+
+**Location:** Sub-section in UAT Program (below UAT Plan Table)
+
+Institutions that have agreed to participate in future UAT cycles. Maintained by CSM (Division J).
+
+| Institution | Type | Plan | Contact | Total UAT Rounds | Last UAT | Preference |
+|---|---|---|---|---|---|---|
+| Sri Chaitanya Coaching | Coaching | Enterprise | mgr@srichaitanya.in | 8 | Mar 2026 | Major releases only |
+| Narayana Jr College | College | Professional | it@narayana.in | 5 | Mar 2026 | Any release |
+| Delhi Public School (HYD) | School | Professional | admin@dps-hyd.in | 3 | Feb 2026 | Any release |
+
+**[Add to Registry]** · **[Remove]** · **[Edit Preference]**
+
+A minimum of 3 beta institutions must be in the registry at all times. If registry drops below 3, PM Platform (Role 5) is notified to engage CSM team for recruitment.

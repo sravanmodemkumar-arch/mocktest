@@ -616,3 +616,125 @@ Reports generated asynchronously (Celery). Download link sent via in-app notific
 | Run re-run failed tests only | Button in run summary | Saves CI time — retesting only failed tests after a fix instead of full regression |
 | Override gate criterion | PM-only with documented justification | Emergency hotfixes may need to bypass a criterion; audit trail ensures accountability |
 | Suite execution order | Configurable by QA Engineer | Optimising pipeline speed (fast gates first, slow suites last) is an ongoing concern |
+
+---
+
+## Tab 8 — Accessibility Testing
+
+**Purpose:** At 2.4M–7.6M users, a significant portion have visual impairments, motor limitations, or rely on screen readers (JAWS, NVDA, TalkBack on Android). WCAG 2.1 AA compliance is the platform standard. This tab tracks accessibility test results per release, per feature area, so that QA Lead can certify accessibility compliance before a release ships.
+
+**Why in QA Dashboard and not Design System (page 19):** Page 19 defines the *standards*. This tab tracks *test results against those standards*. Design tells QA what to test; QA records pass/fail.
+
+---
+
+### 8.1 Accessibility Test Runs Table
+
+| Run ID | Release | Feature Area | Test Type | Tester | Date | Issues Found | Status |
+|---|---|---|---|---|---|---|---|
+| A11Y-2026-03-20 | v3.5.0 | Exam Interface | Screen Reader | Deepa | Mar 20 | 3 | ⚠ Open |
+| A11Y-2026-03-14 | v3.4.2 | Result Page | Keyboard Nav | Arjun | Mar 14 | 0 | ✅ Pass |
+| A11Y-2026-03-01 | v3.4.1 | Login / OTP | WCAG Contrast | Deepa | Mar 1 | 1 | ✅ Resolved |
+| A11Y-2026-02-15 | v3.4.0 | Question Bank | Screen Reader | Arjun | Feb 15 | 5 | ✅ Resolved |
+
+**Columns:** Run ID · Release · Feature Area · Test Type · Tester · Date · Issues Found · Status
+
+**Test Types:**
+- Screen Reader — NVDA (Windows), JAWS (Windows), TalkBack (Android), VoiceOver (iOS)
+- Keyboard Navigation — Tab order, focus traps, skip-to-content, Esc-close
+- Colour Contrast — WCAG AA minimum 4.5:1 normal text, 3:1 large text
+- Motion / Animation — Prefers-reduced-motion respects
+- Touch Target — Mobile: minimum 44×44px per WCAG 2.1 SC 2.5.5
+- Zoom / Reflow — Page usable at 400% zoom without horizontal scroll
+- ARIA Labels — All interactive elements have descriptive aria-label
+
+---
+
+### 8.2 Accessibility Issue Tracker
+
+Each accessibility issue from any test run is recorded here. This is a sub-list of page 25 (Defect Tracker) filtered to `component=accessibility` — clicking any issue opens the full defect in page 25.
+
+**Columns:**
+
+| Issue ID | Description | Page / Component | WCAG Criterion | Severity | Assignee | Status |
+|---|---|---|---|---|---|---|
+| A11Y-INC-042 | Screen reader doesn't announce timer remaining | Exam Interface | 4.1.3 Status Messages | P1 | Ravi (Frontend) | Open |
+| A11Y-INC-041 | Insufficient contrast: button text on dark bg | Question Card | 1.4.3 Contrast | P2 | Design | Resolved |
+| A11Y-INC-040 | Modal focus trap missing — Tab leaves modal | Result Modal | 2.1.2 No Keyboard Trap | P1 | Backend | Resolved |
+
+**Severity mapping:**
+- P0: Completely unusable by screen reader users (blocks core flow like exam submission)
+- P1: Significant barrier (WCAG A violation)
+- P2: Moderate barrier (WCAG AA violation)
+- P3: Enhancement (WCAG AAA or best practice)
+
+---
+
+### 8.3 Accessibility Coverage by Feature Area
+
+| Feature Area | Last Tested | Screen Reader | Keyboard | Contrast | Touch | Overall |
+|---|---|---|---|---|---|---|
+| Login / OTP | Mar 1 | ✅ Pass | ✅ Pass | ✅ Pass | ✅ Pass | ✅ |
+| Exam Interface | Mar 20 | ⚠ 3 open | ✅ Pass | ✅ Pass | ✅ Pass | ⚠ |
+| Question Bank | Feb 15 | ✅ Pass | ✅ Pass | ✅ Pass | N/A | ✅ |
+| Result Page | Mar 14 | ✅ Pass | ✅ Pass | ✅ Pass | ✅ Pass | ✅ |
+| Institution Dashboard | Jan 20 | ✅ Pass | ⚠ 1 open | ✅ Pass | N/A | ⚠ |
+| Mobile App | Feb 28 | N/A | N/A | ✅ Pass | ⚠ 2 open | ⚠ |
+| Payment / Billing | Not tested | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+
+Red `⬜` "Not tested" rows trigger a warning badge on the tab when a release containing that feature area is about to ship.
+
+---
+
+### 8.4 Accessibility Release Gate
+
+**Gate rule:** A release cannot be marked QA Sign-off (page 03, Release Manager) if any P0 or P1 accessibility issues are open for feature areas included in that release.
+
+**Gate status displayed in Release Gates tab (Tab 3):**
+```
+Accessibility Gate:  ⚠ OPEN  (1 P1 issue in Exam Interface — INC-042)
+                     [View Issue →]
+```
+
+**Exemption process:** QA Lead can grant an exemption for a P1 issue with: justification text + milestone date for resolution + PM Platform sign-off. Exemption creates an audit entry.
+
+---
+
+## Tab 9 — Security Scan Results
+
+**Purpose:** QA Engineer runs OWASP ZAP automated scans against Staging and Pre-Production environments as part of every release cycle. Results are tracked here. Findings are classified by OWASP risk rating (Critical/High/Medium/Low/Informational) and assigned to Engineering (Division C Security Engineer, Role 16) for remediation.
+
+**Why in QA Dashboard (not Engineering):** QA initiates, tracks, and gates the scans. Security Engineer (Division C) remediates. QA verifies the fix. This is the same model as functional defects — QA owns the tracking, Engineering owns the fix.
+
+---
+
+### 9.1 Security Scan Runs Table
+
+| Scan ID | Environment | Release | Scanner | Started | Duration | Critical | High | Medium | Status |
+|---|---|---|---|---|---|---|---|---|---|
+| SEC-2026-03-18 | Pre-Prod | v3.5.0 | OWASP ZAP | Mar 18 | 2h 14m | 0 | 1 | 3 | ⚠ High open |
+| SEC-2026-02-28 | Staging | v3.4.2 | OWASP ZAP | Feb 28 | 1h 58m | 0 | 0 | 2 | ✅ Resolved |
+| SEC-2026-02-01 | Staging | v3.4.1 | OWASP ZAP | Feb 1 | 2h 02m | 0 | 0 | 5 | ✅ Resolved |
+
+**Scan triggers:** Automatic — every Pre-Production promotion in Release Manager triggers a scan. Manual — [Run Scan Now] button (QA Engineer only).
+
+**[Run Scan Now]:** Opens modal — select environment (Staging/Pre-Prod) + scope (Full / API only / Frontend only) + notification recipients.
+
+---
+
+### 9.2 Security Findings Table
+
+| Finding ID | Title | OWASP Category | Risk | Environment | Found In | Assignee | Status |
+|---|---|---|---|---|---|---|---|
+| SEC-F-088 | Missing CSRF token on admin action endpoint | OWASP A01 (Broken Access Control) | High | Pre-Prod | `/api/v1/flags/update/` | Kiran (Backend) | Open |
+| SEC-F-087 | Clickjacking: X-Frame-Options header missing | OWASP A05 (Security Misconfiguration) | Medium | Staging | All pages | Ravi (Frontend) | Resolved |
+| SEC-F-086 | Verbose error messages expose stack trace | OWASP A09 (Logging/Monitoring Failures) | Medium | Staging | `/api/v1/exams/` 500 responses | Kiran (Backend) | Resolved |
+
+**OWASP categories tracked:** A01 Broken Access Control · A02 Cryptographic Failures · A03 Injection · A04 Insecure Design · A05 Security Misconfiguration · A06 Vulnerable Components · A07 Auth Failures · A08 Software Integrity Failures · A09 Logging Failures · A10 SSRF
+
+**Risk badge colours:**
+- Critical: `bg-[#450A0A] text-[#F87171] animate-pulse`
+- High: `bg-[#450A0A] text-[#EF4444]`
+- Medium: `bg-[#451A03] text-[#F59E0B]`
+- Low: `bg-[#1E2D4A] text-[#94A3B8]`
+
+**Security Release Gate:** A release cannot be QA sign-off approved if any Critical or High security findings are open. Medium findings require documented risk acceptance from CTO (Role 2 in Division A).

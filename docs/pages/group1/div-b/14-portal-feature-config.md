@@ -546,6 +546,100 @@ All edits are staged — never applied live until Published.
 
 ---
 
+## Custom Domain & Subdomain Policy
+
+**Purpose:** Each of 2,050 institutions gets a portal URL. By default: `{slug}.eduforge.in` (e.g., `narayana.eduforge.in`). Professional+ plan institutions can request a custom domain (e.g., `portal.narayana.com`). PM Institution Portal (Role 7) tracks custom domain requests, their DNS verification status, SSL certificate health, and enforces the plan-tier policy. DNS provisioning and SSL issuance are handled by Engineering (Division C DevOps, Role 14) — PM Portal has read/approve access.
+
+**Why here (page 14) and not in Portal Templates (page 16):** Custom domains are a *plan-tier-gated feature entitlement*, not a template customisation. The feature "Custom Domain (White-label)" is already listed in the Feature Matrix. This section tracks the per-institution workflow for activating that entitlement.
+
+---
+
+### Custom Domain Request Table
+
+| Institution | Plan | Requested Domain | Requested On | DNS Status | SSL Status | Go-Live Status | Actions |
+|---|---|---|---|---|---|---|---|
+| Narayana Jr College | Enterprise | `portal.narayana.in` | Mar 15 | ✅ Verified | ✅ Active | ✅ Live | [View] |
+| Sri Chaitanya Group | Enterprise | `tests.srichaitanya.com` | Mar 18 | ⏳ Awaiting CNAME | 🔄 Pending | ⏳ Pending | [View] [Resend Instructions] |
+| Resonance Coaching | Professional | `myportal.resonance.ac.in` | Mar 10 | ✅ Verified | ✅ Active | ✅ Live | [View] |
+| DPS Hyderabad | Professional | `dps-hyd.portal.in` | Mar 19 | ❌ Verification failed | — | ❌ Blocked | [View] [Reset] |
+
+**Status columns:**
+- **DNS Status:** ✅ Verified (CNAME record pointing to EduForge load balancer confirmed) · ⏳ Awaiting (instructions sent, not yet configured) · ❌ Failed (CNAME incorrect or timeout after 72h)
+- **SSL Status:** ✅ Active (Let's Encrypt cert issued) · 🔄 Pending (cert provisioning in progress, ~15 min) · ⚠ Expiring (cert expires < 30 days) · ❌ Error (renewal failed)
+- **Go-Live Status:** ✅ Live (institution portal accessible via custom domain) · ⏳ Pending · ❌ Blocked
+
+**SSL Auto-renewal:** Let's Encrypt certificates auto-renew 30 days before expiry via Certbot (managed by DevOps). If renewal fails, PM Portal sees ❌ Error and escalates to Engineering via [Create Engineering Ticket] button.
+
+---
+
+### Custom Domain Detail Drawer (560px)
+
+**Trigger:** [View] in table row
+
+**Section A — Domain Configuration:**
+- Institution name (read-only)
+- Requested domain (read-only after DNS verified)
+- EduForge default URL: `narayana.eduforge.in` (always active as fallback)
+- CNAME record to configure: `portal.narayana.in → ingress.eduforge.in`
+- Instructions PDF: [Download Setup Guide] (sent to institution IT admin)
+- [Resend Instructions Email] → sends DNS setup guide to institution's registered IT contact
+
+**Section B — SSL Certificate:**
+- Certificate provider: Let's Encrypt
+- Issued: date
+- Expires: date · days remaining
+- Auto-renewal: Enabled (toggle — PM cannot disable)
+- Last renewal attempt: date · status
+- [Force Renewal] button (Engineering only — read-only for PM Portal)
+
+**Section C — Traffic Split (migration period):**
+During the first 7 days after a custom domain goes live, traffic is served from both `narayana.eduforge.in` and `portal.narayana.in`. After 7 days, EduForge default auto-redirects to custom domain.
+- Traffic via default URL (last 7 days): 12% (declining)
+- Traffic via custom domain (last 7 days): 88% (rising)
+- [Force full cutover now] (PM Portal only · confirmation modal)
+
+**Section C — Subdomain Policy:**
+
+Standard subdomain format: `{institution-slug}.eduforge.in`
+- Slug auto-generated from institution name (lowercase, hyphens, max 30 chars)
+- PM Portal can override slug via [Edit Slug] (requires confirmation — affects all existing links)
+- Slug change: old URL auto-redirects to new URL for 90 days
+
+**Plan-tier subdomain entitlements:**
+| Plan | URL format | Custom domain | Subdomain override |
+|---|---|---|---|
+| Starter | `{slug}.eduforge.in` | ❌ | ❌ |
+| Standard | `{slug}.eduforge.in` | ❌ | ❌ |
+| Professional | `{slug}.eduforge.in` | ✅ (1 domain) | ✅ |
+| Enterprise | `{slug}.eduforge.in` | ✅ (3 domains) | ✅ |
+
+---
+
+### Parent Portal Feature Set
+
+**Purpose:** In school and college portals, parents access a limited subset of features (exam results, attendance, fee status, upcoming exam schedule). This subset is separate from the student and teacher feature sets. PM Institution Portal (Role 7) configures which features are available to parent accounts.
+
+**Parent Feature Matrix** (sub-section of Feature Matrix tab, toggle: [Student View] [Teacher View] [Parent View]):
+
+| Feature | Starter | Standard | Professional | Enterprise | Notes |
+|---|---|---|---|---|---|
+| View child's exam results | ✅ | ✅ | ✅ | ✅ | Read-only |
+| View child's rank in test | ❌ | ✅ | ✅ | ✅ | — |
+| Upcoming exam schedule | ✅ | ✅ | ✅ | ✅ | Read-only |
+| Attendance view | ❌ | ✅ | ✅ | ✅ | School/College only |
+| Fee payment status | ❌ | ❌ | ✅ | ✅ | View only — payment via separate billing |
+| WhatsApp result notification | ❌ | ✅ | ✅ | ✅ | DPDPA consent required |
+| SMS result notification | ❌ | ✅ | ✅ | ✅ | TRAI DLT template |
+| Download result PDF | ❌ | ❌ | ✅ | ✅ | — |
+| Multiple child profiles | ❌ | ❌ | ✅ | ✅ | Family with 2+ children at same institution |
+| Parent-teacher messaging | ❌ | ❌ | ❌ | ✅ | In-app messaging |
+
+**Institution type scope:** Parent portal features apply to School and College institution types only. Coaching Centres and Institution Groups do not have parent accounts.
+
+**DPDPA compliance note:** Parent accounts can access child data only with the student's (or guardian's) explicit consent. Consent is collected at parent account creation and stored in the institution's tenant schema.
+
+---
+
 ## Key Design Decisions
 
 | Concern | Decision | Rationale |
