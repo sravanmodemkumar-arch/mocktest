@@ -6,7 +6,7 @@
 > **Read Access:** Backend Engineer (Role 11) · DBA (Role 15) · Security Engineer (Role 16)
 > **File:** `c-08-infrastructure.md`
 > **Priority:** P0 — Must be live before first institution goes live
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G4 (Celery Queues tab) · G23 (ECS Task Definition Editor drawer)
 
 ---
 
@@ -19,7 +19,7 @@
 - `/engineering/infrastructure/?part=lambda` — Lambda concurrency panel
 - `/engineering/infrastructure/?part=ecs` — ECS cluster panel
 - `/engineering/infrastructure/?part=rds` — RDS + replicas panel
-- `/engineering/infrastructure/?part=elasticache` — Redis panel
+- `/engineering/infrastructure/?part=elasticache` — Memcached panel
 - `/engineering/infrastructure/?part=alb` — ALB panel
 - `/engineering/infrastructure/?part=cloudfront` — CloudFront summary
 - `/engineering/infrastructure/?part=s3` — S3 buckets panel
@@ -71,7 +71,7 @@ Critically, this page also has **write controls**: DevOps can change Lambda conc
 | RDS Primary | ✅ Healthy | Green |
 | RDS Replica 1 | ✅ Healthy | Green |
 | RDS Replica 2 | ⚠ Lag 4s | Amber |
-| ElastiCache Redis | ✅ Healthy | Green |
+| ElastiCache Memcached | ✅ Healthy | Green |
 | ALB | ✅ Healthy | Green |
 | CloudFront | ✅ Healthy | Green |
 
@@ -100,7 +100,7 @@ Critically, this page also has **write controls**: DevOps can change Lambda conc
 |---|---|---|---|
 | Lambda Throttle Events | Count in last 5 min | CloudWatch | > 10 amber · > 100 red |
 | RDS Connections | Active connections (primary) | RDS Metrics | > 80% of max_connections = amber |
-| Redis Memory Usage | % of total cluster memory | ElastiCache | > 85% amber · > 95% red |
+| Memcached Memory Usage | % of total cluster memory | ElastiCache | > 85% amber · > 95% red |
 | ALB 5xx Rate | 5xx/total (last 5 min) | ALB metrics | > 0.5% amber |
 | ECS Task Failures | Failed tasks in last 15 min | ECS metrics | > 0 = amber |
 | Estimated Infra Cost (Today) | Sum all services | AWS Cost Explorer | > 80% daily budget = amber |
@@ -242,48 +242,42 @@ Critically, this page also has **write controls**: DevOps can change Lambda conc
 
 ---
 
-### Section 6 — ElastiCache Redis Panel
+### Section 6 — ElastiCache Memcached Panel
 
-**Purpose:** Redis cluster health — 40M keys at peak, 3 shards × 2 nodes.
+**Purpose:** Memcached cluster health — cache layer for session keys, tenant metadata, rate-limit counters, and API response cache.
 
 **Cluster Overview:**
 
-| Shard | Primary Node | Replica Node | Memory Used | Memory Max | Hit Rate | Evictions/min | Status |
+| Node | Node ID | Memory Used | Memory Max | Hit Rate | Evictions/min | New Connections | Status |
 |---|---|---|---|---|---|---|---|
-| Shard 1 | redis-001-001 | redis-001-002 | 18.4 GB | 25.5 GB (72%) | 96.2% | 0 | ✅ OK |
-| Shard 2 | redis-002-001 | redis-002-002 | 17.1 GB | 25.5 GB (67%) | 97.1% | 0 | ✅ OK |
-| Shard 3 | redis-003-001 | redis-003-002 | 21.2 GB | 25.5 GB (83%) | 95.8% | 8 | ⚠ High memory |
+| Node 1 | memcached-001 | 4.8 GB | 6.4 GB (75%) | 96.2% | 0 | 12 | ✅ OK |
+| Node 2 | memcached-002 | 4.2 GB | 6.4 GB (66%) | 97.1% | 0 | 14 | ✅ OK |
+| Node 3 | memcached-003 | 5.3 GB | 6.4 GB (83%) | 95.8% | 8 | 9 | ⚠ High memory |
 
 **Alert Thresholds:**
 
 | Metric | Amber | Red |
 |---|---|---|
-| Memory per shard | > 80% | > 90% |
+| Memory per node | > 80% | > 90% |
 | Cache hit rate | < 90% | < 80% |
 | Evictions/min | > 100 | > 1,000 |
-| Replication lag | > 1s | > 5s |
+| New connections/min | > 500 | > 1,000 |
 
-**Key Space Summary:**
-- Total keys: 38.4M (last estimate)
-- Key distribution by prefix (top 10):
-  - `session:*` — 12.1M keys
-  - `tenant:*` — 8.4M keys
-  - `cache:api:*` — 7.2M keys
-  - `rate_limit:*` — 5.8M keys
-  - `exam:*` — 3.1M keys
+**Cluster-level Metrics:**
+- Overall hit rate: calculated from sum(CacheHits) / (sum(CacheHits) + sum(CacheMisses)) across all nodes
+- Total memory used: sum across nodes
+- Total evictions: sum across nodes (high evictions = cache pressure → consider adding node)
 
 **Time-series Charts (last 1h):**
-- Memory usage per shard (stacked)
-- Commands/sec (reads vs writes)
-- Hit/miss ratio
-- Evictions
+- Memory usage per node (stacked)
+- Commands/sec (gets vs sets) — from ElastiCache CloudWatch `GetRequests` + `SetRequests`
+- Hit/miss ratio (cluster-wide)
+- Evictions (cluster-wide)
 
 **Write Actions (Admin · DevOps):**
-- "Add node to shard" → adds replica node to specified shard (horizontal scale-up) — 2FA required
-- "Flush specific key pattern" → SCAN + DEL with prefix input (e.g., `cache:api:*`) — 2FA required + confirmation
-- "Failover shard primary" → promote replica to primary for a specific shard (use when primary node has issue)
-
-**Eviction policy display:** Current policy: `allkeys-lru` — shown with explanation; change triggers alert (Admin only)
+- "Add node to cluster" → scales out Memcached cluster by adding a new node (auto-rebalancing handled by ElastiCache) — 2FA required
+- "Flush all cache" → `cache.clear()` via django.core.cache — clears all keys across cluster — 2FA required + confirmation modal (impact: next 60s will be cache-cold; DB load will spike)
+- "Remove node" → scales in cluster by removing the least-loaded node — 2FA required + confirmation showing traffic impact estimate
 
 ---
 
@@ -391,7 +385,7 @@ Critically, this page also has **write controls**: DevOps can change Lambda conc
 2. Exam Day Mode banner not yet active (no active exams)
 3. Checks Lambda concurrency: exam-submit at 12% (pre-exam warm baseline)
 4. Checks RDS connections: 240/5,000 (normal)
-5. Checks Redis memory: 72% / 67% / 83% — Shard 3 noted as higher
+5. Checks Memcached memory: 75% / 66% / 83% — Node 3 noted as higher
 6. Exam starts: Exam Day Mode banner activates, poll interval drops to 15s
 7. Lambda concurrency climbs: exam-submit 420 → 680 → 840 (84% of reserved)
 8. Amber alert: exam-submit concurrency > 80%
@@ -409,15 +403,15 @@ Critically, this page also has **write controls**: DevOps can change Lambda conc
 7. Old primary: rds-primary-1 now in recovery (becomes new replica-1)
 8. C-18 incident created: "RDS failover — rds-primary-1 replaced due to replica cascade"
 
-### Flow C — Redis Shard Memory Alert
+### Flow C — Memcached Node Memory Alert
 
-1. Shard 3 memory: 91% (red alert)
+1. Node 3 memory: 91% (red alert)
 2. Evictions: 12/min (cache data being evicted under memory pressure)
-3. DevOps reviews key space: `session:*` keys dominating Shard 3
+3. DevOps reviews cluster metrics: high eviction rate indicates memory pressure from session + rate-limit keys
 4. Opens C-03 System Config → reduces session timeout from 720 min to 480 min
-5. Celery task: purges expired sessions
+5. Celery task: purges expired session cache keys
 6. Memory drops to 74% within 30 min
-7. Alternatively: Admin considers "Add node to shard" from write action panel
+7. Alternatively: Admin considers "Add node to cluster" from write action panel to scale out
 
 ---
 
@@ -441,8 +435,8 @@ InfrastructureMonitorPage
 │   ├── PgBouncerPoolTable
 │   └── WriteActionButtons
 ├── ElastiCachePanel
-│   ├── ShardCards × 3
-│   ├── KeySpaceSummary
+│   ├── NodeCards × 3
+│   ├── ClusterLevelMetrics
 │   └── TimeSeriesCharts
 ├── ALBPanel
 │   ├── TargetGroupsTable
@@ -485,10 +479,10 @@ InfrastructureMonitorPage
 |---|---|
 | Change Lambda reserved concurrency | Min 10 · Max = account reserved concurrency limit · Cannot set exam-critical function to 0 (blocks exams) |
 | Promote RDS replica to primary | Only allowed if replica lag < 30s · 2FA required · Confirmation with "writes unavailable for ~60s" warning |
-| Redis key flush | Pattern must be specific (no bare `*` flush of all keys) · 2FA required · Confirmation with estimated key count |
+| Memcached cache flush | Full cluster flush: 2FA required + confirmation "All cache cold for ~60s; DB load will spike" · No partial key-pattern flush (Memcached limitation — use C-03 targeted session/permission flush instead) |
 | ECS scale down | Cannot scale below 1 for critical workers (celery-worker, celery-beat) |
 | S3 block public access (static bucket) | Warning: "Blocking public access on the static assets bucket will break all CSS/JS/images on all 2,050 portals. Confirm?" + 2FA |
-| Add Redis node | Only available if cluster mode is active; single-AZ constraint shown if applicable |
+| Add Memcached node | Scales out cluster; ElastiCache handles key rebalancing automatically; single-AZ constraint shown if applicable |
 | RDS add replica | Admin only · confirmation modal showing estimated 15–30 min provisioning time |
 
 ---
@@ -499,7 +493,7 @@ InfrastructureMonitorPage
 |---|---|
 | AWS API calls | All AWS API calls made server-side via IAM role; no AWS credentials exposed to browser |
 | Write action scope | IAM role for infra-monitor service has minimum necessary permissions: `lambda:PutFunctionConcurrency` · `rds:FailoverDBCluster` · `elasticache:AddTagsToResource` etc. — cannot delete resources |
-| 2FA on critical writes | RDS failover, Redis flush, Lambda concurrency change all require TOTP |
+| 2FA on critical writes | RDS failover, Memcached flush, Lambda concurrency change all require TOTP |
 | Audit log | All write actions logged to `platform_infra_events` with before/after state snapshots |
 | CERT-In compliance | Infrastructure events (especially failovers) retained in audit log for breach investigation evidence (6-hour CERT-In reporting window applies to data breaches, not infra events; but evidence retention is good practice) |
 | Read replica promotion | Safeguard: cannot promote replica with lag > 30s without explicit override — prevents data loss window |
@@ -511,12 +505,12 @@ InfrastructureMonitorPage
 
 | Scenario | Handling |
 |---|---|
-| CloudWatch API rate limiting | Batch all metrics into single GetMetricData call per service panel; 25s Redis cache; amber "Metrics delayed" indicator if stale |
+| CloudWatch API rate limiting | Batch all metrics into single GetMetricData call per service panel; 25s Memcached cache; amber "Metrics delayed" indicator if stale |
 | AWS region partial outage (ap-south-1) | Infra monitor itself may be degraded; DR site (ap-southeast-1) procedures link shown in header; automatic failover is not triggered from this UI — requires manual DR decision |
 | Lambda concurrency limit hit (account-wide) | Red banner: "Account Lambda concurrency limit reached. New invocations are being throttled. Request limit increase from AWS Support." + direct link |
 | RDS storage full | Red alert + "CRITICAL: RDS storage full. Database writes are failing." + immediate escalation to DBA via email + C-18 auto-incident |
 | PgBouncer pool exhaustion | Amber/red on connection queue > 50; write action available: "Restart PgBouncer pool" (ECS task restart) |
-| ElastiCache failover in progress | Shard shows "Failover in progress" status; read operations may be degraded for < 30s; no write action available during failover |
+| ElastiCache node degraded | Node shows "Degraded" status; Memcached clients automatically skip degraded nodes (consistent hashing); cache miss rate may spike temporarily; no write action available during node recovery |
 | S3 bucket access denied | Admin sees "Permission denied" in bucket size column; bucket may have policy override; investigate via CloudTrail |
 | ECS task in STOPPED state cycling (crash loop) | Task count shows 8 desired / 6 running / 2 pending repeatedly; "crash loop" indicator on service row; "View task logs" button highlighted to help diagnose |
 
@@ -526,9 +520,118 @@ InfrastructureMonitorPage
 
 | Concern | Strategy |
 |---|---|
-| CloudWatch API calls | One GetMetricData batch call per panel per poll cycle; each batch handles up to 500 metric queries; Redis 25–30s cache prevents double-fetching |
+| CloudWatch API calls | One GetMetricData batch call per panel per poll cycle; each batch handles up to 500 metric queries; Memcached 25–30s cache prevents double-fetching |
 | Page load with 8 panels | Each panel loaded via separate HTMX `?part=` request; panels load in parallel; page shell loads in < 100ms; panels fill in as CloudWatch data arrives |
-| Exam day poll frequency | Poll interval halved (30s → 15s); additional Redis cache keys created for exam-critical metrics at 15s TTL |
+| Exam day poll frequency | Poll interval halved (30s → 15s); additional Memcached cache keys created for exam-critical metrics at 15s TTL |
 | Write action feedback | All write actions trigger async Celery job; UI shows "Action in progress" spinner; polls job status every 5s; completion notification in platform alert bell |
 | Historical charts | Charts in drawer panels use CloudWatch GetMetricData with appropriate period (1-min for 1h range; 5-min for 6h; 1-hour for 7d); no DynamoDB/DB needed |
 | Cost data | AWS Cost Explorer has 1-day delay; MTD estimate built from usage metrics × pricing table (calculated server-side); accuracy within 5% |
+
+---
+
+## Amendment — G4: Celery Queues Tab
+
+**Gap addressed:** DevOps had no visibility into Celery worker count per queue, queue depth, failed task rate, dead-letter queue items, or worker restart capability.
+
+### New Tab on Infrastructure Monitor — Celery Queues
+
+**Access:** `/engineering/infrastructure/?tab=celery-queues` — top-level tab on the page.
+
+**Queue Health Overview Table:**
+
+| Column | Description |
+|---|---|
+| Queue Name | e.g., `default` · `exam_critical` · `low_priority` · `ai_pipeline` |
+| Active Workers | Workers currently processing tasks from this queue |
+| Idle Workers | Workers connected but not processing |
+| Queue Depth | Messages waiting to be consumed (tasks enqueued but not yet picked up) |
+| Processed/hr | Tasks completed in last 1 hour |
+| Failed/hr | Tasks failed in last 1 hour |
+| Avg Duration | Average task execution time (last 1h) |
+| DLQ Count | Dead-letter queue items for this queue (failed + not retried) |
+| Status | ✅ Healthy · ⚠ High depth · ❌ No workers |
+
+**Alert thresholds:**
+- Queue depth > 1,000: amber · > 10,000: red
+- No active workers for a queue: red (critical — tasks silently accumulating)
+- DLQ count > 0: amber (failed tasks not retried)
+
+**Per-queue actions (DevOps · Admin):**
+- **Pause/Resume queue:** Stops workers consuming from this queue (tasks remain enqueued); used before risky maintenance. No 2FA needed — reversible instantly.
+- **Retry all DLQ:** Moves all DLQ items back to main queue for retry — confirmation modal showing DLQ item count.
+- **View DLQ items:** Opens `celery-queue-drawer` with list of failed task entries (task name · error · first failed · retry count).
+
+**Worker Detail (per queue, expandable row):**
+
+| Column | Description |
+|---|---|
+| Worker Hostname | e.g., `celery@worker-01` |
+| Current Task | Task name currently executing (or "idle") |
+| Uptime | Duration since worker process started |
+| Tasks Completed (session) | Since last restart |
+| Actions | Restart worker (graceful: finish current task + restart · hard: SIGKILL immediately) |
+
+**DLQ Item list (celery-queue-drawer):**
+- Task name · exception type · error message · failed at · retry count (default: 3) · "Retry this task" individual action
+
+**Data Flow:**
+- Worker + queue data: Celery Inspect API (`celery.control.inspect`) polled every 30s — `active()`, `reserved()`, `stats()` per worker
+- Queue depth: Celery `app.control.inspect().active_queues()` + broker queue stats (stored in `platform_celery_queue_stats` table, updated every 30s by Celery beat)
+- DLQ: `platform_celery_task_results` table filtered to `status = failure AND retry_count >= 3`
+- Note: Celery result backend is the Django ORM (DB), not Memcached/Redis — task results stored in `platform_celery_task_results` table
+
+---
+
+## Amendment — G23: ECS Task Definition Editor
+
+**Gap addressed:** DevOps could not update a container's Docker image tag, CPU, or memory from the portal. Every container update required a full CI/CD pipeline run even when only the image tag needed to change.
+
+### New Drawer — ECS Task Definition Editor
+
+**Trigger:** Click on any ECS service row in the ECS Cluster Panel → opens `ecs-task-def-drawer` (640px)
+
+**Drawer Tabs:**
+
+**Tab 1 — Current Definition:**
+- Task definition family: e.g., `platform-celery-worker`
+- Current revision: e.g., `platform-celery-worker:47`
+- Container table (one row per container in the task):
+
+| Field | Value |
+|---|---|
+| Container Name | `celery-worker` |
+| Docker Image URI | `123456789.dkr.ecr.ap-south-1.amazonaws.com/platform:celery-b47a3f2` |
+| Image Tag | `celery-b47a3f2` |
+| CPU (vCPUs) | 1.0 |
+| Memory (MB) | 2048 |
+| Essential | Yes |
+| Environment Variables | Count: 8 (link to C-05 env vars) |
+
+**Tab 2 — Edit Image Tag:**
+- "New image tag" text input (e.g., `celery-c98d1e5`)
+- Image URI preview: auto-builds full URI from registry + input tag
+- "Validate Image" button → calls ECR `describeImages` API to verify tag exists before saving
+- Cost impact: none (same CPU/memory; image tag change only)
+- "Apply New Tag" → 2FA confirmation → calls AWS ECS `registerTaskDefinition` with new image URI → creates new revision (e.g., `:48`) → calls `updateService` with `forceNewDeployment: true` → rolling deployment begins
+- Deployment progress: HTMX poll every 10s showing running task count (old revision → new revision)
+
+**Tab 3 — Edit CPU / Memory:**
+- CPU slider: 0.25 / 0.5 / 1.0 / 2.0 / 4.0 / 8.0 vCPUs (Fargate valid values)
+- Memory slider: 512 / 1024 / 2048 / 4096 / 8192 MB (constrained by CPU selection)
+- Cost impact estimate: shown inline in ₹/month (CPU/memory × ECS pricing × estimated hours)
+- 2FA required for CPU/memory changes (higher blast radius than tag change)
+
+**Tab 4 — Deployment History (last 10):**
+
+| Column | Description |
+|---|---|
+| Revision | Task def revision number |
+| Image Tag | Docker image tag deployed |
+| CPU | vCPUs at time of deployment |
+| Memory | MB at time of deployment |
+| Deployed By | Staff name |
+| Deployed At | Timestamp |
+| Status | ✅ Active · ⬛ Replaced · ❌ Failed |
+| Rollback | "Roll back to this revision" button (active for non-current revisions) |
+
+**Rollback action:** Select any previous revision → "Roll back to revision :45" → calls ECS `updateService` with old revision ARN → rolling update begins → confirmation toast "Rolling back {service} to revision :45"

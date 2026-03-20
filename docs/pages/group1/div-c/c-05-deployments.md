@@ -6,7 +6,7 @@
 > **Read Access:** Frontend Engineer (Role 12)
 > **File:** `c-05-deployments.md`
 > **Priority:** P1
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G1 (Environment Variables tab) · G2 (Scheduled Jobs tab)
 
 ---
 
@@ -91,7 +91,7 @@ This page is most critical immediately after a deployment: the first 30 minutes 
 
 **Data Flow:**
 - Lambda GetAliasConfiguration + ListVersionsByFunction API calls — batched per function
-- Results cached Redis 60s; Celery beat refreshes every 55s
+- Results cached Memcached 60s; Celery beat refreshes every 55s
 - KPI poll: 60s HTMX interval
 
 ---
@@ -385,7 +385,7 @@ This page is most critical immediately after a deployment: the first 30 minutes 
 |---|---|---|---|---|
 | `DJANGO_ENV` | `production` | Direct | 3 months ago | System |
 | `DB_HOST` | `[SECRET — C-14]` | Secrets Manager | — | — |
-| `REDIS_URL` | `[SECRET — C-14]` | Secrets Manager | — | — |
+| `MEMCACHED_URL` | `[SECRET — C-14]` | Secrets Manager | — | — |
 | `LOG_LEVEL` | `INFO` | Direct | 2 weeks ago | Priya Sharma |
 | `FEATURE_FLAGS_TTL` | `30` | Direct | 1 week ago | Rohan Dev |
 
@@ -591,9 +591,106 @@ DeploymentManagerPage
 
 | Concern | Strategy |
 |---|---|
-| Lambda API rate limits | AWS Lambda API: 100 requests/sec per region; batching function status queries using AWS SDK pagination; cached in Redis 60s |
+| Lambda API rate limits | AWS Lambda API: 100 requests/sec per region; batching function status queries using AWS SDK pagination; cached in Memcached 60s |
 | 68 function status queries | Single `ListFunctions` call + parallel `GetAliasConfiguration` calls (100 concurrent via asyncio); total < 3s; cached 60s |
-| Canary health comparison data | Sourced from C-04 KPI strip Redis cache; no additional CloudWatch calls; same 25s cache |
+| Canary health comparison data | Sourced from C-04 KPI strip Memcached cache; no additional CloudWatch calls; same 25s cache |
 | Deployment log page load | Index on `function_name + created_at`; 25 entries per page; < 50ms |
 | Health check execution | Celery worker: runs 5 checks in parallel per deployment; each check is an async HTTP call or CloudWatch query; all 5 checks complete within 15 min |
-| Real-time canary panel | 30s HTMX poll; data from Redis (C-04 writes exam-critical metrics to Redis); no extra CloudWatch calls for canary panel |
+| Real-time canary panel | 30s HTMX poll; data from Memcached (C-04 writes exam-critical metrics to Memcached); no extra CloudWatch calls for canary panel |
+
+---
+
+## Amendment — G1: Environment Variables Tab
+
+**Gap addressed:** Backend Engineer could not view or edit Lambda environment variables (DB connection strings, API key references, feature toggles). C-05 covered version/routing only.
+
+### New Tab in Lambda Function Drawer — Environment Variables
+
+A new **Environment Variables** tab is added to the `lambda-function-drawer` (and also exposed as a standalone sub-page tab on the main deployment page for the selected function).
+
+**Access:** `/engineering/deployments/?part=env-vars&function={name}`
+
+**Tab layout:**
+
+**Current Variables Table:**
+
+| Column | Description |
+|---|---|
+| Key | Variable name (always visible) |
+| Value | Masked by default (••••••••) — "Reveal" button shows plaintext for 30s (Admin + Backend only) · if value references Secrets Manager ARN — shown as `[SECRET — ARN]` badge |
+| Source | Direct (stored in Lambda config) · Secrets Manager (value is ARN reference) |
+| Last Modified | Timestamp + who |
+| Actions | Edit · Delete (Admin + Backend) |
+
+**Add Variable:** "Add Variable" button → inline row with key input + value input + source selector (Direct / Secrets Manager ARN) → "Save" per row.
+
+**Edit Variable:** Click Edit on any row → inline edit → key is read-only after creation (to prevent accidental rename); value editable → "Save" applies change.
+
+**Diff View:** "Compare with Live" toggle → two-column view showing current (what's deployed now) vs pending (what will be deployed) — green = added · amber = changed · red = removed.
+
+**Deploy on Save:** After any edit, a "Deploy Changes" button appears in the drawer footer with a pre-deploy health check: checks if function is currently serving traffic above 1% of peak before allowing deploy.
+
+**Restrictions:**
+- Raw secret values never stored in Django DB — only ARN references stored; actual values fetched from Secrets Manager at Lambda runtime
+- Reveal plaintext: only for Direct-source values; Secrets Manager values cannot be revealed from this UI (must use C-14)
+- All changes: 2FA required from Backend Engineer and Admin; DevOps can view but not edit env vars (security boundary)
+
+**Data Flow:**
+- Existing variables: `GET /api/lambda/{function}/env-vars/` → calls AWS Lambda GetFunctionConfiguration API → returns env var map
+- Save: `PATCH /api/lambda/{function}/env-vars/` → calls Lambda UpdateFunctionConfiguration → Celery job polls until configuration update completes → success toast
+
+---
+
+## Amendment — G2: Scheduled Jobs Tab
+
+**Gap addressed:** No page showed scheduled background jobs (nightly aggregations, health checks, archival tasks). Nobody could pause, trigger, or audit Celery beat tasks.
+
+### New Tab on Service Deployment Manager Page — Scheduled Jobs
+
+**Access:** `/engineering/deployments/?tab=scheduled-jobs` — top-level tab on the main page, alongside the function list.
+
+**Layout:**
+
+**Celery Beat Task Registry Table:**
+
+| Column | Description |
+|---|---|
+| Task Name | Full dotted Python path (e.g., `portal.tasks.aggregation.nightly_exam_summary`) |
+| Queue | Celery queue name (e.g., `default` · `exam_critical` · `low_priority`) |
+| Schedule | Human-readable: "Every day at 02:00 IST" · "Every 5 minutes" · "0 8 * * 1 (Mondays 08:00)" |
+| Last Run Time | Timestamp of most recent execution start |
+| Last Run Status | ✅ Success · ❌ Failed · ⚠ Partial · ⏳ Running · — Never run |
+| Next Run Time | Calculated from schedule + last run |
+| Average Duration | P50 duration over last 30 runs |
+| Actions | Pause/Resume · Run Now · View History |
+
+**Filters:** Queue · Status (Healthy/Failed/Paused/Never Run) · Schedule type (interval/cron)
+
+**Per-task actions:**
+- **Pause/Resume:** Removes/restores the beat entry without deleting it — paused tasks show amber badge; paused by / paused at shown in row tooltip; all pauses 2FA-gated (pausing nightly archival has data-growth consequences)
+- **Run Now:** Triggers a manual immediate execution — confirmation modal with "This will run `{task}` immediately in queue `{queue}`. Confirm?" — no 2FA needed for Run Now
+- **View History:** Opens `scheduled-job-drawer` showing last 30 runs: run start · duration · status · output summary · error (if failed)
+
+**Task detail drawer (scheduled-job-drawer):**
+- Schedule config: current cron expression + human-readable interpretation + "Edit Schedule" (Admin + DevOps only)
+- Last 30 runs timeline: bar chart (duration) with colour (green/red) + table below
+- Error log: full traceback for failed runs (last 5 failures shown)
+- Queue depth at time of run (from C-08 Celery queue metrics)
+
+**Data Source:** Django-Celery-Beat `PeriodicTask` model (ORM query — no Redis needed; beat schedule stored in DB with `select_related` on `ClockedSchedule` / `CrontabSchedule` / `IntervalSchedule`). Last run metadata from Celery task result backend (stored in `platform_celery_task_results` table, not Redis).
+
+**Data Model Addition — platform_celery_task_results:**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| task_name | VARCHAR(255) | dotted path |
+| celery_task_id | VARCHAR(255) | |
+| queue | VARCHAR(100) | |
+| started_at | TIMESTAMPTZ | |
+| completed_at | TIMESTAMPTZ | nullable |
+| status | ENUM | success/failure/partial/running |
+| duration_seconds | FLOAT | nullable |
+| error_message | TEXT | nullable |
+| triggered_by | ENUM | beat_schedule / manual_run / deployment |
+| triggered_by_staff | UUID FK | nullable (for manual runs) |

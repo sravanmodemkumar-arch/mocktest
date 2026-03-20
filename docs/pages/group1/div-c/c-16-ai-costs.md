@@ -6,7 +6,7 @@
 > **Read Access:** DevOps/SRE (Role 14)
 > **File:** `c-16-ai-costs.md`
 > **Priority:** P2
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G15 (Cost Forecast section) · G27 (API Rate Limits section)
 
 ---
 
@@ -429,7 +429,7 @@ AICostMonitorPage
 | API cost data | Derived from token counts logged by Celery workers (not from LLM provider billing APIs) — avoids exposing billing credentials to this page |
 | Budget config writes | Admin only · 2FA required for budget changes > 20% |
 | Model API key cost | Token pricing table stored in DB (not from LLM provider APIs directly); monthly update by AI/ML Engineer |
-| Hard stop | Implemented as Redis key `platform:ai_hard_stop = 1`; Celery workers check this key before each API call; hard to bypass |
+| Hard stop | Implemented as Memcached key `platform:ai_hard_stop`; Celery workers check this key before each API call; fall back to DB flag if Memcached unavailable |
 | Cost anomaly | If daily spend > 3× daily avg: immediate email to Admin + AI/ML Engineer; C-18 incident created |
 
 ---
@@ -451,8 +451,223 @@ AICostMonitorPage
 | Concern | Strategy |
 |---|---|
 | Cost aggregation | Pre-aggregated daily by Celery beat into `platform_ai_cost_daily`; all chart queries hit this pre-computed table (< 30ms) |
-| Real-time MTD spend | Redis counter `platform:ai_mtd_cost_inr` incremented by each completed LLM API call; page reads from Redis (< 5ms) |
+| Real-time MTD spend | Celery workers increment `platform_ai_cost_daily` ORM rows on each completed LLM API call; MTD total aggregated from DB; Memcached 30s TTL for page reads |
 | 30-day daily chart | 30 rows × 3 models = 90 rows from `platform_ai_cost_daily`; trivial query |
 | Optimization flags | Computed by Celery beat weekly; stored as JSONB in `platform_ai_optimization_flags` table; page reads from cache |
-| Hard stop check | Redis key check by Celery worker: < 1ms; no DB query on the critical path |
+| Hard stop check | Memcached key check by Celery worker: < 1ms; falls back to `platform_ai_budget_config.hard_stop_enabled` DB flag if Memcached unavailable |
 | Budget alert emails | Celery beat checks MTD spend against thresholds every 30 min; one-time email per threshold crossing per month |
+
+---
+
+## 12. Amendment — G15: Cost Forecast Section
+
+**Assigned gap:** G15 — C-16 shows historical spend but has no month-end forecast, no "cost if we run N more batches" simulator, and no burn-rate visibility. AI/ML Engineer cannot predict whether the monthly cap will be breached.
+
+**Where it lives:** New section added between Section 10 (Cost per Approved Question Trend) and Section 11 (not present — this becomes Section 11). The page gains this section after the cost trend chart.
+
+---
+
+### Cost Forecast Section
+
+**Purpose:** Project end-of-month LLM API spend based on current burn rate, and allow the AI/ML Engineer to simulate the cost impact of planned batch jobs before triggering them — preventing budget surprises.
+
+**Layout:** Two sub-sections — Month-End Projection · Spend Simulator
+
+---
+
+**Month-End Projection**
+
+Displayed as a card at the top of the section, updated every 30 minutes by Celery beat.
+
+**Projection method:** Simple linear extrapolation from current month-to-date spend and pace:
+- Daily burn rate: MTD spend ÷ current day of month
+- Projected spend at month end: daily burn rate × days in month
+- Remaining budget: monthly budget − MTD spend
+- Projected overrun: MAX(0, projected spend − monthly budget)
+- Days until budget exhausted: remaining budget ÷ daily burn rate
+
+**Display format:**
+
+| Metric | Value |
+|---|---|
+| Today (Day 20 of 31) | ₹6,84,200 spent (57% of ₹12,00,000 budget) |
+| Daily burn rate (7-day avg) | ₹36,200/day |
+| Projected month-end spend | ₹11,22,200 (93.5% of budget) |
+| Budget remaining | ₹3,15,800 |
+| Days until budget exhausted | ~8.7 days at current rate |
+| Projected hard stop | Day 29 (2 days before month end) |
+
+**Visual:** Horizontal progress bar showing: MTD spend · projected remaining · headroom to hard stop · hard stop line.
+
+**Forecast accuracy indicator:** "Projection based on last 7-day burn rate. Actual may vary with job scheduling."
+
+**Trend alerts:**
+- If projected month-end > 95%: amber — "Projected to hit hard stop before month end. Reduce job volume or request budget increase."
+- If projected month-end > 100%: red — "Projected to exceed budget by ₹{overrun}. Immediate action required."
+
+**Burn rate chart:**
+- Line chart: daily burn rate (7-day rolling average) over last 30 days
+- Horizontal line: required burn rate to stay within budget (monthly budget ÷ 31)
+- Shows visually if spend is accelerating (rising line) or decelerating (falling line)
+
+---
+
+**Spend Simulator**
+
+"What happens if I run more jobs this month?" tool.
+
+**Simulator inputs:**
+
+| Input | Description |
+|---|---|
+| Number of additional questions | Slider: 1,000 – 500,000 |
+| Model mix | Slider: Claude % / GPT-4o % / Gemini % (must sum to 100%) |
+| Expected approval rate | Slider: 50% – 90% |
+| Prompt version | Select from active prompt versions (affects token count estimate) |
+| Question type mix | MCQ Single / Multiple / Integer / etc. (affects token count) |
+
+**Outputs (computed instantly from inputs):**
+
+| Output | Estimated Value |
+|---|---|
+| Additional questions generated | 100,000 |
+| Expected approved questions | 72,000 (72% approval rate) |
+| Estimated additional tokens | 92M input + 30M output |
+| Estimated additional cost | ₹1,24,000 |
+| New projected month-end total | ₹8,08,200 (67.4% of budget) |
+| Budget remaining after jobs | ₹3,91,800 |
+| Within budget? | ✅ Yes — ₹3,91,800 remaining headroom |
+
+**Output colour coding:**
+- Green: within budget with > 20% headroom
+- Amber: within budget but < 20% headroom
+- Red: would exceed budget
+
+**"Trigger these jobs" button:**
+- If the simulation result is green, the button becomes active
+- Takes AI/ML Engineer to C-15 "Trigger New Job" pre-filled with the simulated config
+- Ensures the actual job config matches what was simulated
+
+---
+
+## 13. Amendment — G27: API Rate Limits Section
+
+**Assigned gap:** G27 — AI/ML Engineer cannot see current RPM/TPM (requests/tokens per minute) consumption versus quota for Anthropic, OpenAI, or Google providers. Quota exhaustion silently stops the MCQ generation pipeline until discovered manually.
+
+**Where it lives:** New section appended after the Cost Forecast section.
+
+---
+
+### API Rate Limits Section
+
+**Purpose:** Surface real-time LLM API quota consumption for all three providers so the AI/ML Engineer knows how close the pipeline is to being throttled. Rate limit exhaustion causes API 429 errors that slow or stop question generation without any obvious dashboard signal.
+
+**Layout:** One card per provider showing quota health + usage chart
+
+---
+
+**Provider Cards**
+
+Three side-by-side cards (or stacked on mobile), one per LLM provider.
+
+---
+
+**Anthropic (Claude) Card:**
+
+| Metric | Value | Status |
+|---|---|---|
+| Requests per minute (RPM) | 48 / 60 | 🟡 80% — amber |
+| Input tokens per minute (ITPM) | 180,000 / 200,000 | 🟡 90% — amber |
+| Output tokens per minute (OTPM) | 58,000 / 80,000 | ✅ 73% |
+| Daily token limit (if applicable) | 2.4B / — | — |
+| Current queue: Lambda workers waiting | 2 workers rate-limited | ⚠ |
+
+**OpenAI (GPT-4o) Card:**
+
+| Metric | Value | Status |
+|---|---|---|
+| Requests per minute (RPM) | 12 / 500 | ✅ 2% |
+| Tokens per minute (TPM) | 84,000 / 800,000 | ✅ 10% |
+| Current queue | 0 workers rate-limited | ✅ |
+
+**Google (Gemini) Card:**
+
+| Metric | Value | Status |
+|---|---|---|
+| Requests per minute (RPM) | 8 / 60 | ✅ 13% |
+| Tokens per minute (TPM) | 42,000 / 300,000 | ✅ 14% |
+| Current queue | 0 workers rate-limited | ✅ |
+
+**Card colour coding:**
+- Green: < 70% quota used
+- Amber: 70–89% quota used
+- Red: ≥ 90% quota used — "Rate limit pressure: pipeline may be throttled"
+
+---
+
+**Rate Limit Charts:**
+
+For each provider: sparkline chart of RPM/TPM usage over the last 60 minutes (1-minute buckets). Shows spikes (batch job bursts) and throttling events (usage drops suddenly due to 429 responses from provider).
+
+**429 error history (last 24h):**
+
+| Time | Provider | Error Type | Duration of Throttling | Jobs Affected |
+|---|---|---|---|---|
+| 2h ago | Anthropic | RPM limit | 4 min | job-abc123 |
+| 6h ago | Anthropic | ITPM limit | 8 min | job-def456 |
+
+Throttling events are identified from Celery worker 429 error logs.
+
+**Auto-pause configuration:**
+
+When a provider's RPM or TPM usage exceeds 95% of quota, the pipeline can be configured to auto-pause new API calls to that provider rather than generate 429 errors:
+
+| Provider | Auto-pause enabled | Auto-pause threshold | Fallback model on pause |
+|---|---|---|---|
+| Anthropic | ✅ Yes | 95% | GPT-4o |
+| OpenAI | ✅ Yes | 95% | Gemini |
+| Google | ✅ Yes | 95% | Anthropic (if recovered) |
+
+"Edit auto-pause config" → allows AI/ML Engineer to toggle per-provider auto-pause and adjust threshold.
+
+**Quota limits configuration:**
+
+Provider quotas are not fetched from provider APIs (no native quota API in all providers). They are configured manually:
+- "Update quota limits" → simple form: RPM · TPM · OTPM per provider
+- AI/ML Engineer updates these after receiving new quota from provider account team
+- Stored in `platform_ai_rate_limit_config` table
+- Last updated timestamp shown per provider
+
+**Data source for current usage:**
+- RPM/TPM metrics: aggregated from Celery worker API call logs (timestamp + token counts logged per API call)
+- Aggregated every 60 seconds by Celery beat into `platform_ai_rate_limit_stats` (minute-level rolling window)
+- Page polls every 30 seconds via HTMX for near-real-time view
+
+**Data model:**
+
+**platform_ai_rate_limit_config**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| provider | ENUM | anthropic/openai/google |
+| rpm_limit | INTEGER | |
+| itpm_limit | INTEGER | nullable (input tokens per minute) |
+| otpm_limit | INTEGER | nullable (output tokens per minute) |
+| auto_pause_enabled | BOOLEAN | |
+| auto_pause_threshold_pct | SMALLINT | 50–99 |
+| fallback_provider | ENUM | nullable |
+| updated_by | UUID FK → platform_staff | |
+| updated_at | TIMESTAMPTZ | |
+
+**platform_ai_rate_limit_stats**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| provider | ENUM | |
+| minute_bucket | TIMESTAMPTZ | truncated to minute |
+| requests_count | INTEGER | |
+| input_tokens | INTEGER | |
+| output_tokens | INTEGER | |
+| throttle_events | INTEGER | count of 429 errors in this minute |

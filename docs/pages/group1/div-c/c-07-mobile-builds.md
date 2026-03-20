@@ -6,7 +6,7 @@
 > **Read Access:** DevOps/SRE (Role 14)
 > **File:** `c-07-mobile-builds.md`
 > **Priority:** P2
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G28 (FCM Delivery Monitor tab)
 
 ---
 
@@ -390,7 +390,7 @@ Crashlytics integration on this page closes the feedback loop — engineers can 
 
 **Data Flow:**
 - Crashlytics data via Firebase REST API (Management API + Crashlytics Data API)
-- Data cached in Redis 10 min (Crashlytics API has rate limits)
+- Data cached in Memcached 10 min (Crashlytics API has rate limits)
 - Crash-free rate alerts evaluated by Celery beat every 30 min
 
 ---
@@ -587,8 +587,103 @@ MobileBuildPipelinePage
 | Concern | Strategy |
 |---|---|
 | Build log size | Logs can be 5–20 MB; streamed from S3 via chunked response; only last 5,000 lines shown in UI; "load more" button for older lines |
-| Crashlytics data polling | 10-min Redis cache; Celery beat refreshes proactively every 9 min; crash threshold alerts run independently every 30 min |
+| Crashlytics data polling | 10-min Memcached cache; Celery beat refreshes proactively every 9 min; crash threshold alerts run independently every 30 min |
 | GitHub Actions API rate limit | 5,000 requests/hour for authenticated requests; build status polling (30s × 68 functions max) = 120 req/min; well within limit |
 | Build list table | Max ~50 builds shown by default (last 14 days); older builds accessible via date range filter; no virtual scroll needed at this volume |
 | Store submission status | Polled from App Store Connect API (fastlane spaceship) and Play Developer API every 15 min; not real-time (Apple processing has inherent delay) |
 | Firebase distribution | Firebase Admin SDK batches tester notification sending; no UI blocking during distribution; result shown asynchronously |
+
+---
+
+## Amendment — G28: FCM Delivery Monitor Tab
+
+**Gap addressed:** Mobile Engineer could not see push notification delivery rates, iOS vs Android split, device token health (expired/unregistered = uninstalled apps), or active FCM topic subscriber counts. Delivery failures went undetected.
+
+### New Tab on Mobile Build Pipeline — FCM Delivery Monitor
+
+**Access:** `/engineering/mobile-builds/?tab=fcm-delivery`
+
+**Data source:** Firebase Cloud Messaging (FCM) Admin SDK + Firebase Management API for delivery statistics.
+
+**Layout:**
+
+**Overall Delivery Summary (KPI strip — last 24h):**
+
+| Card | Metric |
+|---|---|
+| Total Sent | Push notifications sent in last 24h |
+| Delivered | Successfully delivered count + % |
+| Failed | Failed delivery count + % |
+| iOS Delivery Rate | % delivered on iOS (APNs gateway) |
+| Android Delivery Rate | % delivered on Android (FCM direct) |
+| Unregistered Tokens | Count of device tokens returned as unregistered (= app uninstalled) |
+
+**Colour rules:** Delivery rate < 90% → amber · < 80% → red · Unregistered tokens > 5% of total → amber (high uninstall rate indicator)
+
+**iOS vs Android Delivery Split:**
+- Side-by-side bar: iOS delivered/failed · Android delivered/failed (last 7 days, daily bars)
+- Tooltip per bar: sent count + delivery rate
+
+**Device Token Health Panel:**
+
+| Status | Count | Description |
+|---|---|---|
+| Valid | Count | Active tokens that have received at least 1 notification in last 30 days |
+| Expired | Count | Tokens returned as expired by APNs/FCM but device still exists |
+| Unregistered | Count | App uninstalled — these tokens should be purged from the platform DB |
+
+- "Purge Unregistered Tokens" button (Admin + Mobile Engineer · no 2FA — data hygiene operation): triggers Celery task to remove all unregistered tokens from `platform_fcm_tokens` table across all 2,050 tenant schemas → progress shown via HTMX poll
+
+**Active FCM Topics Table:**
+
+| Column | Description |
+|---|---|
+| Topic Name | e.g., `question_returned` · `exam_starting` · `key_rotation_reminder` · `app_update` |
+| Subscriber Count | Current subscribed device count |
+| Last Notification | Timestamp of most recent notification sent to this topic |
+| 24h Sent | Notifications sent to topic in last 24h |
+| 24h Delivery Rate | % of sent that were delivered |
+
+**Recent Notification Log (last 50):**
+
+| Column | Description |
+|---|---|
+| Timestamp | Sent at |
+| Topic | FCM topic name |
+| Title | Notification title |
+| Sent | Count of devices targeted |
+| Delivered | Count confirmed delivered |
+| Failed | Count failed |
+| Failure Reason | Most common failure: `UNREGISTERED` / `INVALID_ARGUMENT` / `QUOTA_EXCEEDED` / `INTERNAL` |
+
+**Notification Template Manager:**
+- Predefined payloads for platform notifications: `question_returned` · `exam_starting` · `key_rotation_reminder` · `app_update`
+- Each template: Title (English + Hindi) · Body · Data payload (JSONB) · Icon · Sound
+- Edit template: inline edit + "Save" (Admin + Mobile Engineer · no 2FA for template edits)
+- "Send Test" button per template: opens mini-modal → select target topic → sends test notification immediately → shows "Test sent to {n} devices" toast
+
+**fcm-delivery-drawer (per notification log row):**
+- Delivery Stats: sent / delivered / failed / pending breakdown
+- Device Breakdown: iOS vs Android pie
+- Failed Tokens: sample of 5 failed token IDs (masked) + failure reason
+- Retry Status: whether auto-retry was attempted (FCM retries UNAVAILABLE errors automatically)
+
+**Data Flow:**
+- Delivery stats: FCM Data API (Firebase Management API v1) — `projects/{project_id}/androidApps/{app_id}/deliveryData` + equivalent iOS endpoint; cached Memcached 10 min
+- Topic subscriber counts: FCM Admin SDK topic management endpoint
+- Recent notification log: stored in `platform_fcm_notification_log` table (platform sends all notifications via backend; log captured at send time)
+
+**Data Model Addition — platform_fcm_notification_log:**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| topic | VARCHAR(100) | |
+| title | VARCHAR(255) | |
+| body | TEXT | |
+| sent_count | INTEGER | |
+| delivered_count | INTEGER | nullable — updated async |
+| failed_count | INTEGER | nullable — updated async |
+| failure_reason | VARCHAR(100) | nullable — most common failure type |
+| sent_at | TIMESTAMPTZ | |
+| sent_by | UUID FK → platform_staff | nullable (null = system-automated) |

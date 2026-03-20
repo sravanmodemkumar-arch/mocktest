@@ -9,6 +9,7 @@
 | File | `c-18-incidents.md` |
 | Division | Division C — Engineering & Infrastructure |
 | Priority | P0 — Mission Critical |
+| Status | ⬜ Amendment pending — G10 (Alert Rules tab) · G21 (Runbook Editor tab) |
 | HTMX Parts | `?part=board`, `?part=active`, `?part=timeline`, `?part=runbooks`, `?part=oncall`, `?part=postmortems`, `?part=analytics`, `?part=integrations` |
 | Poll Interval | `every 15s[!document.querySelector('.drawer-open,.modal-open')]` (10s during P0 active exam incident) |
 | Roles Allowed | Platform Admin (full) · DevOps Engineer (full) · Security Engineer (security incidents only) |
@@ -60,7 +61,7 @@ Provides at-a-glance incident health for the entire platform. The header communi
 
 **Data Flow:**
 - Status bar loaded via `?part=board` on page load; polled every 15s (10s during P0)
-- On-call badge pulls from OpsGenie current schedule API (cached 60s in Redis)
+- On-call badge pulls from OpsGenie current schedule API (cached 60s in Memcached)
 - Active incident quick-link fetches `platform_incidents` where `status IN ('open','acknowledged','mitigating')` ordered by severity then detected_at
 - War Room link is static; pulse animation driven by presence of P0 record with `exam_day = true` flag
 
@@ -311,7 +312,7 @@ A searchable repository of 30+ known incident types with step-by-step mitigation
 - Runbook with no steps: creation is blocked; minimum 3 steps required
 
 **Performance:**
-- Runbook list renders in < 150ms (small dataset, cached 5 minutes in Redis)
+- Runbook list renders in < 150ms (small dataset, cached 5 minutes in Memcached)
 - Full-text search returns results in < 300ms (tsvector GIN index)
 - Version diff computed server-side; cached per version pair
 
@@ -355,8 +356,8 @@ Displays the current and upcoming on-call rotations for all engineering roles. E
 - Sync indicator: "Synced from OpsGenie — last updated {time}"
 
 **Data Flow:**
-- Schedule sourced from OpsGenie Schedule API, cached in Redis (TTL 5 minutes)
-- Cache is updated via OpsGenie webhook on any schedule change (manual or automatic rotation)
+- Schedule sourced from OpsGenie Schedule API, cached in Memcached (TTL 5 minutes)
+- Cache key deleted (cache.delete) via OpsGenie webhook on any schedule change (manual or automatic rotation)
 - Override request: `POST /platform/api/oncall/override-requests` → Platform Admin notified via PagerDuty + email → on approval, override pushed to OpsGenie API
 - On-call history: `platform_oncall_history` table updated nightly from OpsGenie API
 
@@ -365,12 +366,12 @@ Displays the current and upcoming on-call rotations for all engineering roles. E
 - Platform Admin: approve/deny override requests; can directly edit schedule (opens OpsGenie deep link)
 
 **Edge Cases:**
-- OpsGenie API unavailable: schedule loads from Redis cache with "Showing cached schedule — last synced {time}" warning; "Request Override" form disabled with explanation
+- OpsGenie API unavailable: schedule loads from Memcached cache with "Showing cached schedule — last synced {time}" warning; "Request Override" form disabled with explanation
 - Override requested during active P0 incident: blocked with warning "You are currently the active on-call for a P0 incident. Override requests cannot be submitted during active incidents."
 - All on-call slots unfilled for a future date (scheduling gap): that cell shows "UNCOVERED" in red; Platform Admin receives daily digest alert
 
 **Performance:**
-- Schedule renders in < 200ms from Redis cache
+- Schedule renders in < 200ms from Memcached cache
 - OpsGenie API call is async background refresh; never blocks page render
 
 **Mobile:**
@@ -544,7 +545,7 @@ Tracks Mean Time to Acknowledge (MTTA), Mean Time to Mitigate (MTTM), and Mean T
 - Custom date range exceeding 365 days: warning "Analytics older than 1 year may be incomplete — archived records may not be included"
 
 **Performance:**
-- Analytics computed on-demand with results cached in Redis (TTL 15 minutes per {date_range, role} key)
+- Analytics computed on-demand with results cached in Memcached (TTL 15 minutes per {date_range, role} key)
 - Heatmap and trend charts rendered server-side as SVG for fast initial load; interactive overlays added via lightweight JS
 - PDF export is async (Celery job); download link sent via SSE when ready (typically < 20s)
 
@@ -586,7 +587,7 @@ Structured intake form for declaring a new incident. Ensures every incident is c
 
 **Data Flow:**
 - Service registry dropdown: `SELECT name, id FROM platform_service_registry ORDER BY name`
-- On-call staff: fetched from OpsGenie current shift (Redis cache 60s)
+- On-call staff: fetched from OpsGenie current shift (Memcached 60s TTL)
 - On submit: `POST /platform/api/incidents` — creates `platform_incidents` record with all fields, initial status = 'open', `detected_at = NOW()`
 - Simultaneously (parallel Lambda calls): PagerDuty trigger alert · Slack webhook post · if P0 + exam-day → notify War Room Div A page owners
 - All creates appended to `platform_audit_log`
@@ -881,9 +882,9 @@ Structured intake form for declaring a new incident. Ensures every incident is c
 - **Incident board poll (15s/10s)**: uses HTMX morph-swap — only changed incident card HTML is replaced; no full board re-render; board renders in < 200ms for up to 50 concurrent incidents
 - **Incident status bar poll**: separate lightweight `?part=board` part that returns only the banner state (severity + incident count); renders in < 50ms (single aggregation query)
 - **Timeline immutability at scale**: `platform_incident_timeline` grows unboundedly for long incidents; paginated (50 events per load); full-page timeline view groups events by 5-minute windows when > 500 events
-- **Runbook library**: small dataset (< 500 runbooks); cached in Redis (TTL 5 minutes); full-text search on PostgreSQL tsvector GIN index returns results in < 100ms
-- **MTTR analytics**: computed on-demand; results cached in Redis keyed by `{date_range}_{role}`; TTL 15 minutes; for 90-day ranges the query touches up to ~10K incident records (fully indexed on `detected_at`, `resolved_at`, `severity`)
-- **OpsGenie schedule**: cached 60s in Redis; OpsGenie webhook triggers cache invalidation on any schedule change; avoids redundant OpsGenie API calls during heavy incident periods when page is polled frequently
+- **Runbook library**: small dataset (< 500 runbooks); cached in Memcached (TTL 5 minutes); full-text search on PostgreSQL tsvector GIN index returns results in < 100ms
+- **MTTR analytics**: computed on-demand; results cached in Memcached keyed by `{date_range}_{role}`; TTL 15 minutes; for 90-day ranges the query touches up to ~10K incident records (fully indexed on `detected_at`, `resolved_at`, `severity`)
+- **OpsGenie schedule**: cached 60s in Memcached; OpsGenie webhook triggers cache.delete on any schedule change; avoids redundant OpsGenie API calls during heavy incident periods when page is polled frequently
 - **PagerDuty calls**: all outbound PagerDuty API calls are async (Lambda invocation); never block the UI response; failures queued to Celery for retry with exponential backoff (max 5 retries over 1 hour)
 - **Postmortem PDF export**: Celery async job; Lambda generates PDF from headless renderer; signed S3 URL (15-minute TTL) delivered via SSE; typical generation time 10–20s for a full postmortem with all sections
 - **Concurrent incident writes**: PostgreSQL row-level locking prevents concurrent status updates from conflicting; `SELECT FOR UPDATE SKIP LOCKED` pattern used in the acknowledge flow to handle simultaneous acknowledgement clicks from two responders
@@ -891,4 +892,241 @@ Structured intake form for declaring a new incident. Ensures every incident is c
 
 ---
 
-*C-18 — Engineering Incident Manager. Division C complete — all 18 pages specified.*
+*C-18 — Engineering Incident Manager.*
+
+---
+
+## Amendment — G10: Alert Rules Tab
+
+**Assigned gap:** G10 — C-18 has on-call schedule and PagerDuty integration but nobody can configure metric alert thresholds (e.g. "Lambda error rate > 5% → P1") from the portal. Alert rules are hardcoded or configured directly in PagerDuty/CloudWatch without a platform-managed audit trail.
+
+**Where it lives:** New tab in the C-18 page tab bar (alongside Runbooks, On-Call, Analytics, Integrations).
+
+---
+
+### Alert Rules Tab
+
+**Purpose:** Give DevOps Engineers and Platform Admins a single place to define, view, and manage the metric alert thresholds that drive PagerDuty pages. Every rule change is audited. Rules are linked to their incident history so the team can see which rules are noisy (many pages, few real incidents) vs effective.
+
+**Layout:** Two panels — Active Rules Table · Rule Editor Drawer
+
+---
+
+**Active Rules Table:**
+
+| Column | Description |
+|---|---|
+| Rule Name | Human-readable name (e.g., "Lambda Error Rate — P1") |
+| Metric | CloudWatch metric namespace + metric name |
+| Service | Which platform service this monitors |
+| Condition | Threshold expression (e.g., "error_rate > 5% for 3 consecutive 1-min windows") |
+| Severity | P0 · P1 · P2 |
+| PagerDuty Routing | Which PagerDuty service + escalation policy receives this alert |
+| Status | ✅ Active · ⏸ Silenced · ❌ Disabled |
+| Last Triggered | Timestamp of most recent alert firing |
+| Incidents Created (30d) | Count of C-18 incidents linked to this rule |
+| Noise Ratio | % of alerts that resulted in acknowledged incidents (low % = noisy) |
+| Actions | Edit · Silence · Disable · View history |
+
+**Existing alert rules (representative inventory):**
+
+| Rule | Metric | Threshold | Severity |
+|---|---|---|---|
+| Lambda Error Rate — P1 | Lambda `Errors` / `Invocations` | > 5% for 3 min | P1 |
+| Lambda Error Rate — P0 (exam day) | Same metric | > 10% + `is_exam_day = true` | P0 |
+| API P99 Latency — P1 | ALB `TargetResponseTime` P99 | > 800ms for 5 min | P1 |
+| RDS CPU — P2 | RDS `CPUUtilization` | > 85% for 10 min | P2 |
+| RDS Connection Pool — P1 | PgBouncer `cl_waiting` | > 50 waiting clients | P1 |
+| Celery Queue Depth — P2 | `platform_celery_queue_stats.queue_depth` | > 500 for 5 min | P2 |
+| Failed Auth Burst — P1 | `platform_failed_auth_stats.count_1h` | > 2,000 in 1h | P1 |
+| Memcached Node Down — P1 | ElastiCache `CurrItems` sudden drop | > 90% drop in 2 min | P1 |
+| ECS Task Health — P0 | ECS `TaskCount` for service | < 2 healthy tasks | P0 |
+| AI Pipeline Hard Stop — P1 | `platform_ai_budget_config.hard_stop_enabled` | = true | P1 |
+
+**Filter bar:** Service · Severity · Status (Active / Silenced / Disabled) · Noise ratio > 80% toggle
+
+---
+
+**Rule Editor Drawer (alert-rule-drawer, 640px)**
+
+Opens on "Edit" or "New Rule" button.
+
+**Tabs: Definition · Routing · History**
+
+**Tab — Definition:**
+
+- Rule name: text input (required)
+- Description: textarea (what does this alert mean, what should the on-call do first?)
+- Metric source: select (CloudWatch / ORM query / Custom Celery metric)
+- For CloudWatch:
+  - Namespace: dropdown (AWS/Lambda · AWS/RDS · AWS/ECS · AWS/ElastiCache · AWS/ApplicationELB · Custom)
+  - Metric name: dropdown (populated based on namespace)
+  - Dimension: key=value (e.g., FunctionName=auth-service-login)
+  - Statistic: Average · Sum · Maximum · Minimum · p99 · p95
+  - Period: 1 min · 5 min · 15 min
+  - Threshold: operator (> · < · >= · <= · !=) + value
+  - Consecutive periods: "for N consecutive periods" (1–10)
+- Exam Day escalation: checkbox — "Escalate to P0 during active exam window (overrides severity above)"
+- Silence window: optional time-of-day window when alert is suppressed (e.g., 03:00–04:00 IST for scheduled maintenance)
+- Severity: P0 · P1 · P2
+
+**Save → CloudWatch Alarm API (PutMetricAlarm)** — creates or updates the CloudWatch alarm backing this rule.
+
+**Tab — Routing:**
+
+- PagerDuty service: select from connected PagerDuty services (fetched from integration panel)
+- Escalation policy: select (from PagerDuty API)
+- Auto-create C-18 incident: toggle (yes/no) — if yes, incident is automatically created in platform DB when alert fires + PagerDuty page sent simultaneously
+- Auto-incident severity: auto-filled from rule severity (editable)
+- Auto-incident category: select
+- Linked runbook: search and attach (if auto-create = yes, the runbook is pre-attached to auto-created incidents)
+
+**Tab — History:**
+
+Table of all times this alert fired:
+- Fired at · Duration (how long metric stayed above threshold) · Incident created (link) · Resolved at · Resolution type (alert cleared / manual resolve / auto-resolve)
+- "Noise analysis": of the last 30 firings, {n}% resulted in a created and acknowledged incident (the rest were acknowledged without an incident → noise)
+
+**Silence an alert:**
+- "Silence" action → modal: duration (1h / 4h / 12h / until next scheduled maintenance window) + reason (required)
+- Silenced alerts still log to history but do not page PagerDuty
+- Auto-unsilence at end of duration
+- Silence shown in Active Rules Table as "⏸ Silenced until {time}"
+
+**Data model:**
+
+**platform_alert_rules**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| name | VARCHAR(200) | |
+| description | TEXT | |
+| metric_source | ENUM | cloudwatch/orm/celery_metric |
+| cloudwatch_alarm_arn | VARCHAR(512) | nullable |
+| metric_config | JSONB | namespace/metric/dimension/threshold/period config |
+| exam_day_escalate | BOOLEAN | |
+| severity | ENUM | p0/p1/p2 |
+| pagerduty_service_id | VARCHAR(100) | |
+| auto_create_incident | BOOLEAN | |
+| linked_runbook_id | UUID FK → platform_runbooks | nullable |
+| status | ENUM | active/silenced/disabled |
+| silenced_until | TIMESTAMPTZ | nullable |
+| silence_reason | TEXT | nullable |
+| created_by | UUID FK → platform_staff | |
+| created_at | TIMESTAMPTZ | |
+| updated_by | UUID FK → platform_staff | |
+| updated_at | TIMESTAMPTZ | |
+
+---
+
+## Amendment — G21: Runbook Editor Tab
+
+**Assigned gap:** G21 — C-18 displays a runbook library but there is no editor to create, update, or version runbooks from the portal. Runbook updates require direct DB access outside the platform, creating an audit gap.
+
+**Where it lives:** The existing Runbook Library (Section 5) is extended — it gains a full editor tab. The section becomes a two-tab panel: **Library** (existing browsing/search) · **Editor** (new — create/edit/version).
+
+**Note:** The existing spec describes some editing capability ("Edit Runbook" button, WYSIWYG editor with version history) but it is underspecified — no drawer detail, no step-level data model, no version diff view. This amendment fully specifies the editor.
+
+---
+
+### Runbook Editor Tab
+
+**Purpose:** Give DevOps Engineers and Platform Admins a fully-featured runbook creation and editing tool within the platform. All changes are versioned, auditable, and can be linked directly to alert rules (G10).
+
+**Access:** DevOps Engineer (Role 14) + Platform Admin (Role 10) — write access. Security Engineer (Role 16) — write access for Security category runbooks only.
+
+**Layout:** Two panels — Runbook List (left sidebar) · Editor (main panel)
+
+---
+
+**Left Sidebar — Runbook List:**
+
+Same category tree as the Library tab, but with:
+- "New Runbook" button at top
+- Edit/Archive icons on hover per row
+- Draft runbooks shown with "Draft" badge
+- Archived runbooks hidden by default; "Show archived" toggle
+
+**Main Panel — Editor:**
+
+**Header controls:**
+- Runbook title: large text input
+- Category: dropdown
+- Severity applicability: checkbox group (P0 · P1 · P2)
+- Affected services: multi-select from service registry
+- Estimated resolution time: number input (minutes)
+- Tags: free text multi-tag input (for search indexing)
+- Linked alert rule: search and select from platform_alert_rules (G10 integration) — optional; allows "From alert rule, open this runbook in drawer"
+- Status badge: Draft / Published (toggles on Save vs Publish)
+
+**Step Editor:**
+
+Each step is an independent editable block:
+
+- Step number (auto-assigned, drag-to-reorder)
+- Step title: text input (short heading, e.g., "Check Lambda error logs")
+- Step body: rich-text area (supports markdown — bold, code blocks, lists, links; rendered as formatted text in view mode)
+- Step type: Action (engineer does something) · Check (verify a state) · Decision (branch point) · Escalation (escalate to another team)
+- For Decision steps: two outcome paths (Yes/No or Pass/Fail) each pointing to a step number
+- For Escalation steps: escalation target (select from platform_staff or role type) + escalation message template
+- "Add step below" button between steps (+ drag handle for reorder)
+- "Delete step" button (with confirmation — warns if other steps reference this step number in a Decision branch)
+- Minimum 3 steps to save; system validates sequential step numbering
+
+**Rollback section:**
+- Separate collapsible section below main steps: "Rollback procedure" (free-text textarea)
+- "Has rollback: Yes / No" checkbox — if No, a warning badge appears on the runbook in the library
+
+**Escalation path section:**
+- Escalation path: ordered list of escalation contacts (select from platform staff)
+- Escalation conditions: text description of when to escalate beyond the runbook steps
+- Linked to C-02 G30 escalation chains: optional link to a platform_escalation_chains record
+
+**Related runbooks:**
+- Multi-select search: link to other runbooks that are commonly used alongside this one
+
+**Save / Version controls:**
+
+- "Save Draft" → saves without incrementing version; only the author can see draft version changes
+- "Publish" → increments version number; new version becomes AWSCURRENT; previous version retained in history
+- "Request Review" → sends notification to a selected senior DevOps or Platform Admin for review before publish
+- "Discard changes" → reverts to last published version
+
+**Version History panel (right-side drawer or bottom panel):**
+
+- Version table: version number · published by · published at · change summary (required field on publish)
+- "View this version" → read-only preview of historical version
+- "Restore this version" → creates a new draft from historical version content (does not overwrite published version; goes through draft → publish flow)
+- "Diff view" → side-by-side comparison of any two versions (step-level diff: added/removed/changed steps highlighted)
+
+**Test badge:**
+- "Mark as tested (simulated)" → records who tested, when, and via what scenario (free text)
+- Quarterly reminder: if last test > 90 days ago, amber badge "Overdue for simulation review" on runbook card in Library
+
+**Audit trail:**
+All runbook creates, edits, publishes, and archives logged to `platform_security_audit_log` (C-13 G24) under event_category = `platform_config`.
+
+**Data model additions:**
+
+The existing `platform_runbooks` and `platform_runbook_versions` tables (documented in the Data Model section) are extended:
+
+**platform_runbooks additions:**
+
+| Field | Type | Notes |
+|---|---|---|
+| linked_alert_rule_id | UUID FK → platform_alert_rules | nullable (G10 integration) |
+| has_rollback | BOOLEAN | whether a rollback procedure is documented |
+| escalation_chain_id | UUID FK → platform_escalation_chains | nullable (C-02 G30) |
+| last_tested_at | TIMESTAMPTZ | nullable |
+| last_tested_by | UUID FK → platform_staff | nullable |
+| test_scenario | TEXT | nullable — description of simulation scenario |
+
+**platform_runbook_versions additions:**
+
+| Field | Type | Notes |
+|---|---|---|
+| change_summary | VARCHAR(500) | required on publish — describes what changed |
+| status | ENUM | draft/published/archived |
+| reviewed_by | UUID FK → platform_staff | nullable — reviewer who approved before publish |
+| reviewed_at | TIMESTAMPTZ | nullable |

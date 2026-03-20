@@ -6,7 +6,7 @@
 > **Read Access:** Security Engineer (Role 16)
 > **File:** `c-03-system-config.md`
 > **Priority:** P1
-> **Status:** ✅ Spec done
+> **Status:** ✅ Spec done — no amendment required
 
 ---
 
@@ -45,7 +45,7 @@ Accordingly, every configuration change is: 2FA-gated (for destructive settings)
 | Role | Access Level | Permissions |
 |---|---|---|
 | Platform Admin (10) | Level 5 | Read + Edit all sections · Maintenance mode toggle · Kill switches · Emergency overrides |
-| DevOps / SRE (14) | Level 4 | Read + Edit: AWS/infra-related sections only (Rate limits · Redis TTLs · CORS · Session timeouts) · Cannot touch maintenance mode or kill switches |
+| DevOps / SRE (14) | Level 4 | Read + Edit: AWS/infra-related sections only (Rate limits · Memcached TTLs · CORS · Session timeouts) · Cannot touch maintenance mode or kill switches |
 | Security Engineer (16) | Level 4 — Read | View all sections · View audit log · Cannot edit |
 
 ---
@@ -93,17 +93,17 @@ Accordingly, every configuration change is: 2FA-gated (for destructive settings)
 
 | Card | Metric | Source | Alert |
 |---|---|---|---|
-| Active Tenants | Tenants with live portals | Redis | < 2,040 = amber |
+| Active Tenants | Tenants with live portals | Memcached | < 2,040 = amber |
 | Session Error Rate | Failed auth sessions / total (last 5 min) | CloudWatch | > 0.1% = red |
 | API Error Rate (5xx) | 5xx rate across all Lambda | CloudWatch | > 0.5% = amber |
-| Cache Hit Rate | Redis hit / (hit+miss) ratio | ElastiCache metrics | < 85% = amber |
+| Cache Hit Rate | Memcached hit / (hit+miss) ratio | ElastiCache metrics | < 85% = amber |
 | Rate Limit Hits (5min) | Count of 429 responses | CloudWatch | > 100 = amber |
 | Last Config Change | Time since last configuration change | Audit log | — |
 
 **Data Flow:**
 - KPI strip: `GET /engineering/system-config/?part=kpi` — 30s HTMX poll
-- All metrics from CloudWatch Metrics API + Redis INFO command
-- Cached in Redis 30s to avoid hammering CloudWatch API
+- All metrics from CloudWatch Metrics API + ElastiCache Memcached stats
+- Cached in Memcached 30s to avoid hammering CloudWatch API
 
 ---
 
@@ -132,7 +132,7 @@ Step 2 — 2FA confirmation (Platform Admin only; DevOps cannot activate mainten
 - Confirm button: "Activate Maintenance Mode"
 
 **On activation:**
-- Redis key `platform:maintenance_mode` set to `{active: true, message: "...", activated_at: ..., activated_by: ...}`
+- Memcached key `platform:maintenance_mode` set to `{active: true, message: "...", activated_at: ..., activated_by: ...}` via django.core.cache
 - All tenant portal requests → 503 response with maintenance page (served from CloudFront edge)
 - Active exam submissions: graceful pause (current answers saved, timer paused)
 - System status bar → red pulsing
@@ -143,7 +143,7 @@ Step 2 — 2FA confirmation (Platform Admin only; DevOps cannot activate mainten
 **Toggle OFF — Deactivation:**
 - Single-click (no 2FA required for deactivation — speed matters on recovery)
 - Confirmation modal: "Deactivate maintenance mode? This will restore access to all {n} tenant portals."
-- On confirm: Redis key deleted → portals live within 30s
+- On confirm: Memcached key deleted → portals live within 30s
 - Paused exams: timer resumes automatically; students shown "Maintenance complete — your exam has resumed"
 - Audit log entry
 
@@ -260,7 +260,7 @@ Step 2 — 2FA confirmation (Platform Admin only; DevOps cannot activate mainten
 
 **Data Flow:**
 - CORS origins stored in `platform_system_config` table key `cors_allowed_origins` as JSONB array
-- On save: Redis key `platform:cors_origins` updated immediately; Django CORS middleware reads from Redis on each request
+- On save: Memcached key `platform:cors_origins` updated immediately (django.core.cache); Django CORS middleware reads from Memcached on each request
 - Propagation: < 5s across all Lambda instances
 
 **Edge Cases:**
@@ -312,9 +312,9 @@ Step 2 — 2FA confirmation (Platform Admin only; DevOps cannot activate mainten
 
 ---
 
-### Section 8 — Redis Cache Configuration
+### Section 8 — Memcached Cache Configuration
 
-**Purpose:** Control Redis cache TTL defaults across the platform.
+**Purpose:** Control Memcached (django.core.cache) TTL defaults across the platform.
 
 **TTL Settings Table:**
 
@@ -331,23 +331,22 @@ Step 2 — 2FA confirmation (Platform Admin only; DevOps cannot activate mainten
 | Feature flag values | 30s | 5s | 120s | Admin only |
 | AI pipeline result cache | 600s | 60s | 3600s | Admin only |
 
-**Redis cluster health (read-only display in this section):**
-- 3 shards × 2 nodes: status badges (all green / degraded)
-- Memory usage per shard: GB used / GB total
-- Hit rate: last 5 min
-- Keyspace size: current key count vs 40M peak capacity
+**Memcached cluster health (read-only display in this section):**
+- ElastiCache Memcached cluster: node count + status badges (all green / degraded)
+- Memory usage per node: MB used / MB total
+- Hit rate: last 5 min (from ElastiCache CloudWatch metrics)
 - Link: "View full details in C-08 Infrastructure Monitor"
 
-**Save:** Each row has individual save; TTL changes take effect immediately on next key expiry; existing cached keys are not invalidated on TTL change (new TTL applies to subsequent writes)
+**Save:** Each row has individual save; TTL changes take effect for new writes immediately; existing cached keys expire at their original TTL (Memcached does not support per-key TTL update on existing entries)
 
 **Flush controls (Platform Admin only · 2FA required):**
-- "Flush all API response caches" → SCAN + DEL matching `cache:api:*` keys
-- "Flush all session caches" → 2FA required + confirmation "This will log out all {n} active users"
-- "Flush permission caches" → immediate re-evaluation of all user permissions (use after bulk role changes)
+- "Flush all caches" → `cache.clear()` via django.core.cache — clears all Memcached keys across the cluster
+- "Flush session caches" → 2FA required + confirmation "This will log out all {n} active users" → targeted flush via `cache.delete_many(session_keys)` where session keys are tracked in `platform_active_sessions` table
+- "Flush permission caches" → deletes permission cache keys from tracked permission key registry → immediate re-evaluation of all user permissions (use after bulk role changes)
 
 **Edge Cases:**
 - Setting permission cache TTL > 120s: amber warning "Permission changes will take up to {TTL}s to propagate. Recommended: ≤ 30s."
-- Redis cluster in degraded state when admin tries to save TTL: warning "Redis unavailable. TTL change saved to DB but will not take effect until Redis recovers."
+- Memcached cluster in degraded state when admin tries to save TTL: warning "Memcached unavailable. TTL change saved to DB but will not take effect until cache recovers."
 
 ---
 
@@ -413,7 +412,7 @@ Step 2 — 2FA confirmation (Platform Admin only; DevOps cannot activate mainten
 - Initiating admin clicks kill switch → selects reason from list + free text (min 50 chars)
 - System sends approval request to all other Level 5 admins (email + platform alert)
 - Second admin approves within 15 min (or initiating admin can override with double-TOTP)
-- On activation: Redis key `platform:kill_switch:{name}` set; all Lambda functions read this key on cold start and warm invocation (cached 5s locally in Lambda)
+- On activation: Memcached key `platform:kill_switch:{name}` set (django.core.cache); all Lambda functions read this key on cold start and warm invocation (cached 5s locally in Lambda)
 - C-18 incident auto-created
 
 **Active kill switches banner:**
@@ -470,9 +469,9 @@ Changed: Session timeout Level 3-4
 - If countdown reaches 0: change applies automatically
 
 **Data Flow:**
-- Pending change stored in Redis key `platform:pending_config_change:{session_id}` with 90s TTL
-- Countdown managed client-side (JS); Redis key checked server-side on apply
-- If admin closes browser during countdown: Redis TTL expires; change does NOT apply; no partial state
+- Pending change stored in Memcached key `platform:pending_config_change:{session_id}` with 90s TTL
+- Countdown managed client-side (JS); Memcached key checked server-side on apply
+- If admin closes browser during countdown: Memcached TTL expires; change does NOT apply; no partial state
 
 **Edge Cases:**
 - Two admins submit conflicting staged changes simultaneously: second change shows warning "Another change for this setting is pending. View it before applying."
@@ -519,7 +518,7 @@ Changed: Session timeout Level 3-4
 6. Saves (DevOps can edit this without 2FA)
 7. Staged review shows: "Rate limit increase: exam submit 2,000 → 3,000 req/min — applies in 60s"
 8. Clicks "Apply Now"
-9. Change propagates to all Lambda instances via Redis within 5s
+9. Change propagates to all Lambda instances via Memcached within 5s
 10. Audit log entry created
 
 ---
@@ -545,7 +544,7 @@ SystemConfigPage
 │   ├── RateLimitsSection
 │   ├── CORSOriginsSection
 │   ├── SESEmailSection
-│   ├── RedisCacheSection
+│   ├── MemcachedCacheSection
 │   ├── FeatureFlagOverrideSection
 │   └── KillSwitchPanel (distinct red-border card)
 ├── RecentChangesAuditFeed (right sidebar)
@@ -613,7 +612,7 @@ SystemConfigPage
 | CORS origin | Must be HTTPS · valid FQDN · no IP · no internal ranges · no global wildcard `*` |
 | Session timeout values | Must respect hierarchy: Level 5 < Level 3-4 < Level 1-2 · student exam timeout < student session timeout |
 | Rate limit values | Exam submit limit cannot be set below 500 req/min (hard floor) · Auth endpoint limit cannot be < 30 req/min |
-| Redis TTL | Permission cache TTL: max 120s (enforced) · Session TTL: min 300s (enforced — lower would log users out too aggressively) |
+| Memcached TTL | Permission cache TTL: max 120s (enforced) · Session TTL: min 300s (enforced — lower would log users out too aggressively) |
 | JWT access token TTL | Min 5 min · Max 60 min · Must be < refresh token TTL |
 | Kill switch reason | Min 50 chars · must select from reason category list first |
 | Feature flag force-OFF reason | Min 30 chars |
@@ -629,12 +628,12 @@ SystemConfigPage
 |---|---|
 | 2FA on destructive settings | Session timeout reduction, rate limit decrease, CORS removal, kill switches, maintenance mode: all require TOTP from Platform Admin |
 | DevOps write scope | Role-based field-level access: `platform_staff.access_level = 4` restricts which `config_key` rows are editable; enforced server-side |
-| Staged review race condition | Pending change stored in Redis with actor's session ID; conflict detection if another admin has pending change for same key |
+| Staged review race condition | Pending change stored in Memcached with actor's session ID; conflict detection if another admin has pending change for same key |
 | Kill switch dual approval | Approval token sent via email; valid 15 min; one-time use; stored hashed in DB |
 | Config value encryption | `is_sensitive = true` config values stored encrypted (AES-256-GCM) in DB; decrypted in memory only; never logged in plaintext |
 | CORS wildcard prevention | `*` as CORS origin is blocked at DB level via CHECK constraint and application validation |
 | Audit log immutability | Same INSERT-only `platform_audit_log` policy; platform_system_config `previous_value` column is application-set only; not user-editable |
-| Propagation verification | After Redis key update, backend performs read-after-write to confirm propagation; if mismatch: error returned to admin "Config save failed — verify in audit log" |
+| Propagation verification | After Memcached key update, backend performs read-after-write to confirm propagation; if mismatch: error returned to admin "Config save failed — verify in audit log" |
 | Rate limit floor | Exam submit minimum floor (500 req/min) enforced via DB CHECK constraint; cannot be lowered via API regardless of role |
 
 ---
@@ -643,13 +642,13 @@ SystemConfigPage
 
 | Scenario | Handling |
 |---|---|
-| Redis unavailable when maintenance mode activated | Fallback: write maintenance state to `platform_system_config` DB table; Lambda functions fall back to DB check every 30s; slight delay in propagation (30s vs 5s) |
+| Memcached unavailable when maintenance mode activated | Fallback: write maintenance state to `platform_system_config` DB table; Lambda functions fall back to DB check every 30s; slight delay in propagation (30s vs 5s) |
 | Config change during peak exam traffic | Warning overlay: "74,000 exam submissions in progress. Config changes will take effect within 5s. High-risk changes during peak traffic are discouraged." |
 | Both Level 5 admins offline when kill switch needed | Double-TOTP override available: initiating admin enters TOTP twice within 30s window; treated as self-approving; logged as emergency override |
 | Staged change window expires while reviewing impact | Automatic apply is intentional (60s is sufficient review); admin who wants to abort must actively click Cancel |
 | Feature flag master override conflicts with A/B test | Master override takes absolute precedence; A/B test in Div B shows banner "Master override active — test data may be unreliable" |
-| Maintenance mode deactivation fails (Redis unavailable) | Manual fallback: DBA can directly delete `platform:maintenance_mode` Redis key from cluster; or DevOps redeploys Lambda with env var `MAINTENANCE_OVERRIDE=false` |
-| Multiple kill switches active simultaneously | System supports it; each kill switch is independent Redis key; active count shown in status bar: "3 kill switches active" |
+| Maintenance mode deactivation fails (Memcached unavailable) | Manual fallback: DBA can update `platform:maintenance_mode` directly in `platform_system_config` DB table; or DevOps redeploys Lambda with env var `MAINTENANCE_OVERRIDE=false` |
+| Multiple kill switches active simultaneously | System supports it; each kill switch is an independent Memcached key; active count shown in status bar: "3 kill switches active" |
 | SES bounce rate spike during maintenance notification send | SES sending halted above 4.5% bounce rate; notification emails may not all be delivered; admin shown delivery status: "Notifications sent: 1,847/2,050 — 203 failed (SES limit)" |
 | Revert last change with multiple dependent changes | Revert blocked if > 2 subsequent changes made; admin must manually identify and undo chain of changes |
 
@@ -659,11 +658,11 @@ SystemConfigPage
 
 | Concern | Strategy |
 |---|---|
-| Config propagation to 2,050 tenants | All tenant requests read config from Redis (not DB); Redis update is single operation; propagation is per-request on next read within TTL window — no broadcast needed |
-| Maintenance mode activation latency | Redis key set: < 5ms; Lambda warm instances pick up on next invocation (< 1s); cold starts: Lambda reads Redis on init; full propagation: < 30s across all warm Lambda instances |
+| Config propagation to 2,050 tenants | All tenant requests read config from Memcached (not DB); Memcached update is single operation; propagation is per-request on next read within TTL window — no broadcast needed |
+| Maintenance mode activation latency | Memcached key set: < 5ms; Lambda warm instances pick up on next invocation (< 1s); cold starts: Lambda reads Memcached on init; full propagation: < 30s across all warm Lambda instances |
 | Kill switch Lambda propagation | Lambda instances cache kill switch state locally for 5s; worst-case: 5s propagation; acceptable for emergency scenarios |
-| Staged change countdown | Countdown timer client-side only (JS); server-side: Redis key with 90s TTL as guard; no polling during 60s window |
+| Staged change countdown | Countdown timer client-side only (JS); server-side: Memcached key with 90s TTL as guard; no polling during 60s window |
 | Config page load | All config values served from `platform_system_config` table (< 100 rows); full page load < 200ms; no heavy joins |
 | Audit log scale | Config changes are infrequent (< 50/day); no partition needed; standard index on `section + created_at` sufficient |
 | SES bulk notification on maintenance | 2,050 emails queued as Celery task batch (250/task × 9 tasks); delivered within 5 min; SES rate limit respected |
-| Redis flush operations | Flush uses SCAN (not KEYS) to avoid blocking Redis; batches of 100 keys per iteration; non-blocking for other operations |
+| Memcached flush operations | Full flush uses `cache.clear()` (django.core.cache); targeted session/permission flush uses `cache.delete_many()` with tracked key lists; non-blocking for other operations |

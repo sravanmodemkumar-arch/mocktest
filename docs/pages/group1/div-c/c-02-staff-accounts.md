@@ -6,7 +6,7 @@
 > **Read Access:** Security Engineer (Role 16)
 > **File:** `c-02-staff-accounts.md`
 > **Priority:** P1
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G30 (Staff Escalation Tree)
 
 ---
 
@@ -73,7 +73,7 @@ Platform integrity depends on this page: a compromised staff account can affect 
 
 **Data Flow:**
 - Page load: `GET /engineering/staff/?part=kpi` + `GET /engineering/staff/?part=table` in parallel
-- Staff count badge: Redis cache `platform:staff_count` with 5-min TTL
+- Staff count badge: Memcached (django.core.cache, key `platform:staff_count`) with 5-min TTL
 - Division filter tab click: `GET /engineering/staff/?part=table&division={div}`
 
 **Role-Based Behavior:**
@@ -118,7 +118,7 @@ Platform integrity depends on this page: a compromised staff account can affect 
 - Security Engineer: cards visible but not clickable
 
 **Data Flow:**
-- All 6 metrics: single Redis pipeline query; fallback to DB if Redis miss
+- All 6 metrics: single Memcached `get_many` call; fallback to DB if cache miss
 - Poll: `part=kpi` every 120s with HTMX poll guard
 
 **Edge Cases:**
@@ -199,7 +199,7 @@ Platform integrity depends on this page: a compromised staff account can affect 
 - Table: `GET /engineering/staff/?part=table`
 - 81 rows loaded at once (no pagination needed at this scale)
 - Last login: from `platform_staff_sessions` table most recent row per staff
-- Login count: Redis counter `staff:{id}:login_count_30d` reset monthly by Celery beat
+- Login count: Memcached counter (key `staff:{id}:login_count_30d`) reset monthly by Celery beat
 
 **Role-Based Behavior:**
 - Platform Admin: ⋮ menu with all actions; row clickable
@@ -261,7 +261,7 @@ Platform integrity depends on this page: a compromised staff account can affect 
 
 **Edge Cases:**
 - Email change: sends verification email to new address; old email retains access until verification
-- Level downgrade (e.g., Level 4 → Level 3): all pages they cannot access at new level become inaccessible immediately (session doesn't need refresh — Redis permission cache updated within 30s)
+- Level downgrade (e.g., Level 4 → Level 3): all pages they cannot access at new level become inaccessible immediately (session doesn't need refresh — Memcached permission cache invalidated immediately on role change)
 - Attempting to downgrade the last Level 5 admin: blocked with "Cannot downgrade — minimum 3 Level 5 Platform Admin accounts required"
 
 ---
@@ -493,7 +493,7 @@ Platform integrity depends on this page: a compromised staff account can affect 
 
 **On suspend:**
 - `POST /api/staff/{id}/suspend/`
-- All active sessions terminated immediately (Redis session keys deleted)
+- All active sessions terminated immediately (Memcached session keys deleted)
 - AWS SSO session revoked (if SSO linked)
 - Status → `suspended`
 - Notification: email to staff's manager
@@ -578,7 +578,7 @@ Any unchecked item blocks deletion until resolved.
 
 **No confirmation required** for emergency lock (unlike normal suspend — speed is critical)
 - One click → account locked immediately
-- All sessions terminated within 5s (via Redis session key deletion + background Celery job)
+- All sessions terminated within 5s (via Memcached session key deletion + background Celery job)
 - AWS SSO session revoked
 - Incident automatically created in C-18 with pre-filled description: "Emergency account lock: {staff name} — locked by {admin name} at {time}"
 - Security Engineer notified via email + platform alert bell
@@ -804,11 +804,74 @@ StaffAccountManagerPage
 |---|---|
 | 81 staff accounts | Trivially small; all rows loaded at once (no virtual scroll needed); no pagination in table |
 | Login history query | Index on `staff_id + created_at`; 12-month rolling window; older data archived to S3 |
-| Session check on every request | Sessions cached in Redis with 15-min TTL; DB query only on cache miss; session check < 2ms P99 |
+| Session check on every request | Sessions cached in Memcached with 15-min TTL; DB query only on cache miss; session check < 2ms P99 |
 | Access review batch | 81 accounts processed in single DB query; all review cards rendered server-side; no lazy load needed |
 | Geo-IP lookup | MaxMind GeoLite2 loaded into memory at worker startup; lookup < 0.5ms per login |
-| Staff count badge | Redis cache `platform:staff_count`; TTL 5 min; invalidated on any account create/delete |
+| Staff count badge | Memcached (django.core.cache) key `platform:staff_count`; TTL 5 min; invalidated on any account create/delete |
 | Audit log query | Partition by month; index on `staff_id + created_at`; page load < 100ms for 25 entries |
-| Emergency lock latency | Redis session key deletion: < 5ms; worker picks up session invalidation within 1s; full lock propagation < 5s |
+| Emergency lock latency | Memcached session key deletion: < 5ms; worker picks up session invalidation within 1s; full lock propagation < 5s |
 | SSO token validation | SAML cert cached in memory (24h); validation < 3ms per login request |
 | Platform growth | If staff count grows beyond 200: add server-side pagination (25/page); access review workflow supports 500+ accounts without redesign (card-based) |
+
+---
+
+## Amendment — G30: Staff Escalation Tree
+
+**Gap addressed:** On-call escalation chains for P0 Exam Day, Security Breach, Data Breach-DPDPA, and DB Emergency incidents existed only in a shared document outside the platform. "Out of Office" status was never reflected, leading to calls to unavailable engineers during incidents.
+
+### New Tab — Escalation Tree (in Staff Detail Drawer → cross-account view, and as standalone section)
+
+A sixth tab **Escalation Tree** is added to the Staff Account Manager page as a full-section panel (not inside the per-staff drawer — it covers all chains across the team).
+
+**Accessed via:** "Escalation Trees" button in the page header action bar (visible to Platform Admin and Security Engineer).
+
+**Panel layout (720px right-side panel):**
+
+**5 Escalation Chains:**
+
+| Chain | Trigger Scenario |
+|---|---|
+| P0 Exam Day | 74K exam submission degradation / complete outage during live exam |
+| P1 Service Degradation | Non-exam-hour API latency / partial service degradation |
+| Security Breach | Suspected or confirmed compromise of credentials, WAF bypass, or data exfiltration |
+| Data Breach — DPDPA | Confirmed student PII exposure triggering 72h DPDPA notification obligation |
+| DB Emergency | PostgreSQL primary down / replication failure / schema corruption |
+
+**Per chain, the escalation tree shows:**
+
+| Position | Fields |
+|---|---|
+| Primary on-call | Staff name · role · phone (Signal / WhatsApp / phone call) · email · OOO status |
+| Secondary | Same fields |
+| Tech Lead | Same fields |
+| CTO / DPO | (CTO for P0/P1/DB; DPO for Security Breach/Data Breach) · same contact fields |
+
+**OOO Toggle:** Each person in the tree has an "Out of Office" toggle (self-managed via their own profile, or toggled by Platform Admin). When OOO = true:
+- That position shows amber "OOO" badge
+- The escalation tree auto-shows the next available contact with a note "Primary unavailable — escalate to Secondary"
+- The chain summary shows "Chain reachable: Yes / Partial / No" based on OOO coverage
+
+**Send Test Alert:** Button per chain → fires a test notification (email + WhatsApp API call) to all non-OOO members in the chain → result shown inline: "✅ 3/4 contacts reached · ❌ 1/4 failed (phone unreachable)" → last-tested timestamp updated.
+
+**Last tested timestamp:** Shown per chain with colour coding: green (< 30 days) · amber (30–60 days) · red (> 60 days). Monthly testing recommended.
+
+**Integration with C-18:** When a P0 incident is created in C-18, the platform auto-triggers the corresponding escalation chain notification (configurable: P0 Exam Day chain auto-fires on any `severity = P0` incident with `category = exam-day`).
+
+### Data Model Addition
+
+**platform_escalation_chains** table (shared schema):
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| chain_type | ENUM | p0_exam_day / p1_degradation / security_breach / data_breach / db_emergency |
+| position | SMALLINT | 1 = Primary · 2 = Secondary · 3 = Tech Lead · 4 = CTO/DPO |
+| staff_id | UUID FK → platform_staff | |
+| signal_number | VARCHAR(20) | nullable |
+| whatsapp_number | VARCHAR(20) | nullable |
+| is_ooo | BOOLEAN | default false |
+| ooo_until | TIMESTAMPTZ | nullable |
+| last_test_sent_at | TIMESTAMPTZ | nullable |
+| last_test_result | JSONB | nullable — `{email: ok, whatsapp: failed}` |
+| updated_by | UUID FK → platform_staff | |
+| updated_at | TIMESTAMPTZ | |
