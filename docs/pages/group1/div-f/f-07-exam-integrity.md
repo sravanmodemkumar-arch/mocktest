@@ -114,6 +114,8 @@ All proctoring flags across all exams. Volume can be high — a single 74K exam 
 
 **Auto-escalation indicator:** Flags auto-escalated by Celery (flag_count ≥ threshold) show `[Auto-escalated]` badge. Integrity Officer reviews the resulting case in Tab 2.
 
+**Auto-escalation deduplication:** Before creating a new auto-escalated case, the `analyze_exam_integrity` Celery task checks for an existing OPEN or UNDER_INVESTIGATION case with the same `(exam_schedule_id, institution_id, case_type)`. If one exists, the newly triggered flags are appended to the existing case (a log entry is added: "Additional flags auto-linked by system") rather than creating a duplicate. Only if no matching open case exists is a new `FMC-` case created. This prevents the same incident from generating multiple separate cases across multiple Celery task runs.
+
 ---
 
 ### Flag Review Drawer (640px)
@@ -178,7 +180,7 @@ Formal cases opened and tracked to closure.
 
 | Column | Sortable | Notes |
 |---|---|---|
-| Case ID | No | Auto-ref |
+| Case ID | No | Format: `FMC-{YYYYMMDD}-{seq}` — e.g. `FMC-20260315-0001`; seq is 4-digit daily counter |
 | Case Type | No | — |
 | Exam | Yes | — |
 | Institution | Yes | — |
@@ -350,7 +352,9 @@ Searchable dropdown. Shows all institutions that have any flag history.
 | Link Flags | No | Multi-select from flags on this exam |
 | Anomaly Score | No | Number 0–100 (from statistical analysis) |
 
-**[Create Case]** → `exam_malpractice_case` created. ✅ "Malpractice case opened" toast 4s. Assigned to Integrity Officer (91).
+**[Create Case]** → `exam_malpractice_case` created with ID format `FMC-{YYYYMMDD}-{seq}` (e.g. `FMC-20260315-0001`). ✅ "Malpractice case opened — FMC-{ref}" toast 4s. Assigned to Integrity Officer (91).
+
+**Deduplication check on manual create:** Before opening, system checks for an existing OPEN or UNDER_INVESTIGATION case with the same `(exam_schedule_id, institution_id, case_type)`. If found, a warning is shown: "An open case already exists for this exam, institution, and type: FMC-{ref}. Link flags to the existing case instead?" — with buttons [Open Existing Case] · [Create New Case Anyway].
 
 ### Place Result Hold Modal (480px) — Dual Approval Required
 

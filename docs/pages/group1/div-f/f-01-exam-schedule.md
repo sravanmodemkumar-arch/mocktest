@@ -105,6 +105,7 @@ At 2,050 institutions, exam scheduling is a bulk operation. A single national SS
 
 **[Configure]:** opens Schedule Detail Drawer (760px)
 **[Lock Config]:** shown only when status = SCHEDULED and all required fields complete. Confirmation modal required. See Section 6.
+**[Reschedule]:** shown only when status = SCHEDULED or CONFIG_LOCKED (not ACTIVE or COMPLETED). Opens Reschedule Modal. Creates a new `exam_schedule` record with `rescheduled_from_id` pointing to the original; marks original as RESCHEDULED status. Student registrations are migrated to the new schedule by Celery task.
 
 **Row selection:** Multi-select via checkbox (column 1). Bulk actions: "Lock selected configs" · "Cancel selected".
 
@@ -149,6 +150,11 @@ Triggered by [Configure] on any row.
 
 **Status controls:**
 - [Save Timing] — saves timing fields. Not available when CONFIG_LOCKED or ACTIVE.
+- **[Confirm Schedule]** — moves status from `DRAFT` → `SCHEDULED`. Enabled when:
+  - `scheduled_start` is set and > now + 1 hour
+  - `duration_minutes` is set
+  - Shows confirmation: "Confirm this exam schedule? It will appear in the calendar and be visible to institution admins." [Confirm] · [Keep as Draft]
+  - After confirming: status badge updates to SCHEDULED and config-lock deadline appears.
 - Config lock indicator: 🔒 "Locked by {Role} at {datetime}" or "⚠️ Config must be locked before {datetime}"
 
 **Computed fields (read-only):**
@@ -393,6 +399,20 @@ Lock configuration now?"
 
 [Confirm Lock] `bg-[#6366F1]` · [Cancel]
 
+### Reschedule Modal (480px)
+
+**Trigger:** [Reschedule] in table row Actions.
+
+"Rescheduling creates a new exam schedule and marks the current one as RESCHEDULED. Student registrations will be migrated to the new schedule."
+
+| Field | Required | Notes |
+|---|---|---|
+| New Scheduled Start | Yes | Must be ≥ 1 hour in future |
+| Reason for Reschedule | Yes | Text area — logged in `exam_ops_action_log` |
+| Notify institution? | Toggle | Default ON — creates in-app notification to institution admin |
+
+**[Confirm Reschedule]** → creates new `exam_schedule` with `rescheduled_from_id = original.id`, original status → RESCHEDULED, Celery task migrates student registrations. ✅ "Schedule rescheduled — new schedule created for {datetime}" toast 4s.
+
 ### Bulk Cancel Modal (400px)
 
 **Trigger:** Bulk selection → "Cancel selected"
@@ -404,6 +424,32 @@ Lock configuration now?"
 ---
 
 ## 6. Data Model Reference
+
+### `exam_schedule` — Status State Machine
+
+Valid transitions (enforced server-side):
+
+```
+DRAFT ──[Confirm Schedule]──────────────────────────────► SCHEDULED
+                                                               │
+SCHEDULED ──[Lock Config]──────────────────────────────► CONFIG_LOCKED
+                                                               │
+                         ──[auto_activate_exam Celery]──► ACTIVE ──[Pause]──► PAUSED
+                                                               │                  │
+                                                               │ ◄──[Resume]──────┘
+                                                               │
+CONFIG_LOCKED or SCHEDULED ──[Cancel]──► CANCELLED            │
+SCHEDULED or CONFIG_LOCKED ──[Reschedule]──► RESCHEDULED       │
+                                                               ▼
+                                         ──[auto_complete_exam]──► COMPLETED
+```
+
+**Rules:**
+- Only Exam Config Specialist (90) can CONFIRM (DRAFT → SCHEDULED) and LOCK (SCHEDULED → CONFIG_LOCKED)
+- Only Ops Manager (34) can UNLOCK (CONFIG_LOCKED → SCHEDULED, emergency only)
+- `auto_activate_exam` and `auto_complete_exam` are Celery Beat tasks (if enabled in F-09 config)
+- CANCELLED and RESCHEDULED are terminal states — no further transitions
+- PAUSED is only possible from ACTIVE; RESUME sends back to ACTIVE with `resumed_at` set
 
 **`exam_schedule`** — full definition in `div-f-pages-list.md`
 

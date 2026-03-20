@@ -21,6 +21,7 @@
 - `/ops/exam/notifications/?part=quota-dashboard` — quota monitoring tab
 - `/ops/exam/notifications/?part=template-drawer&id={id}` — template edit drawer
 - `/ops/exam/notifications/?part=broadcast-wizard` — broadcast create wizard
+- `/ops/exam/notifications/?part=opt-out` — opt-out / DNC management tab
 
 ---
 
@@ -49,6 +50,7 @@ F-06 is the central hub for all platform communications from EduForge to institu
 | 2 | Broadcasts |
 | 3 | Delivery Reports |
 | 4 | Quota Dashboard |
+| 5 | Opt-out Management |
 
 ---
 
@@ -165,6 +167,8 @@ Variables detected:
 
 **DLT note:** Templates not DLT-registered will be rejected by SMS gateway. F-06 enforces: SMS template with `dlt_template_id = NULL` cannot be activated.
 
+**Overdue DLT warning:** If a template remains `PENDING_APPROVAL` for > 10 days, F-06 shows an amber warning badge in the template row: "⚠️ DLT approval pending for {N} days. Check TRAI portal for status." No automatic escalation — Notification Manager (37) must follow up manually.
+
 #### Section D — WhatsApp Registration (WhatsApp only)
 
 | Field | Notes |
@@ -173,6 +177,20 @@ Variables detected:
 | WhatsApp Template ID | From Meta — entered after approval |
 | WhatsApp Approved Date | Date picker |
 | Template Category (Meta) | Utility · Authentication · Marketing — affects deliverability and cost |
+
+**WhatsApp template status workflow:**
+1. `DRAFT` → filled in F-06
+2. `PENDING_APPROVAL` → submitted to Meta Business Manager (external; 1–5 days)
+3. `APPROVED` → WhatsApp Template ID entered in F-06; Notification Manager activates
+4. `ACTIVE` → available for broadcasts
+5. **`REJECTED`** — Meta rejected the template (policy violation, incorrect format, or category mismatch)
+
+When Meta rejects a template, the Notification Manager enters the rejection in F-06:
+- [Mark as Rejected] button (shown on PENDING_APPROVAL WhatsApp templates)
+- Opens modal: rejection_reason (text) + rejection_date
+- Sets `exam_notification_template.status = REJECTED` (new status value)
+- Template row shows red badge: "Meta Rejected — {reason}" with [Edit & Resubmit] action
+- [Edit & Resubmit]: opens drawer in edit mode; saves as new DRAFT (original REJECTED record retained for audit)
 
 #### Footer
 
@@ -212,6 +230,11 @@ Variables detected:
 **Progress display during SENDING:**
 - Row shows: `{sent_count} / {total_recipients} sent` with thin progress bar
 - HTMX auto-updates while status = SENDING: `hx-trigger="every 10s"` on SENDING rows only
+
+**Scheduled Broadcasts sub-view** (filter `Status = APPROVED` + `scheduled_at > now()`):
+- A dedicated filter state showing broadcasts approved and queued for a future send
+- Actions: [Cancel] — cancels before Celery picks it up; [Edit Schedule] — change `scheduled_at` (only before QUEUED)
+- Countdown shown: "Sends in {time}" under Scheduled At column
 
 ---
 
@@ -362,6 +385,76 @@ Useful for planning: identifies exam announcement days (quota spikes) vs normal 
 
 ---
 
+### Tab 5 — Opt-out / DNC Management
+
+The platform maintains a Do Not Contact (DNC) list. Any recipient on this list is automatically excluded from all broadcast sends. Opt-outs are per-channel — a recipient can opt out of WhatsApp while still receiving SMS.
+
+**DPDPA note:** This page operates entirely on anonymised `recipient_ref` values. Phone numbers are never stored in the DNC list — only the platform-internal ref tied to the institution/student record.
+
+#### Filter Bar
+
+| Filter | Control |
+|---|---|
+| Channel | Multi-select: WhatsApp · SMS · Email · All channels |
+| Opt-out Reason | Multi-select: Student Request · Institution Request · Carrier Bounce · Manual Admin |
+| Status | Active Opt-outs · Re-opted In · All |
+| Date Range | Opted out at |
+| Institution | Searchable select |
+
+#### Opt-out Table
+
+| Column | Sortable | Notes |
+|---|---|---|
+| Recipient Ref | No | Anonymised — `RCPT-{hash}` |
+| Institution | Yes | — |
+| Channel | No | WhatsApp / SMS / Email / All |
+| Opted Out At | Yes (default: DESC) | — |
+| Reason | No | STUDENT_REQUEST · INSTITUTION_REQUEST · CARRIER_BOUNCE · MANUAL_ADMIN |
+| Re-opted In At | No | Datetime if re-opted in; `—` if still opted out |
+| Status | No | Active / Re-opted In |
+| Actions | — | [Re-opt In] · [View Deliveries] |
+
+**[Re-opt In]:** removes the opt-out restriction for this recipient + channel. Requires reason. Logs action. ✅ "Opt-out removed — recipient will receive future sends" toast 4s.
+
+**[View Deliveries]:** opens a delivery log panel showing all past broadcast delivery records for this recipient_ref (shows status only — no content).
+
+#### Opt-out Counts Summary (top of tab)
+
+```
+WhatsApp opt-outs: {N}  |  SMS opt-outs: {N}  |  Email opt-outs: {N}
+All-channel opt-outs (excluded from everything): {N}
+```
+
+---
+
+#### Add Manual Opt-out
+
+**[+ Add Opt-out]** (header button): opens inline form.
+
+| Field | Required | Notes |
+|---|---|---|
+| Recipient Ref | Yes | Platform internal ref — search by institution + student ref |
+| Channel | Yes | Select: WhatsApp · SMS · Email · All channels |
+| Reason | Yes | Select: Manual Admin · Student Request · Institution Request |
+| Notes | No | Free text for audit context |
+
+**[Add]** → creates `exam_notification_opt_out` record. ✅ "Opt-out added — recipient will be excluded from {channel} sends" toast 4s.
+
+---
+
+#### Bulk Import Opt-outs (CSV)
+
+**[Import Opt-outs CSV]**: Upload file. Format: `recipient_ref,channel,reason`. Max 10,000 rows per import.
+
+- Validates: recipient_ref exists in platform, channel is valid enum, reason is valid enum
+- Preview: shows first 10 rows + total valid / invalid count
+- Invalid rows highlighted red with error reason
+- [Confirm Import] → processes valid rows, skips invalid, downloads error report for failed rows
+
+**[Download Current Opt-out List CSV]**: exports all active opt-outs. Format: `recipient_ref,channel,opted_out_at,reason`. DPDPA: no phone numbers.
+
+---
+
 ## 5. Modals
 
 ### Send Now Confirmation Modal (480px)
@@ -418,6 +511,20 @@ Full models in `div-f-pages-list.md`:
 | `failure_reason` | varchar(100) | Nullable |
 | `sent_at` | timestamptz | Nullable |
 
+**`exam_notification_opt_out`** (DNC / opt-out records):
+| Field | Type | Notes |
+|---|---|---|
+| `id` | UUID | — |
+| `recipient_ref` | varchar(50) | Anonymised — DPDPA: no phone number stored |
+| `institution_id` | FK → institution | — |
+| `channel` | varchar | Enum: `WHATSAPP` · `SMS` · `EMAIL` · `ALL` |
+| `opted_out_at` | timestamptz | — |
+| `opt_out_reason` | varchar | Enum: `STUDENT_REQUEST` · `INSTITUTION_REQUEST` · `CARRIER_BOUNCE` · `MANUAL_ADMIN` |
+| `opted_in_at` | timestamptz | Nullable — set when re-opt-in processed |
+| `is_active` | boolean | `True` = currently opted out; `False` = re-opted in |
+| `notes` | varchar(300) | Nullable — audit context |
+| `added_by_id` | FK → auth.User | Nullable (NULL for carrier-bounce auto-entries) |
+
 **`exam_notification_quota_daily`**:
 | Field | Type | Notes |
 |---|---|---|
@@ -442,6 +549,9 @@ Full models in `div-f-pages-list.md`:
 | Cancel broadcasts | Notification Manager (37), Ops Manager (34) |
 | Quota dashboard | All Div F roles read |
 | Delivery reports | Notification Manager (37), Ops Manager (34) |
+| View opt-out list | Notification Manager (37), Ops Manager (34) |
+| Add / remove opt-outs | Notification Manager (37), Platform Admin (10) |
+| Import opt-out CSV | Notification Manager (37), Platform Admin (10) |
 
 ---
 
@@ -455,7 +565,8 @@ Full models in `div-f-pages-list.md`:
 | Broadcast sends during exam (high load) | Rate limiter still applies (5,000/min). Celery distributes load. No broadcast is allowed to suppress OTP quota (5K reserved). |
 | Celery task failure mid-broadcast | Partial status set. `failed_count` shows failed batches. [Retry Failed] button appears. Notification Manager notified in-app. |
 | Duplicate broadcast accidentally triggered | Detection: if same template + same target_type sent within last 2 hours, warning modal: "A broadcast with this template to this audience was sent {N} min ago. Send again?" |
-| Opt-out list not updated | Opt-outs are sourced from platform DNC (Do Not Contact) table maintained by Notification Manager. If DNC table is stale: no system-level detection — Notification Manager is responsible for keeping it current. |
+| Opt-out list not updated | Opt-outs are sourced from `exam_notification_opt_out` maintained via Tab 5. Carrier bounce opt-outs are auto-added by Celery when `status = CARRIER_BOUNCE` appears in delivery log for the same recipient 3+ times. Notification Manager is responsible for reviewing and supplementing with student/institution requests received outside the platform. |
+| Re-opt-in after carrier bounce | Allowed — if a new valid phone number is registered for the same recipient_ref, Notification Manager can re-opt-in the ref for that channel after confirming validity. |
 
 ---
 
@@ -471,6 +582,9 @@ Full models in `div-f-pages-list.md`:
 | Broadcast sent (complete) | ✅ "Broadcast complete — {N} sent, {N} failed" (4s) |
 | Broadcast cancelled | ✅ "Broadcast cancelled — {N} pending sends stopped" (4s) |
 | Quota alert | ⚠️ "{Channel} quota at {N}% — {N} messages remaining today" (8s) |
+| Opt-out added | ✅ "Opt-out added — recipient excluded from {channel} sends" (4s) |
+| Opt-out removed (re-opt-in) | ✅ "Opt-out removed — recipient will receive future sends" (4s) |
+| Opt-out CSV import complete | ✅ "{N} opt-outs imported. {N} rows skipped (download error report)" (4s) |
 
 ### Responsive
 
@@ -483,4 +597,4 @@ Full models in `div-f-pages-list.md`:
 ---
 
 *Page spec complete.*
-*F-06 covers: template management (WhatsApp/SMS/Email, DLT tracking) → broadcast wizard (target, variables, quota check) → delivery reports → daily quota monitoring.*
+*F-06 covers: template management (WhatsApp/SMS/Email, DLT tracking, Meta rejection workflow) → broadcast wizard (target, variables, quota check) → scheduled broadcasts → delivery reports → daily quota monitoring → opt-out / DNC management (per-channel, import/export, carrier bounce auto-add).*
