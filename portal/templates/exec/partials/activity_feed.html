@@ -1,0 +1,143 @@
+{# Activity Feed panel — tabbed category filter + search + paginated timeline. #}
+{# Polled every 10s via HTMX. Context: events, category, search, page,       #}
+{#   has_next, has_prev, total_count, category_tabs                           #}
+
+<div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+  <!-- Panel header -->
+  <div class="flex items-center justify-between px-5 py-3.5" style="border-bottom:1px solid #1E293B;">
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold" style="color:#F1F5F9;">Activity Feed</h2>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+            style="color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>LIVE
+      </span>
+    </div>
+    <p class="text-[10px]" style="color:#475569;">{{ total_count }} event{{ total_count|pluralize }}</p>
+  </div>
+
+  <!-- Category tabs + search row -->
+  <div class="px-5 pt-3 pb-2" style="border-bottom:1px solid #1E293B;">
+    <!-- Category pills -->
+    <div class="flex flex-wrap gap-1 mb-2.5">
+      {% for cat_val, cat_label, cat_color in category_tabs %}
+      <button hx-get="/exec/dashboard/?part=activity&category={{ cat_val }}&q={{ search }}&page=1"
+              hx-target="#activity-feed"
+              hx-swap="innerHTML"
+              class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors"
+              style="{% if category == cat_val %}background:{{ cat_color }}22; color:{{ cat_color }}; border:1px solid {{ cat_color }}55;
+                     {% else %}background:#131F38; color:#64748B; border:1px solid #1E293B;{% endif %}">
+        {{ cat_label }}
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Search -->
+    <div class="relative">
+      <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+           stroke="#64748B" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text"
+             name="q"
+             value="{{ search }}"
+             placeholder="Search events…"
+             hx-get="/exec/dashboard/?part=activity"
+             hx-target="#activity-feed"
+             hx-swap="innerHTML"
+             hx-trigger="keyup changed delay:300ms"
+             hx-include="this"
+             hx-vals='{"category": "{{ category }}", "page": "1"}'
+             class="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg outline-none"
+             style="background:#131F38; border:1px solid #1E293B; color:#F1F5F9;">
+    </div>
+  </div>
+
+  <!-- Timeline list -->
+  <div class="divide-y" style="--tw-divide-opacity:1; divide-color:#0F1A2E; max-height:320px; overflow-y:auto;">
+    {% for event in events %}
+    <div class="px-5 py-3 flex items-start gap-3 transition-colors"
+         onmouseover="this.style.background='#0F1A2E'"
+         onmouseout="this.style.background=''">
+
+      <!-- Category dot + line -->
+      <div class="flex flex-col items-center flex-shrink-0 pt-0.5">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style="background:{{ event.color }};
+                     box-shadow: 0 0 6px {{ event.color }}66;"></span>
+        {% if not forloop.last %}
+        <div class="w-px flex-1 mt-1.5" style="background:#1E293B; min-height:16px;"></div>
+        {% endif %}
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 min-w-0 pb-0.5">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide mb-1 flex-shrink-0"
+                  style="background:{{ event.color }}22; color:{{ event.color }};">{{ event.category }}</span>
+            <p class="text-xs leading-snug" style="color:#E2E8F0;">{{ event.message }}</p>
+            {% if event.detail %}
+            <p class="text-[10px] mt-0.5 truncate" style="color:#64748B;">{{ event.detail }}</p>
+            {% endif %}
+          </div>
+          <span class="text-[10px] font-mono flex-shrink-0 whitespace-nowrap" style="color:#475569;">
+            {{ event.time_ago }}
+          </span>
+        </div>
+
+        <!-- Actor + severity badge -->
+        <div class="flex items-center gap-2 mt-1">
+          {% if event.actor %}
+          <span class="text-[10px]" style="color:#475569;">{{ event.actor }}</span>
+          {% endif %}
+          {% if event.severity %}
+          <span class="px-1 py-0.5 rounded text-[9px] font-bold uppercase"
+                style="{% if event.severity == 'critical' %}background:rgba(239,68,68,0.15); color:#EF4444;
+                       {% elif event.severity == 'warning' %}background:rgba(245,158,11,0.15); color:#F59E0B;
+                       {% else %}background:rgba(100,116,139,0.15); color:#94A3B8;{% endif %}">
+            {{ event.severity }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="px-5 py-10 text-center">
+      <p class="text-sm font-medium mb-1" style="color:#475569;">No events</p>
+      <p class="text-xs" style="color:#334155;">
+        {% if search %}No results for "{{ search }}"{% else %}Activity will appear here in real time{% endif %}
+      </p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination footer -->
+  {% if has_prev or has_next %}
+  <div class="px-5 py-3 flex items-center justify-between" style="border-top:1px solid #1E293B;">
+    <button {% if has_prev %}
+            hx-get="/exec/dashboard/?part=activity&category={{ category }}&q={{ search }}&page={{ page|add:'-1' }}"
+            hx-target="#activity-feed"
+            hx-swap="innerHTML"
+            {% else %}disabled{% endif %}
+            class="flex items-center gap-1 text-xs font-medium transition-colors px-3 py-1.5 rounded-lg
+                   {% if not has_prev %}opacity-40 cursor-not-allowed{% endif %}"
+            style="color:{% if has_prev %}#818CF8{% else %}#475569{% endif %}; background:{% if has_prev %}rgba(99,102,241,0.1){% else %}transparent{% endif %};">
+      ← Newer
+    </button>
+
+    <span class="text-[10px]" style="color:#475569;">Page {{ page }}</span>
+
+    <button {% if has_next %}
+            hx-get="/exec/dashboard/?part=activity&category={{ category }}&q={{ search }}&page={{ page|add:'1' }}"
+            hx-target="#activity-feed"
+            hx-swap="innerHTML"
+            {% else %}disabled{% endif %}
+            class="flex items-center gap-1 text-xs font-medium transition-colors px-3 py-1.5 rounded-lg
+                   {% if not has_next %}opacity-40 cursor-not-allowed{% endif %}"
+            style="color:{% if has_next %}#818CF8{% else %}#475569{% endif %}; background:{% if has_next %}rgba(99,102,241,0.1){% else %}transparent{% endif %};">
+      Older →
+    </button>
+  </div>
+  {% endif %}
+</div>

@@ -1,0 +1,52 @@
+{# Exam Ops — live stats bar. Polled every 5s. #}
+{# Context: total_active, total_students, peak_concurrent, #}
+{#          submissions_min, avg_latency_ms, pending_results #}
+
+{% load humanize %}
+
+<div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+
+  <div class="rounded-xl p-4 relative" style="background:#0D1526; border:1px solid #1E293B;">
+    <span class="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>
+    <p class="text-[10px] uppercase tracking-widest mb-1" style="color:#64748B;">Active Exams</p>
+    <p class="font-mono text-2xl font-bold" style="color:#F1F5F9;">{{ total_active }}</p>
+  </div>
+
+  <div class="rounded-xl p-4" style="background:#0D1526; border:1px solid #1E293B;">
+    <p class="text-[10px] uppercase tracking-widest mb-1" style="color:#64748B;">Students Live</p>
+    <p class="font-mono text-2xl font-bold" style="color:#F1F5F9;">{{ total_students|intcomma }}</p>
+  </div>
+
+  <div class="rounded-xl p-4" style="background:#0D1526;
+       border:1px solid {% if peak_concurrent > 80 %}#EF4444{% elif peak_concurrent > 60 %}#F59E0B{% else %}#1E293B{% endif %};">
+    <p class="text-[10px] uppercase tracking-widest mb-1" style="color:#64748B;">Peak Load</p>
+    <p class="font-mono text-2xl font-bold"
+       style="color:{% if peak_concurrent > 80 %}#EF4444{% elif peak_concurrent > 60 %}#F59E0B{% else %}#10B981{% endif %};">
+      {{ peak_concurrent }}%
+    </p>
+  </div>
+
+  <div class="rounded-xl p-4" style="background:#0D1526; border:1px solid #1E293B;">
+    <p class="text-[10px] uppercase tracking-widest mb-1" style="color:#64748B;">Submissions/min</p>
+    <p class="font-mono text-2xl font-bold" style="color:#F1F5F9;">{{ submissions_min|intcomma }}</p>
+  </div>
+
+  <div class="rounded-xl p-4" style="background:#0D1526;
+       border:1px solid {% if avg_latency_ms > 200 %}#EF4444{% elif avg_latency_ms > 150 %}#F59E0B{% else %}#1E293B{% endif %};">
+    <p class="text-[10px] uppercase tracking-widest mb-1" style="color:#64748B;">Avg Latency</p>
+    <p class="font-mono text-2xl font-bold"
+       style="color:{% if avg_latency_ms > 200 %}#EF4444{% elif avg_latency_ms > 150 %}#F59E0B{% else %}#F1F5F9{% endif %};">
+      {{ avg_latency_ms }}ms
+    </p>
+  </div>
+
+  <div class="rounded-xl p-4" style="background:#0D1526;
+       border:1px solid {% if pending_results > 0 %}#F59E0B{% else %}#1E293B{% endif %};">
+    <p class="text-[10px] uppercase tracking-widest mb-1" style="color:#64748B;">Pending Results</p>
+    <p class="font-mono text-2xl font-bold"
+       style="color:{% if pending_results > 0 %}#F59E0B{% else %}#10B981{% endif %};">
+      {{ pending_results }}
+    </p>
+  </div>
+
+</div>

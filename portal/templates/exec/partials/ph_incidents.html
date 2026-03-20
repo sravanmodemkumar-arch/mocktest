@@ -1,0 +1,70 @@
+{# Platform Health — recent incidents table partial #}
+{# Context: incidents (list of dicts) #}
+
+<div class="overflow-x-auto">
+  <table class="w-full text-xs">
+    <thead>
+      <tr style="border-bottom:1px solid #1E293B;">
+        <th class="px-5 py-3 text-left font-bold uppercase tracking-widest" style="color:#475569;">Incident</th>
+        <th class="px-4 py-3 text-left font-bold uppercase tracking-widest" style="color:#475569;">Severity</th>
+        <th class="px-4 py-3 text-left font-bold uppercase tracking-widest" style="color:#475569;">Status</th>
+        <th class="px-4 py-3 text-right font-bold uppercase tracking-widest" style="color:#475569;">Duration</th>
+        <th class="px-4 py-3 text-right font-bold uppercase tracking-widest" style="color:#475569;">Time</th>
+        <th class="px-4 py-3 text-center font-bold uppercase tracking-widest" style="color:#475569;">Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inc in incidents %}
+      <tr style="border-bottom:1px solid #0F1A2E;"
+          onmouseover="this.style.background='#131F38'"
+          onmouseout="this.style.background=''">
+
+        <td class="px-5 py-3">
+          <p class="font-medium" style="color:#F1F5F9;">{{ inc.title }}</p>
+          <p class="text-[10px] mt-0.5 font-mono" style="color:#475569;">{{ inc.id }}</p>
+        </td>
+
+        <td class="px-4 py-3">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                style="{% if inc.severity == 'P0' or inc.severity == 'P1' %}
+                         background:rgba(239,68,68,0.15); color:#FCA5A5;
+                       {% elif inc.severity == 'P2' %}
+                         background:rgba(245,158,11,0.15); color:#FCD34D;
+                       {% else %}
+                         background:rgba(99,102,241,0.15); color:#A5B4FC;
+                       {% endif %}">
+            {{ inc.severity }}
+          </span>
+        </td>
+
+        <td class="px-4 py-3">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                style="{% if inc.status == 'open' %}
+                         background:rgba(239,68,68,0.15); color:#FCA5A5; border:1px solid rgba(239,68,68,0.3);
+                       {% else %}
+                         background:rgba(16,185,129,0.15); color:#34D399; border:1px solid rgba(16,185,129,0.3);
+                       {% endif %}">
+            {% if inc.status == 'open' %}<span class="w-1.5 h-1.5 rounded-full bg-red-400 live-dot"></span>{% endif %}
+            {{ inc.status|upper }}
+          </span>
+        </td>
+
+        <td class="px-4 py-3 text-right font-mono" style="color:#94A3B8;">{{ inc.duration }}</td>
+        <td class="px-4 py-3 text-right font-mono" style="color:#64748B;">{{ inc.ts }}</td>
+
+        <td class="px-4 py-3 text-center">
+          <a href="/exec/incidents/{{ inc.id }}/"
+             class="text-xs font-medium" style="color:#818CF8;">View →</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="px-5 py-10 text-center">
+          <p class="text-sm font-medium" style="color:#10B981;">No recent incidents</p>
+          <p class="text-xs mt-1" style="color:#334155;">All systems healthy</p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

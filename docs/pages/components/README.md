@@ -18,8 +18,11 @@
 | [06-navigation.md](06-navigation.md) | Sidebar, Top Nav, Tabs, Breadcrumb, Step Progress | All portals |
 | [07-data-display.md](07-data-display.md) | Stat Card, Badge, Avatar, Tag, Progress Bar, Chart | All dashboards |
 | [08-design-tokens.md](08-design-tokens.md) | Colors, Typography, Spacing, Shadows, Breakpoints | All pages |
+| [09-charts-graphs.md](09-charts-graphs.md) | Chart variants, axes config, empty states | Dashboard panels |
+| [10-stat-cards.md](10-stat-cards.md) | KPI cards — Standard, Hero, Status, Sparkline, Mini | All dashboards |
+| [11-timeline.md](11-timeline.md) | Activity feed, incident timeline, grouped timeline | Activity panels |
+| [12-command-palette.md](12-command-palette.md) | ⌘K palette — role-filtered, keyboard nav | All portals |
 
----
 
 ## How to Reference Components in Page Specs
 

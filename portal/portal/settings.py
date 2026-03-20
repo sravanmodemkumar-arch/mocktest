@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.auth_views",
     "apps.home",
+    "apps.exec",
 ]
 
 MIDDLEWARE = [

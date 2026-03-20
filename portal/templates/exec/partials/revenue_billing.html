@@ -1,0 +1,126 @@
+{# Revenue & Billing panel — 3 tabs: MTD / YTD / Forecast. Polled every 120s. #}
+{# Context: active_tab, rev_labels_json, rev_data_json, forecast_json,       #}
+{#          forecast_lo_json, forecast_hi_json, donut_labels_json,            #}
+{#          donut_data_json, revenue_mtd_fmt, revenue_ytd_fmt,                #}
+{#          arr_fmt, mrr_fmt, rev_change, arr_change                          #}
+
+<div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+  <!-- Panel header + tabs -->
+  <div class="px-5 py-3.5" style="border-bottom:1px solid #1E293B;">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold" style="color:#F1F5F9;">Revenue &amp; Billing</h2>
+      <a href="/exec/financial-overview/" class="text-xs font-medium" style="color:#818CF8;">Full report →</a>
+    </div>
+    <div class="flex gap-0" style="border-bottom:1px solid #1E293B;">
+      {% for tab_id, tab_label in rev_tabs %}
+      <button hx-get="/exec/dashboard/?part=revenue&tab={{ tab_id }}"
+              hx-target="#revenue-billing"
+              hx-swap="innerHTML"
+              class="px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px"
+              style="{% if active_tab == tab_id %}border-color:#6366F1; color:#818CF8;
+                     {% else %}border-color:transparent; color:#64748B;{% endif %}">
+        {{ tab_label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Chart area -->
+  <div class="px-5 pt-4 pb-3" style="height:170px;">
+    {% if active_tab == 'mtd' %}
+    <canvas id="revenue-chart"
+            class="w-full h-full"
+            data-labels="{{ rev_labels_json }}"
+            data-values="{{ rev_data_json }}"
+            data-type="area">
+    </canvas>
+
+    {% elif active_tab == 'ytd' %}
+    <canvas id="revenue-chart"
+            class="w-full h-full"
+            data-labels="{{ rev_labels_json }}"
+            data-values="{{ rev_data_json }}"
+            data-type="bar">
+    </canvas>
+
+    {% elif active_tab == 'forecast' %}
+    <canvas id="revenue-chart"
+            class="w-full h-full"
+            data-labels="{{ rev_labels_json }}"
+            data-values="{{ rev_data_json }}"
+            data-forecast="{{ forecast_json }}"
+            data-forecast-lo="{{ forecast_lo_json }}"
+            data-forecast-hi="{{ forecast_hi_json }}"
+            data-type="forecast">
+    </canvas>
+    {% endif %}
+  </div>
+
+  <!-- Summary metrics footer -->
+  <div class="grid grid-cols-2 gap-0" style="border-top:1px solid #1E293B;">
+
+    <!-- Left: MTD + YTD -->
+    <div class="px-5 py-3.5" style="border-right:1px solid #1E293B;">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <p class="text-[10px] uppercase tracking-widest font-bold mb-0.5" style="color:#475569;">
+            {% if active_tab == 'ytd' or active_tab == 'forecast' %}Revenue YTD{% else %}Revenue MTD{% endif %}
+          </p>
+          <p class="font-mono text-lg font-bold" style="color:#F1F5F9;">
+            {% if active_tab == 'ytd' or active_tab == 'forecast' %}{{ revenue_ytd_fmt }}{% else %}{{ revenue_mtd_fmt }}{% endif %}
+          </p>
+        </div>
+        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
+              style="color:#10B981; background:rgba(16,185,129,0.1);">
+          ↑ {{ rev_change }}%
+        </span>
+      </div>
+      <p class="text-xs" style="color:#64748B;">vs prior period</p>
+    </div>
+
+    <!-- Right: ARR / MRR -->
+    <div class="px-5 py-3.5">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <p class="text-[10px] uppercase tracking-widest font-bold mb-0.5" style="color:#475569;">ARR</p>
+          <p class="font-mono text-lg font-bold" style="color:#F1F5F9;">{{ arr_fmt }}</p>
+        </div>
+        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
+              style="color:#10B981; background:rgba(16,185,129,0.1);">
+          ↑ {{ arr_change }}%
+        </span>
+      </div>
+      <p class="text-xs" style="color:#64748B;">MRR: {{ mrr_fmt }}</p>
+    </div>
+  </div>
+
+  <!-- Subscription mix donut + legend -->
+  <div class="px-5 pb-4 pt-3 flex items-center gap-4" style="border-top:1px solid #1E293B;">
+    <div style="width:80px; height:80px; flex-shrink:0;">
+      <canvas id="revenue-donut"
+              data-labels="{{ donut_labels_json }}"
+              data-values="{{ donut_data_json }}">
+      </canvas>
+    </div>
+    <div class="flex-1 space-y-1.5">
+      <p class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color:#475569;">Subscription Mix</p>
+      {% for seg in donut_segments %}
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{{ seg.color }};"></span>
+          <span class="text-xs" style="color:#94A3B8;">{{ seg.label }}</span>
+        </div>
+        <span class="text-xs font-mono" style="color:#F1F5F9;">{{ seg.pct }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  requestAnimationFrame(function() {
+    if (typeof initRevenueChart !== 'undefined') initRevenueChart();
+    if (typeof initDonutChart !== 'undefined') initDonutChart();
+  });
+</script>

@@ -1,0 +1,82 @@
+{# Platform Health panel — chart + service status strip. Polled every 30s. #}
+{# Context: range, labels_json, uptime_json, latency_json, error_rate_json, services #}
+
+<div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+  <!-- Panel header -->
+  <div class="flex items-center justify-between px-5 py-3.5"
+       style="border-bottom:1px solid #1E293B;">
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold" style="color:#F1F5F9;">Platform Health</h2>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+            style="color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>LIVE
+      </span>
+    </div>
+
+    <!-- Time range selector -->
+    <div class="flex items-center gap-1">
+      {% for r in "1h,6h,24h,7d"|split:"," %}
+      <button hx-get="/exec/dashboard/?part=health&range={{ r }}"
+              hx-target="#platform-health"
+              hx-swap="innerHTML"
+              class="px-2.5 py-1 text-xs rounded-md font-medium transition-colors
+                     {% if range == r %}ring-1{% endif %}"
+              style="{% if range == r %}background:rgba(99,102,241,0.15); color:#818CF8; border:1px solid #6366F1;
+                     {% else %}background:transparent; color:#64748B; border:1px solid transparent;{% endif %}">
+        {{ r }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="px-5 pt-4 pb-2" style="height:180px;">
+    <canvas id="platform-health-chart"
+            class="w-full h-full"
+            data-labels="{{ labels_json }}"
+            data-uptime="{{ uptime_json }}"
+            data-latency="{{ latency_json }}"
+            data-err-rate="{{ error_rate_json }}">
+    </canvas>
+  </div>
+
+  <!-- Service status strip -->
+  <div class="px-5 pb-4 pt-2" style="border-top:1px solid #1E293B;">
+    <p class="text-[10px] font-bold uppercase tracking-widest mb-2.5" style="color:#475569;">
+      Service Status
+    </p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {% for svc in services %}
+      <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#131F38] transition-colors"
+           style="background:#131F38; border:1px solid #1E293B;"
+           hx-get="/exec/dashboard/service/{{ svc.name|lower|slugify }}/"
+           hx-target="#drawer-container"
+           hx-swap="innerHTML">
+        <span class="w-2 h-2 rounded-full flex-shrink-0"
+              style="background:{% if svc.status == 'healthy' %}#10B981{% elif svc.status == 'warning' %}#F59E0B{% else %}#EF4444{% endif %};"></span>
+        <div class="min-w-0">
+          <p class="text-xs font-medium truncate" style="color:#F1F5F9;">{{ svc.name }}</p>
+          <p class="text-[10px] font-mono truncate" style="color:#64748B;">{{ svc.metric }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{# Chart init script — runs because htmx.config.allowScriptTags = true #}
+<script>
+  (function() {
+    // Give Chart.js a tick to load if needed
+    requestAnimationFrame(function() {
+      if (typeof Chart !== 'undefined') {
+        if (window._charts && window._charts['platform-health-chart']) {
+          window._charts['platform-health-chart'].destroy();
+        }
+        const canvas = document.getElementById('platform-health-chart');
+        if (canvas) initPlatformHealthChart && initPlatformHealthChart();
+      }
+    });
+  })();
+</script>

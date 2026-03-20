@@ -1,0 +1,138 @@
+{% extends "portal_base_dark.html" %}
+
+{% block page_content %}
+<div class="p-6 space-y-5">
+
+  {# ── Page header ──────────────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-xs mb-1" style="color:#64748B;">
+        <a href="/exec/dashboard/" style="color:#818CF8;">Dashboard</a> / Exam Operations
+      </p>
+      <h1 class="text-xl font-bold" style="color:#F1F5F9;">Exam Operations</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+            style="background:rgba(16,185,129,0.1); color:#10B981; border:1px solid rgba(16,185,129,0.25);">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+        3 Exams Live
+      </span>
+      <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg"
+              style="background:#6366F1; color:#fff;">
+        + Schedule Exam
+      </button>
+    </div>
+  </div>
+
+  {# ── Live stats bar — polled every 5s ─────────────────────────────────── #}
+  <div id="eo-stats"
+       hx-get="/exec/exam-ops/?part=stats"
+       hx-trigger="load, every 5s"
+       hx-swap="innerHTML">
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 animate-pulse">
+      {% for _ in "123456" %}
+      <div class="rounded-xl p-4" style="background:#0D1526; border:1px solid #1E293B;">
+        <div class="h-3 rounded w-1/2 mb-2" style="background:#131F38;"></div>
+        <div class="h-6 rounded w-3/4"      style="background:#131F38;"></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Search + filters + table — searched/paginated ─────────────────────── #}
+  <div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-center gap-2 px-5 py-3.5" style="border-bottom:1px solid #1E293B;">
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[220px]">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+             fill="none" viewBox="0 0 24 24" stroke="#64748B" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" name="q" value=""
+               placeholder="Search exams, institutions…"
+               hx-get="/exec/exam-ops/?part=table"
+               hx-target="#eo-table"
+               hx-swap="innerHTML"
+               hx-trigger="keyup changed delay:300ms"
+               hx-include="[name='status'],[name='type']"
+               class="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg outline-none"
+               style="background:#131F38; border:1px solid #1E293B; color:#F1F5F9;">
+      </div>
+
+      <!-- Status chips -->
+      {% for chip_val, chip_label in "all,All;running,Running;paused,Paused;scheduled,Scheduled;completed,Completed"|split:";" %}
+      {% with parts=chip_val|add:","|add:chip_label %}
+      <button name="status"
+              value="{{ chip_val }}"
+              hx-get="/exec/exam-ops/?part=table"
+              hx-target="#eo-table"
+              hx-swap="innerHTML"
+              hx-include="[name='q'],[name='type']"
+              class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wide"
+              style="background:#131F38; color:#64748B; border:1px solid #1E293B;">
+        {{ chip_label }}
+      </button>
+      {% endwith %}
+      {% endfor %}
+
+      <!-- Type filter -->
+      <select name="type"
+              hx-get="/exec/exam-ops/?part=table"
+              hx-target="#eo-table"
+              hx-swap="innerHTML"
+              hx-include="[name='q'],[name='status']"
+              hx-trigger="change"
+              class="text-xs px-3 py-1.5 rounded-lg outline-none"
+              style="background:#131F38; border:1px solid #1E293B; color:#94A3B8;">
+        <option value="">All Types</option>
+        <option value="mcq">MCQ</option>
+        <option value="descriptive">Descriptive</option>
+        <option value="mixed">Mixed</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div id="eo-table"
+         hx-get="/exec/exam-ops/?part=table"
+         hx-trigger="load, every 5s"
+         hx-swap="innerHTML">
+      <!-- Skeleton -->
+      <div class="animate-pulse">
+        {% for _ in "12345678910" %}
+        <div class="flex gap-4 px-5 py-3" style="border-bottom:1px solid #0F1A2E;">
+          <div class="h-3 rounded flex-1" style="background:#131F38;"></div>
+          <div class="h-3 rounded w-32"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-16"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-16"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-20"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-16"   style="background:#131F38;"></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# Drawer container #}
+<div id="drawer-backdrop" class="fixed inset-0 z-40 hidden" style="background:rgba(0,0,0,0.6);" onclick="closeDrawer()"></div>
+<div id="drawer-container" class="fixed top-0 right-0 h-full z-50 transform translate-x-full transition-transform duration-300"
+     style="width:640px; background:#0D1526; border-left:1px solid #1E293B; overflow-y:auto;"></div>
+
+<script>
+  function openDrawer()  {
+    document.getElementById('drawer-backdrop').classList.remove('hidden');
+    document.getElementById('drawer-container').classList.remove('translate-x-full');
+  }
+  function closeDrawer() {
+    document.getElementById('drawer-backdrop').classList.add('hidden');
+    document.getElementById('drawer-container').classList.add('translate-x-full');
+    document.getElementById('drawer-container').innerHTML = '';
+  }
+  document.body.addEventListener('htmx:afterSettle', function(e) {
+    if (e.target.id === 'drawer-container' && e.target.innerHTML.trim()) openDrawer();
+  });
+</script>
+{% endblock %}

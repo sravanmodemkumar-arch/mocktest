@@ -1,0 +1,138 @@
+{# KPI Bar — 4 stat cards. Polled every 5s via HTMX. #}
+{# Context keys: platform_health, active_exams, enrollments, revenue, role #}
+
+{% load humanize %}
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+  {# ── Card 1: Platform Health ──────────────────────────────────────────── #}
+  {% with h=platform_health %}
+  <a href="/exec/platform-health/"
+     class="stat-card block rounded-xl p-5 relative transition-all cursor-pointer"
+     style="background:#0D1526;
+            border:1px solid {% if h.status == 'critical' %}#EF4444{% elif h.status == 'warning' %}#F59E0B{% else %}#1E293B{% endif %};
+            {% if h.status == 'critical' %}box-shadow:0 0 0 0 rgba(239,68,68,0.4);animation:critical-pulse 2s ease-in-out infinite;{% endif %}">
+
+    <!-- Live badge -->
+    <span class="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+          style="color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>LIVE
+    </span>
+
+    <!-- Label -->
+    <p class="text-[11px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">
+      Platform Health
+    </p>
+
+    <!-- Value -->
+    <p class="font-mono text-3xl font-bold leading-none mb-1"
+       style="color:{% if h.status == 'critical' %}#EF4444{% elif h.status == 'warning' %}#F59E0B{% else %}#F1F5F9{% endif %};">
+      {{ h.value }}%
+    </p>
+
+    <!-- Secondary -->
+    <p class="text-xs mt-1" style="color:#64748B;">{{ h.sub }}</p>
+
+    <!-- Trend -->
+    <span class="absolute top-3 right-14 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
+          style="color:{% if h.trend_dir == 'down' %}#EF4444{% else %}#10B981{% endif %};
+                 background:{% if h.trend_dir == 'down' %}rgba(239,68,68,0.1){% else %}rgba(16,185,129,0.1){% endif %};">
+      {% if h.trend_dir == 'down' %}↓{% elif h.trend_dir == 'up' %}↑{% else %}→{% endif %}
+      {{ h.trend|floatformat:1 }}%
+    </span>
+  </a>
+  {% endwith %}
+
+  {# ── Card 2: Active Exams ────────────────────────────────────────────── #}
+  {% with e=active_exams %}
+  <a href="/exec/exam-ops/"
+     class="stat-card block rounded-xl p-5 relative transition-all cursor-pointer"
+     style="background:#0D1526; border:1px solid #1E293B;">
+
+    <span class="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+          style="color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>LIVE
+    </span>
+
+    <p class="text-[11px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">
+      Active Exams
+    </p>
+    <p class="font-mono text-3xl font-bold leading-none" style="color:#F1F5F9;">
+      {{ e.value }}
+    </p>
+    <p class="text-xs mt-1 font-mono"
+       style="color:{% if e.concurrent_status == 'critical' %}#EF4444{% elif e.concurrent_status == 'warning' %}#F59E0B{% else %}#10B981{% endif %};">
+      {{ e.concurrent|intcomma }} concurrent users
+      {% if e.concurrent_status == 'critical' %}⚠{% endif %}
+    </p>
+  </a>
+  {% endwith %}
+
+  {# ── Card 3: Total Enrollments ────────────────────────────────────────── #}
+  {% with en=enrollments %}
+  <a href="/exec/institution-growth/"
+     class="stat-card block rounded-xl p-5 relative transition-all cursor-pointer"
+     style="background:#0D1526; border:1px solid #1E293B;">
+
+    <span class="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+          style="color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>LIVE
+    </span>
+    <span class="absolute top-10 right-3 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
+          style="color:#10B981; background:rgba(16,185,129,0.1);">
+      ↑ {{ en.trend }}%
+    </span>
+
+    <p class="text-[11px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">
+      Total Enrollments
+    </p>
+    <p class="font-mono text-3xl font-bold leading-none" style="color:#F1F5F9;">
+      {{ en.value_fmt }}
+    </p>
+    <p class="text-xs mt-1" style="color:#64748B;">{{ en.sub }}</p>
+  </a>
+  {% endwith %}
+
+  {# ── Card 4: Revenue MTD ─────────────────────────────────────────────── #}
+  {% if role != 'cto' and role != 'coo' %}
+  {% with r=revenue %}
+  <a href="/exec/financial-overview/"
+     class="stat-card block rounded-xl p-5 relative transition-all cursor-pointer"
+     style="background:#0D1526;
+            border:1px solid {% if r.status == 'critical' %}#EF4444{% elif r.status == 'warning' %}#F59E0B{% else %}#1E293B{% endif %};">
+
+    <span class="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+          style="color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>LIVE
+    </span>
+    <span class="absolute top-10 right-3 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
+          style="color:#10B981; background:rgba(16,185,129,0.1);">
+      ↑ {{ r.trend }}%
+    </span>
+
+    <p class="text-[11px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">
+      Revenue MTD
+    </p>
+    <p class="font-mono text-3xl font-bold leading-none" style="color:#F1F5F9;">
+      {{ r.value_fmt }}
+    </p>
+    <p class="text-xs mt-1" style="color:#64748B;">{{ r.sub }}</p>
+  </a>
+  {% endwith %}
+  {% else %}
+  {# CTO / COO: show Platform Uptime card instead of Revenue #}
+  <div class="stat-card rounded-xl p-5 relative" style="background:#0D1526; border:1px solid #1E293B;">
+    <p class="text-[11px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">API Uptime (30d)</p>
+    <p class="font-mono text-3xl font-bold leading-none" style="color:#F1F5F9;">99.94%</p>
+    <p class="text-xs mt-1" style="color:#10B981;">↑ 0.04% vs last month</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<style>
+  @keyframes critical-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50%      { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+  }
+</style>

@@ -1,0 +1,77 @@
+{# Business Overview panel — tabbed charts. Polled every 5 min. #}
+{# Context: active_tab, months_json, inst_new_json, student_growth_json,   #}
+{#          geo_data_json, total_institutions, total_students_fmt, ...      #}
+
+<div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+
+  <!-- Panel header + tabs -->
+  <div class="px-5 py-3.5" style="border-bottom:1px solid #1E293B;">
+    <h2 class="text-sm font-semibold mb-3" style="color:#F1F5F9;">Business Overview</h2>
+    <div class="flex gap-0" style="border-bottom:1px solid #1E293B;">
+      {% for tab_id, tab_label in tabs %}
+      <button hx-get="/exec/dashboard/?part=business&tab={{ tab_id }}"
+              hx-target="#business-overview"
+              hx-swap="innerHTML"
+              class="px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px"
+              style="{% if active_tab == tab_id %}border-color:#6366F1; color:#818CF8;
+                     {% else %}border-color:transparent; color:#64748B;{% endif %}">
+        {{ tab_label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Chart area -->
+  <div class="px-5 pt-4 pb-3" style="height:160px;">
+    {% if active_tab == 'growth' %}
+    <canvas id="business-chart"
+            class="w-full h-full"
+            data-labels="{{ months_json }}"
+            data-inst-new="{{ inst_new_json }}"
+            data-stu-grow="{{ student_growth_json }}">
+    </canvas>
+
+    {% elif active_tab == 'geo' %}
+    {# Geo heatmap — simplified text representation (full map needs a library) #}
+    <div class="h-full overflow-y-auto space-y-1">
+      {% for state, count in geo_items %}
+      <div class="flex items-center gap-2">
+        <span class="text-xs w-32 truncate" style="color:#94A3B8;">{{ state }}</span>
+        <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:#131F38;">
+          <div class="h-full rounded-full" style="background:#6366F1; width:{{ count|floatformat:0 }}%;"></div>
+        </div>
+        <span class="text-[10px] font-mono w-8 text-right" style="color:#64748B;">{{ count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% elif active_tab == 'type' %}
+    <canvas id="business-chart"
+            class="w-full h-full"
+            data-labels="{{ months_json }}"
+            data-inst-new="{{ inst_new_json }}"
+            data-stu-grow="{{ student_growth_json }}">
+    </canvas>
+    {% endif %}
+  </div>
+
+  <!-- Summary footer -->
+  <div class="grid grid-cols-2 gap-3 px-5 pb-4 pt-2" style="border-top:1px solid #1E293B;">
+    <div>
+      <p class="text-[10px] uppercase tracking-widest font-bold mb-0.5" style="color:#475569;">Institutions</p>
+      <p class="font-mono text-lg font-bold" style="color:#F1F5F9;">{{ total_institutions|default:"1,900" }}</p>
+      <p class="text-xs" style="color:#10B981;">{{ inst_change }}</p>
+    </div>
+    <div>
+      <p class="text-[10px] uppercase tracking-widest font-bold mb-0.5" style="color:#475569;">Students</p>
+      <p class="font-mono text-lg font-bold" style="color:#F1F5F9;">{{ total_students_fmt }}</p>
+      <p class="text-xs" style="color:#10B981;">{{ student_change }}</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  requestAnimationFrame(function() {
+    if (typeof initBusinessChart !== 'undefined') initBusinessChart();
+  });
+</script>

@@ -1,0 +1,227 @@
+{% extends "portal_base_dark.html" %}
+
+{% block dark_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+  window._charts = window._charts || {};
+  function destroyChart(id) {
+    if (window._charts[id]) { window._charts[id].destroy(); delete window._charts[id]; }
+  }
+  function applyDark() {
+    Chart.defaults.color       = '#64748B';
+    Chart.defaults.borderColor = '#1E293B';
+    Chart.defaults.font.family = "'JetBrains Mono', monospace";
+    Chart.defaults.font.size   = 10;
+  }
+
+  function initFinChart() {
+    const canvas = document.getElementById('fin-main-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    destroyChart('fin-main-chart');
+    applyDark();
+    const type   = canvas.dataset.type || 'area';
+    const labels = JSON.parse(canvas.dataset.labels || '[]');
+    const values = JSON.parse(canvas.dataset.values || '[]');
+    window._charts['fin-main-chart'] = new Chart(canvas, {
+      type: type === 'bar' ? 'bar' : 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Revenue (₹ Cr)',
+          data: values,
+          borderColor: '#6366F1',
+          backgroundColor: type === 'area' ? '#6366F130' : '#6366F1CC',
+          borderWidth: 2, pointRadius: 2, tension: 0.4,
+          fill: type === 'area',
+          borderRadius: type === 'bar' ? 3 : undefined,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: '#1E293B33' } },
+        },
+      },
+    });
+  }
+
+  function initDonutChart() {
+    const canvas = document.getElementById('fin-donut');
+    if (!canvas || typeof Chart === 'undefined') return;
+    destroyChart('fin-donut');
+    applyDark();
+    const labels = JSON.parse(canvas.dataset.labels || '[]');
+    const values = JSON.parse(canvas.dataset.values || '[]');
+    const colors = ['#6366F1','#10B981','#F59E0B','#EF4444'];
+    window._charts['fin-donut'] = new Chart(canvas, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
+      options: {
+        responsive: true, maintainAspectRatio: true, cutout: '70%',
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      },
+    });
+  }
+
+  document.body.addEventListener('htmx:afterSettle', function() {
+    requestAnimationFrame(function() {
+      initFinChart();
+      initDonutChart();
+    });
+  });
+</script>
+{% endblock %}
+
+{% block page_content %}
+<div class="p-6 space-y-5">
+
+  {# ── Page header ──────────────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-xs mb-1" style="color:#64748B;">
+        <a href="/exec/dashboard/" style="color:#818CF8;">Dashboard</a> / Financial Overview
+      </p>
+      <h1 class="text-xl font-bold" style="color:#F1F5F9;">Financial Overview</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg"
+              style="background:#131F38; color:#94A3B8; border:1px solid #1E293B;">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Export PDF
+      </button>
+    </div>
+  </div>
+
+  {# ── Revenue KPI row ───────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% for card in revenue_kpis %}
+    <div class="rounded-xl p-5" style="background:#0D1526; border:1px solid #1E293B;">
+      <p class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">{{ card.label }}</p>
+      <p class="font-mono text-2xl font-bold leading-none mb-1" style="color:#F1F5F9;">{{ card.value }}</p>
+      <p class="text-xs" style="color:{% if card.up %}#10B981{% else %}#EF4444{% endif %};">
+        {% if card.up %}↑{% else %}↓{% endif %} {{ card.change }}% vs prior period
+      </p>
+    </div>
+    {% empty %}
+    {% for kpi in "Revenue MTD:₹4.82 Cr:8.2:1,Revenue YTD:₹12.54 Cr:6.1:1,ARR:₹58.40 Cr:14.3:1,MRR:₹4.87 Cr:11.2:1"|split:"," %}
+    <div class="rounded-xl p-5" style="background:#0D1526; border:1px solid #1E293B;">
+      <p class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color:#64748B;">
+        {{ kpi|cut:":"|truncatechars:20 }}
+      </p>
+      <p class="font-mono text-2xl font-bold leading-none" style="color:#F1F5F9;">—</p>
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </div>
+
+  {# ── Revenue chart + donut ─────────────────────────────────────────────── #}
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+    <!-- Revenue chart (2/3) -->
+    <div class="xl:col-span-2">
+      <div id="fin-chart-panel"
+           hx-get="/exec/financial-overview/?part=chart"
+           hx-trigger="load, every 120s"
+           hx-swap="innerHTML">
+        <div class="rounded-xl p-5 animate-pulse" style="background:#0D1526; border:1px solid #1E293B;">
+          <div class="h-3 rounded w-1/4 mb-4" style="background:#131F38;"></div>
+          <div class="rounded" style="background:#131F38; height:200px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription mix donut (1/3) -->
+    <div class="xl:col-span-1">
+      <div class="rounded-xl p-5 h-full" style="background:#0D1526; border:1px solid #1E293B;">
+        <h3 class="text-sm font-semibold mb-4" style="color:#F1F5F9;">Subscription Mix</h3>
+        <div class="flex justify-center mb-4" style="height:120px;">
+          <canvas id="fin-donut"
+                  data-labels='["Annual", "Monthly", "Trial", "Overdue"]'
+                  data-values='[71, 19, 6, 4]'>
+          </canvas>
+        </div>
+        <div class="space-y-2">
+          {% for seg in donut_segments %}
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background:{{ seg.color }};"></span>
+              <span class="text-xs" style="color:#94A3B8;">{{ seg.label }}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-mono font-bold" style="color:#F1F5F9;">{{ seg.pct }}%</span>
+              <span class="text-[10px] ml-2" style="color:#64748B;">{{ seg.amount }}</span>
+            </div>
+          </div>
+          {% empty %}
+          {% for row in "Annual:71%:₹3.42 Cr:#6366F1,Monthly:19%:₹0.94 Cr:#10B981,Trial:6%:₹0.31 Cr:#F59E0B,Overdue:4%:₹0.15 Cr:#EF4444"|split:"," %}
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background:#6366F1;"></span>
+              <span class="text-xs" style="color:#94A3B8;">{{ row|truncatechars:8 }}</span>
+            </div>
+            <span class="text-xs font-mono" style="color:#F1F5F9;">—</span>
+          </div>
+          {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Invoice table ─────────────────────────────────────────────────────── #}
+  <div class="rounded-xl overflow-hidden" style="background:#0D1526; border:1px solid #1E293B;">
+    <div class="flex items-center justify-between px-5 py-3.5" style="border-bottom:1px solid #1E293B;">
+      <h2 class="text-sm font-semibold" style="color:#F1F5F9;">Invoices</h2>
+      <!-- Search -->
+      <div class="relative">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3" fill="none" viewBox="0 0 24 24"
+             stroke="#64748B" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" name="q" placeholder="Search invoices…"
+               hx-get="/exec/financial-overview/?part=invoices"
+               hx-target="#fin-invoices"
+               hx-swap="innerHTML"
+               hx-trigger="keyup changed delay:300ms"
+               hx-include="[name='status']"
+               class="text-xs pl-7 pr-3 py-1.5 rounded-lg outline-none w-48"
+               style="background:#131F38; border:1px solid #1E293B; color:#F1F5F9;">
+      </div>
+    </div>
+    <!-- Status filter strip -->
+    <div class="flex gap-1 px-5 py-2.5" style="border-bottom:1px solid #1E293B;">
+      {% for s_val, s_label in "all,All;paid,Paid;pending,Pending;overdue,Overdue"|split:";" %}
+      <button name="status" value="{{ s_val }}"
+              hx-get="/exec/financial-overview/?part=invoices"
+              hx-target="#fin-invoices" hx-swap="innerHTML"
+              hx-include="[name='q']"
+              class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wide"
+              style="background:#131F38; color:#64748B; border:1px solid #1E293B;">
+        {{ s_label }}
+      </button>
+      {% endfor %}
+    </div>
+    <!-- Table -->
+    <div id="fin-invoices"
+         hx-get="/exec/financial-overview/?part=invoices"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="animate-pulse">
+        {% for _ in "12345" %}
+        <div class="flex gap-4 px-5 py-3" style="border-bottom:1px solid #0F1A2E;">
+          <div class="h-3 rounded flex-1" style="background:#131F38;"></div>
+          <div class="h-3 rounded w-24"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-20"   style="background:#131F38;"></div>
+          <div class="h-3 rounded w-16"   style="background:#131F38;"></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

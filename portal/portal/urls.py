@@ -4,6 +4,7 @@ from django.conf import settings
 urlpatterns = [
     path("", include("apps.auth_views.urls")),
     path("", include("apps.home.urls")),
+    path("", include("apps.exec.urls")),
 ]
 
 if settings.DEBUG:
