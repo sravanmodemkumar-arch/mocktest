@@ -302,6 +302,104 @@ class SLADashboardView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 ---
 
+## 11a. Credit Note Action Path (Amendment)
+
+> **Gap fix:** The original spec had "Apply Credit" as a modal that applies credit to an invoice. This section specifies the full credit note generation flow — from breach detection → credit calculation → formal credit note document → billing system entry.
+
+### Full Credit Note Workflow
+
+```
+STEP 1 — Detection (automatic)
+  Nightly Celery task `compute_sla_credits()` at 00:30 IST:
+  - For each institution: calculates actual uptime vs SLA target for current month
+  - If breached: creates `ServiceCredit` record (status=pending)
+  - CFO + ops email: "SLA breach detected — N institutions require credit notes"
+
+STEP 2 — Review (Service Credits tab §4.5)
+  CFO reviews pending credits in Service Credits table
+  Click [Generate Credit Note] on any pending row:
+
+STEP 3 — Generate Credit Note Modal (560px)
+────────────────────────────────────────────────────────────────────────────
+Generate Credit Note — Sunrise Coaching Centre
+────────────────────────────────────────────────────────────────────────────
+Breach period:      January 2026
+SLA tier:           Enterprise (99.9%)
+Actual uptime:      99.87%
+Breach:             0.03% (10 min over budget)
+Contract MRR:       ₹58,300
+Credit rate:        15% MRR per 0.1% breach
+Calculated credit:  ₹58,300 × 15% × 0.3 = ₹2,624
+
+Credit note amount: ₹2,624  [editable — CFO may adjust with reason]
+Reason:             "SLA breach Jan 2026 — Enterprise tier (99.87% vs 99.9% target)"
+Apply to invoice:   INV-2026-02-0047 (Feb 2026 invoice)  [auto-selected next invoice]
+Notify institution: ☑ Send email with credit note attached
+
+[Cancel]                            [Generate & Apply Credit Note]
+────────────────────────────────────────────────────────────────────────────
+```
+
+**[Generate & Apply Credit Note] → POST `/exec/sla/actions/generate-credit-note/`:**
+1. Requires 2FA OTP (existing pattern)
+2. Creates `CreditNote` model record with all fields
+3. Generates PDF credit note (WeasyPrint): includes institution name, breach details, credit amount, invoice reference, EduForge letterhead
+4. Attaches PDF to `CreditNote` record (S3 upload)
+5. Updates `ServiceCredit.status` → `applied`, sets `applied_by`, `applied_at`
+6. POSTs credit to billing system (Zoho Books / internal) via API: `billing_api.apply_credit(invoice_id, amount, note_pdf_url)`
+7. Sends email to institution finance contact with credit note PDF attached
+8. Logs `AuditLog` entry: "Credit note ₹2,624 generated for Sunrise Coaching Centre — INC-Jan2026"
+
+**Batch credit note generation:**
+
+When CFO clicks [Generate All Pending Credit Notes]:
+- Confirmation modal: "Generate {N} credit notes totalling ₹{amount}. This cannot be undone."
+- Celery task: `generate_batch_credit_notes.delay(credit_ids)` — async, each PDF generated serially
+- Progress bar in modal: "3 of 8 credit notes generated…"
+- Email summary to CFO when complete: "8 credit notes generated and sent"
+
+**Database additions:**
+```python
+class CreditNote(models.Model):
+    institution     = models.ForeignKey("Institution", on_delete=models.PROTECT)
+    service_credit  = models.OneToOneField("ServiceCredit", on_delete=models.PROTECT)
+    breach_month    = models.CharField(max_length=7)          # "2026-01"
+    breach_pct      = models.DecimalField(max_digits=6, decimal_places=4)
+    calculated_amt  = models.DecimalField(max_digits=12, decimal_places=2)
+    final_amt       = models.DecimalField(max_digits=12, decimal_places=2)  # may differ if CFO edits
+    adjustment_reason = models.TextField(blank=True)          # if final_amt differs
+    applied_to_invoice = models.CharField(max_length=50)      # invoice ID
+    pdf_s3_key      = models.CharField(max_length=300)        # S3 path to PDF
+    billing_api_ref = models.CharField(max_length=100, blank=True)
+    notified_at     = models.DateTimeField(null=True)
+    generated_by    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    generated_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["breach_month","institution"])]
+```
+
+**Celery task:**
+```python
+@shared_task
+def compute_sla_credits():
+    """Runs at 00:30 IST on the 1st of each month for the previous month."""
+    prev_month = last_month()
+    for institution in Institution.objects.filter(is_active=True).select_related("plan"):
+        actual_uptime = _compute_institution_uptime(institution, prev_month)
+        target = institution.plan.sla_target_pct
+        if actual_uptime < target:
+            breach_pct = Decimal(str(target - actual_uptime))
+            credit_rate = institution.plan.credit_rate_per_0_1pct
+            credit_amt = institution.current_mrr * credit_rate * (breach_pct / Decimal("0.001"))
+            ServiceCredit.objects.get_or_create(
+                institution=institution, breach_month=prev_month,
+                defaults={"calculated_amt": credit_amt, "breach_pct": breach_pct, "status": "pending"}
+            )
+```
+
+---
+
 ## 11. Component References
 
 | Component | Used in |

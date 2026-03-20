@@ -515,6 +515,96 @@ class ExamOpsView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 ---
 
+## 14a. Security Considerations
+
+- Exam actions (Pause, Emergency End, Broadcast) restricted to `exec`, `ops`, `superadmin` roles only — institution admins cannot reach this page
+- "Emergency End" requires typing "END" — guards against accidental termination of live exams with 74K students
+- Bulk actions: validated server-side — `exam_ids` list filtered to confirm each exam belongs to accessible institutions (prevents IDOR)
+- Export: rate-limited 5/day. Large exports (> 1,000 rows) async via Celery — prevents DoS on the reporting DB
+- Student data in drawer: names and scores are visible to exec/ops but not exposed in URLs or logs — only by exam ID
+- Schedule conflict warning: shown to prevent accidental double-booking, but not blocked (exec may override)
+- `?part=` parameter: allowlisted server-side — unknown parts return 400
+
+---
+
+## 14b. Database Schema (key models)
+
+```python
+class Exam(models.Model):
+    STATUS = [("draft","Draft"),("scheduled","Scheduled"),("live","Live"),
+              ("paused","Paused"),("completed","Completed"),("failed","Failed"),
+              ("cancelled","Cancelled"),("evaluating","Evaluating")]
+    name            = models.CharField(max_length=200)
+    institution     = models.ForeignKey("Institution", on_delete=models.CASCADE)
+    series          = models.ForeignKey("ExamSeries", null=True, on_delete=models.SET_NULL)
+    exam_type       = models.CharField(max_length=20,
+                        choices=[("mcq","MCQ"),("descriptive","Descriptive"),
+                                 ("mixed","Mixed"),("omr","OMR")])
+    subject         = models.CharField(max_length=100)
+    grade           = models.JSONField(default=list)    # ["11-Sci","12-Sci"]
+    total_marks     = models.IntegerField()
+    duration_minutes= models.IntegerField()
+    scheduled_at    = models.DateTimeField(db_index=True)
+    started_at      = models.DateTimeField(null=True)
+    ended_at        = models.DateTimeField(null=True)
+    status          = models.CharField(max_length=20, choices=STATUS, db_index=True)
+    proctoring_enabled = models.BooleanField(default=False)
+    negative_marking= models.BooleanField(default=False)
+    negative_ratio  = models.DecimalField(max_digits=4, decimal_places=2, default=0)
+    shuffle_questions = models.BooleanField(default=True)
+    enrolled_count  = models.IntegerField(default=0)  # denormalised for fast stats
+    created_by      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status","scheduled_at"]),
+            models.Index(fields=["institution","status"]),
+        ]
+
+
+class ExamExtension(models.Model):
+    exam            = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="extensions")
+    extended_by_min = models.IntegerField()
+    reason          = models.TextField()
+    extended_by     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    extended_at     = models.DateTimeField(auto_now_add=True)
+
+
+class ExamIssue(models.Model):
+    """Student-level technical issue during exam."""
+    TYPES = [("submission_failed","Submission Failed"),("disconnected","Network Disconnected"),
+             ("crash","Browser Crash"),("unknown","Unknown")]
+    exam            = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="issues")
+    student_id      = models.IntegerField()   # cross-schema reference
+    error_type      = models.CharField(max_length=30, choices=TYPES)
+    reported_at     = models.DateTimeField(auto_now_add=True)
+    resolved_at     = models.DateTimeField(null=True)
+    resolved_by     = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+```
+
+Redis keys:
+- `eo:stats:live` TTL 25s — live/scheduled/completed/failed counts
+- `eo:live_exams` TTL 25s — list of live exam IDs for fast table query
+
+---
+
+## 14c. Validation Rules
+
+| Action | Validation |
+|---|---|
+| Schedule Exam — Start date | Must be ≥ today (past dates blocked) |
+| Schedule Exam — Duration | 10 min to 360 min (6 hours max) |
+| Schedule Exam — Total marks | 10 to 1,000 |
+| Schedule Exam — Institution | Must belong to accessible institutions (role check) |
+| Schedule Exam — Proctoring | Only available if institution plan includes proctoring add-on |
+| Extend Duration — Live exam only | Cannot extend completed/cancelled exams |
+| Emergency End — Confirmation | User must type "END" exactly (case-sensitive) |
+| Bulk Extend — Exam IDs | Server validates all IDs are accessible to requesting user |
+| Bulk action max | Max 200 exams per bulk action |
+| Export range | Default: today. Custom: max 365 days. > 90 days: async export |
+
+---
+
 ## 14. Component References
 
 | Component | Used in |

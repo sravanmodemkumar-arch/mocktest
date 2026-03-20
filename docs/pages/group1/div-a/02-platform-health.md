@@ -457,6 +457,70 @@ class PlatformHealthView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 ---
 
+## 14a. Security Considerations
+
+- Page access: `exec`, `ops`, `superadmin` roles only — no institution-level staff can view
+- Service dependency graph: only service names shown (not internal IPs/hostnames)
+- Create Incident (P0): extra confirmation step prevents accidental P0 creation; P0 creation is `SecurityAuditLog` event
+- Export PDF: rate-limited 5/day per user; logged in `AuditLog`
+- HTMX part parameter: validated server-side against allowed dispatch keys — unknown `?part=` returns 400
+- All incident data: read from DB, not from Redis (Redis for metrics only) — prevents cache poisoning from affecting incident records
+
+---
+
+## 14b. Database Schema
+
+```python
+class ServiceHealthSnapshot(models.Model):
+    """30-second metric snapshot per monitored service."""
+    service_slug    = models.CharField(max_length=50, db_index=True)  # "exam_engine"
+    service_label   = models.CharField(max_length=100)
+    status          = models.CharField(max_length=20,
+                        choices=[("ok","OK"),("degraded","Degraded"),("down","Down"),("unknown","Unknown")])
+    uptime_pct      = models.FloatField()
+    p50_latency_ms  = models.IntegerField()
+    p95_latency_ms  = models.IntegerField()
+    p99_latency_ms  = models.IntegerField()
+    error_rate      = models.FloatField()   # percentage: 0.0–100.0
+    requests_per_min= models.IntegerField()
+    recorded_at     = models.DateTimeField(db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["service_slug","recorded_at"]),
+        ]
+
+
+class ServiceDependency(models.Model):
+    """Upstream/downstream service dependency map."""
+    service         = models.CharField(max_length=50)
+    depends_on      = models.CharField(max_length=50)   # service calls this
+
+    class Meta:
+        unique_together = ("service","depends_on")
+```
+
+Redis keys used by this page:
+- `ph:stats:{range}` TTL 25s — pre-computed KPI strip
+- `ph:services:{range}` TTL 25s — services table data
+- `ph:chart:{service}:{range}` TTL 60s — latency time series
+
+---
+
+## 14c. Validation Rules
+
+| Action | Validation |
+|---|---|
+| Create Incident — Title | Required, max 100 chars |
+| Create Incident — Severity | Required, must be P0–P4 |
+| Create Incident — Affected Services | ≥ 1 service required |
+| Create Incident — Description | Required, max 1,000 chars |
+| Create Incident — P0 | Extra confirmation step; logged as `SecurityAuditLog` entry |
+| Export range | Must be one of: `1h`, `6h`, `24h`, `7d`, `30d`; custom range max 90 days |
+| `?part=` param | Must be in dispatch allowlist — unknown values return HTTP 400 |
+
+---
+
 ## 14. Component References
 
 | Component | Used in |

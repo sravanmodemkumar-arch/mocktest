@@ -15,7 +15,11 @@
 | Currency | INR (₹) only |
 | Decimal precision | All financial values: `Decimal(28,2)` — NEVER float |
 
-**Why this matters:** Financial Overview is the CFO/COO's real-time P&L proxy. It shows MRR/ARR trajectory, cash collections, overdue exposure, churn impact on revenue, and plan mix — all in one page. The board deck is built from this page's data. Every rupee must be exact (Decimal, not float).
+**What this page IS:** Financial Overview is a **revenue dashboard** — MRR/ARR trajectory, cash collections, overdue exposure, churn impact on revenue, and plan mix. It does NOT include COGS, gross margin, OpEx, or EBITDA.
+
+**What it is NOT:** It is not a P&L. For a full investor-grade P&L with Gross Margin, EBITDA and burn rate, use [P&L Overview → `/exec/pnl/`](39-pnl-overview.md). For Razorpay settlement reconciliation, use [Razorpay Settlement Tracker → `/exec/settlements/`](33-razorpay-settlements.md).
+
+Every rupee must be exact (Decimal, not float).
 
 ---
 
@@ -80,6 +84,27 @@
 | 7 | Collections Rate | `96.2%` | vs last month | < 90% = red |
 
 **Delta reverse logic:** Churned MRR: increasing = bad (red) · Collections Rate: decreasing = bad (red)
+
+**Amendment — Settlement Status Row (below KPI strip):**
+
+```
+SETTLEMENT STATUS  ·  Last Razorpay settlement: 14h ago  ·  ₹4.2L pending  [View Settlements →]
+```
+
+- One line, `bg-[#0D1B2E] border-t border-[#1E2D4A] px-4 py-2 text-sm text-[#8892A4]`
+- "Last Razorpay settlement: {X}h ago" — sourced from `RazorpaySettlement.settled_at` (latest record)
+- "₹4.2L pending" — sum of `RazorpaySettlement` records with `status=pending`
+- `[View Settlements →]` link → `/exec/settlements/` (page 33)
+- If no settlement in > 48h: amber text — "Last Razorpay settlement: 2d ago ⚠"
+- If pending amount > ₹20L: amber text — "₹22.4L pending ⚠"
+
+**Amendment — Page header correction:**
+```
+HEADER: Financial Overview (Revenue)          [Export Revenue Report] [View Full P&L →]
+```
+- "Export Revenue Report" replaces "Export P&L" (was misleading)
+- "[View Full P&L →]" button: `text-[#6366F1] text-sm underline` → links to `/exec/pnl/`
+- Tooltip on link: "P&L includes COGS, Gross Margin, and EBITDA. This page shows revenue only."
 
 ---
 

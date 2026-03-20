@@ -54,7 +54,7 @@
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| 32 | Exam Day War Room | `/exec/war-room/` | `32-war-room.md` | **P0** | ⬜ | Full-screen command center for 74K peak exams — Lambda concurrency gauge, submission throughput, per-institution live status, one-click escalation, emergency scale controls |
+| 32 | Exam Day War Room | `/exec/war-room/` | `32-war-room.md` | **P0** | ✅ | Full-screen command center for 74K peak exams — Lambda concurrency gauge, submission throughput, per-institution live status, one-click escalation, emergency scale controls |
 
 ---
 
@@ -67,7 +67,7 @@
 | 06 | Institution List | `/exec/institutions/` | `06-institution-list.md` | P1 | ⬜ | Searchable/filterable institution table — tier, region, status, ARR, last active |
 | 07 | Student Analytics | `/exec/student-analytics/` | `07-student-analytics.md` | P2 | ⬜ | Total enrollment trends, subject distribution, pass/fail rates, geographic spread |
 | 35 | Customer Health & Churn Map | `/exec/customer-health/` | `35-customer-health.md` | P1 | ✅ | Composite health score per institution, churn probability, decay signals, CSM assignment, at-risk intervention workflow |
-| 43 | Onboarding Pipeline Tracker | `/exec/onboarding-pipeline/` | `43-onboarding-pipeline.md` | P2 | ⬜ | Kanban/timeline of 30–50 active institution onboardings, step completion, assigned specialist, go-live date, bottleneck analysis |
+| 43 | Onboarding Pipeline Tracker | `/exec/onboarding-pipeline/` | `43-onboarding-pipeline.md` | P2 | ✅ | Kanban/timeline of 30–50 active institution onboardings, step completion, assigned specialist, go-live date, bottleneck analysis |
 
 ---
 
@@ -81,8 +81,8 @@
 | 11 | Subscription Plans | `/exec/subscriptions/` | `11-subscription-plans.md` | P2 | ⬜ | Plan catalog — pricing tiers, feature matrix, upgrade/downgrade actions, active subscriber counts |
 | 33 | Razorpay Settlement Tracker | `/exec/settlements/` | `33-razorpay-settlements.md` | P1 | ✅ | Settlement timeline, reconciliation (invoices vs received vs fees), failed payment root cause, refund pipeline, payment method split, gateway fee tracker |
 | 34 | GST & Tax Compliance | `/exec/gst-compliance/` | `34-gst-compliance.md` | P1 | ✅ | GSTR-1/3B filing calendar, CGST/SGST/IGST breakdown by state, TDS tracking, SAC 9993 compliance, ITC reconciliation |
-| 39 | P&L Overview | `/exec/pnl/` | `39-pnl-overview.md` | P2 | ⬜ | Investor-grade P&L — Revenue, COGS, Gross Margin %, OpEx, EBITDA, burn rate, NRR, GRR by quarter; PDF export |
-| 50 | Cost Center Breakdown | `/exec/cost-breakdown/` | `50-cost-breakdown.md` | P3 | ⬜ | AWS Lambda/RDS/CDN costs, SMS/WhatsApp gateway spend, Razorpay fees, AI API spend — all OpEx line items by month |
+| 39 | P&L Overview | `/exec/pnl/` | `39-pnl-overview.md` | P2 | ✅ | Investor-grade P&L — Revenue, COGS, Gross Margin %, OpEx, EBITDA, burn rate, NRR, GRR by quarter; PDF export |
+| 50 | Cost Center Breakdown | `/exec/cost-breakdown/` | `50-cost-breakdown.md` | P3 | ✅ | AWS Lambda/RDS/CDN costs, SMS/WhatsApp gateway spend, Razorpay fees, AI API spend — all OpEx line items by month |
 
 ---
 
@@ -94,8 +94,8 @@
 | 13 | Incident Detail | `/exec/incidents/<id>/` | `13-incident-detail.md` | P1 | ⬜ | Timeline of events, impacted services, affected institutions, resolution steps, assignee, post-mortem link |
 | 14 | Alerting Rules | `/exec/alerts/` | `14-alerting-rules.md` | P2 | ⬜ | View/edit threshold rules — metric, operator, threshold, channel (email/Slack/webhook) |
 | 15 | Scheduled Maintenance | `/exec/maintenance/` | `15-scheduled-maintenance.md` | P2 | ⬜ | Upcoming + past maintenance windows, create/edit/cancel windows, notification log |
-| 38 | Support Operations | `/exec/support-ops/` | `38-support-ops.md` | P1 | ⬜ | L1/L2/L3 ticket volumes, open/resolved/SLA-breached, agent performance, top issue categories, escalation rate, institutions with most open tickets |
-| 42 | Notification Operations | `/exec/notification-ops/` | `42-notification-ops.md` | P2 | ⬜ | WhatsApp/SMS/Email delivery rates, OTP success rate (1h), queue depth, failed delivery reasons, TRAI DLT compliance, gateway health |
+| 38 | Support Operations | `/exec/support-ops/` | `38-support-ops.md` | P1 | ✅ | L1/L2/L3 ticket volumes, open/resolved/SLA-breached, agent performance, top issue categories, escalation rate, institutions with most open tickets |
+| 42 | Notification Operations | `/exec/notification-ops/` | `42-notification-ops.md` | P2 | ✅ | WhatsApp/SMS/Email delivery rates, OTP success rate (1h), queue depth, failed delivery reasons, TRAI DLT compliance, gateway health |
 
 ---
 
@@ -103,12 +103,12 @@
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| 37 | Infrastructure & Capacity | `/exec/infrastructure/` | `37-infrastructure.md` | P1 | ⬜ | Lambda concurrency/cold starts, RDS connection pool/replica lag, Redis memory/eviction/hit-ratio, CDN cache ratio, next 7-day exam load forecast vs headroom |
-| 40 | Deployment & Release Tracker | `/exec/deployments/` | `40-deployments.md` | P2 | ⬜ | Production version per service, deployment history (author/timestamp/SHA), migration log, CI/CD health, one-click rollback (CTO-gated) |
-| 41 | Security Posture | `/exec/security-posture/` | `41-security-posture.md` | P2 | ⬜ | SSL cert expiry countdown, KMS key rotation schedule, open CVEs with CVSS scores, last pen test findings, WAF coverage %, DPDP Act compliance checklist |
-| 44 | Mobile App Analytics | `/exec/mobile-analytics/` | `44-mobile-analytics.md` | P2 | ⬜ | Crash rate by version/platform, DAU/MAU, FCM delivery rate, app store rating (iOS + Android), version adoption curve, force-update compliance % |
-| 47 | Capacity Planning & Forecasting | `/exec/capacity-planning/` | `47-capacity-planning.md` | P3 | ⬜ | 30-day exam schedule vs predicted peak load vs infra ceiling; Lambda scale-out cost forecast; green/amber/red zone thresholds |
-| 48 | AI/ML Operations | `/exec/ai-ops/` | `48-ai-ops.md` | P3 | ⬜ | MCQ generation throughput, quality acceptance rate, cost per question, AI API spend, model version in production, pipeline queue depth |
+| 37 | Infrastructure & Capacity | `/exec/infrastructure/` | `37-infrastructure.md` | P1 | ✅ | Lambda concurrency/cold starts, RDS connection pool/replica lag, Redis memory/eviction/hit-ratio, CDN cache ratio, next 7-day exam load forecast vs headroom |
+| 40 | Deployment & Release Tracker | `/exec/deployments/` | `40-deployments.md` | P2 | ✅ | Production version per service, deployment history (author/timestamp/SHA), migration log, CI/CD health, one-click rollback (CTO-gated) |
+| 41 | Security Posture | `/exec/security-posture/` | `41-security-posture.md` | P2 | ✅ | SSL cert expiry countdown, KMS key rotation schedule, open CVEs with CVSS scores, last pen test findings, WAF coverage %, DPDP Act compliance checklist |
+| 44 | Mobile App Analytics | `/exec/mobile-analytics/` | `44-mobile-analytics.md` | P2 | ✅ | Crash rate by version/platform, DAU/MAU, FCM delivery rate, app store rating (iOS + Android), version adoption curve, force-update compliance % |
+| 47 | Capacity Planning & Forecasting | `/exec/capacity-planning/` | `47-capacity-planning.md` | P3 | ✅ | 30-day exam schedule vs predicted peak load vs infra ceiling; Lambda scale-out cost forecast; green/amber/red zone thresholds |
+| 48 | AI/ML Operations | `/exec/ai-ops/` | `48-ai-ops.md` | P3 | ✅ | MCQ generation throughput, quality acceptance rate, cost per question, AI API spend, model version in production, pipeline queue depth |
 
 ---
 
@@ -120,7 +120,7 @@
 | 17 | Audit Log | `/exec/audit-log/` | `17-audit-log.md` | P1 | ⬜ | Full audit trail — actor, action, resource, IP, timestamp; exportable; filterable by category |
 | 18 | Security Events | `/exec/security/` | `18-security-events.md` | P2 | ⬜ | Failed logins, suspicious IPs, privilege escalations, anomaly alerts, SIEM-style feed |
 | 19 | Data Residency | `/exec/data-residency/` | `19-data-residency.md` | P3 | ⬜ | Region-by-region data storage map, GDPR/DPDP DPA status per institution, retention policy viewer |
-| 36 | BGV & POCSO Compliance | `/exec/bgv-compliance/` | `36-bgv-compliance.md` | P1 | ⬜ | BGV coverage % per institution, pending/overdue verifications, BGV vendor SLA, POCSO incident log, NCPCR mandatory reporting dashboard |
+| 36 | BGV & POCSO Compliance | `/exec/bgv-compliance/` | `36-bgv-compliance.md` | P1 | ✅ | BGV coverage % per institution, pending/overdue verifications, BGV vendor SLA, POCSO incident log, NCPCR mandatory reporting dashboard |
 
 ---
 
@@ -143,8 +143,8 @@
 | 25 | Usage Analytics | `/exec/usage/` | `25-usage-analytics.md` | P2 | ⬜ | API call volume, feature adoption heatmap, peak usage times, slowest endpoints |
 | 26 | SLA Dashboard | `/exec/sla/` | `26-sla-dashboard.md` | P1 | ⬜ | Per-tier SLA commitments vs actuals — uptime, response time, resolution time; breach history |
 | 27 | Cohort Analysis | `/exec/cohorts/` | `27-cohort-analysis.md` | P3 | ⬜ | Institution retention cohorts, student enrollment cohorts, churn waterfall |
-| 46 | Domain Performance Overview | `/exec/domain-performance/` | `46-domain-performance.md` | P3 | ⬜ | Cross-domain enrollment, revenue per domain (SSC/RRB/NEET/JEE/AP/TS), question bank coverage, top institutions per domain |
-| 49 | Student Outcomes Analytics | `/exec/student-outcomes/` | `49-student-outcomes.md` | P3 | ⬜ | Pass/fail rates by domain/exam/institution type, rank distributions, result accuracy disputes, YoY improvement |
+| 46 | Domain Performance Overview | `/exec/domain-performance/` | `46-domain-performance.md` | P3 | ✅ | Cross-domain enrollment, revenue per domain (SSC/RRB/NEET/JEE/AP/TS), question bank coverage, top institutions per domain |
+| 49 | Student Outcomes Analytics | `/exec/student-outcomes/` | `49-student-outcomes.md` | P3 | ✅ | Pass/fail rates by domain/exam/institution type, rank distributions, result accuracy disputes, YoY improvement |
 
 ---
 
@@ -152,7 +152,7 @@
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
-| 45 | Board / Investor Dashboard | `/exec/board-dashboard/` | `45-board-dashboard.md` | P3 | ⬜ | Quarterly board KPIs — ARR, ARR YoY%, NRR, GRR, ARPU by segment, LTV, CAC, payback period; PDF/PPTX export for board decks |
+| 45 | Board / Investor Dashboard | `/exec/board-dashboard/` | `45-board-dashboard.md` | P3 | ✅ | Quarterly board KPIs — ARR, ARR YoY%, NRR, GRR, ARPU by segment, LTV, CAC, payback period; PDF/PPTX export for board decks |
 
 ---
 

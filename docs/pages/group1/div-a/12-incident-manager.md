@@ -385,6 +385,167 @@ class IncidentManagerView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 ---
 
+## 12a. Post-Mortem Structured Workflow (Amendment)
+
+> **Gap fix:** The original spec had a generic markdown Post-Mortem tab. This section replaces it with a structured, trackable workflow.
+
+### Post-Mortem Form (within Incident Drawer — Tab E)
+
+When an incident is Resolved and a post-mortem is required (all P0/P1 auto-trigger, P2 optional):
+
+```
+POST-MORTEM — INC-2026-0041                              [Status: Draft ▾]
+────────────────────────────────────────────────────────────────────────────
+Title *         Auth service degraded — 24,000 students affected 18 min
+                [text input · max 100 chars]
+
+Root Cause *    [textarea · markdown supported · 4 rows]
+                "Redis connection pool exhaustion caused by missing connection
+                 release in auth middleware v2.4.1 hot-fix deployed 14:28 IST."
+
+Contributing    ☑ Insufficient staging load test
+Factors *       ☑ Missing Redis connection leak detection alert
+                ☐ Inadequate rollback procedure
+                ☑ Deploy during exam window (process violation)
+                ☐ Third-party dependency failure
+                ☐ Human error — config change
+                [multi-select checkboxes — 8 options]
+
+Impact *        [textarea · 2 rows]
+                "2,050 institutions affected. ~24,000 students active. 0 exam
+                 data lost — exams resumed after reconnect."
+
+ACTION ITEMS                                              [+ Add Item]
+────────────────────────────────────────────────────────────────────────────
+#  Task                               Owner        Due Date    Status
+1  Add Redis conn leak alert           @cto          2026-03-25  ⬜ Open
+2  Fix conn release in middleware      @platform_eng 2026-03-22  ✅ Done
+3  Block deploys during exam window    @coo          2026-03-27  ⬜ Open
+
+Authored by:  @ops_manager_1        Last edited: 20 Mar 2026 15:42 IST
+────────────────────────────────────────────────────────────────────────────
+[Save Draft]     [Submit for Review]                (CTO only: [Mark Closed])
+```
+
+**Workflow states:**
+- `Draft` → author saves progress; not visible to wider team yet
+- `In Review` → submitted; CTO receives notification to review; incident list shows "Post-mortem in review" badge
+- `Closed` → CTO marks closed; action items continue to be tracked; incident considered fully resolved
+
+**Action Items tracker:**
+- Each item: task text (required) + owner (user picker) + due date + status (Open/Done)
+- Action items shown on the incident list row: "3/5 items done" progress indicator
+- Overdue open action items: amber badge on incident row
+- Action item owner receives email reminder 24h before due date
+
+**HTMX:**
+```html
+<!-- Auto-save draft every 30s -->
+<form id="postmortem-form"
+      hx-post="/exec/incidents/?part=save_postmortem&id={{ incident.id }}"
+      hx-trigger="every 30s"
+      hx-swap="none">
+```
+
+**POST endpoints added to view:**
+```python
+"save_postmortem":     self._handle_save_postmortem,    # auto-save + manual save
+"submit_postmortem":   self._handle_submit_postmortem,  # status: Draft → In Review
+"close_postmortem":    self._handle_close_postmortem,   # CTO only: In Review → Closed
+"add_action_item":     self._handle_add_action_item,
+"update_action_item":  self._handle_update_action_item,
+```
+
+---
+
+## 12b. SLA Credit Auto-Calculator (Amendment)
+
+> **Gap fix:** When an incident is resolved, automatically calculate SLA credit obligations and surface them for CTO acknowledgement.
+
+### SLA Credit Calculation — shown in Incident Drawer when resolving
+
+When CTO clicks "Close Incident" (or status changes to Resolved):
+
+```
+SLA CREDIT CALCULATION
+────────────────────────────────────────────────────────────────────────────
+Incident:  INC-2026-0041 · Auth degraded · Duration: 24 min
+
+Affected Tiers & Credit Obligations:
+Tier           Institutions   Downtime   SLA Budget   Breach?   Credit Rate   Credit Due
+────────────────┼─────────────┼──────────┼────────────┼─────────┼─────────────┼────────────
+Enterprise       82 insts      24 min     43.2 min     No        10%/0.1%     ₹0
+Professional     184 insts     24 min     130 min      No        7%/0.1%      ₹0
+Standard         1,784 insts   24 min     216 min      No        5%/0.1%      ₹0
+────────────────────────────────────────────────────────────────────────────
+Total credit obligation this incident: ₹0
+
+(If this incident had pushed Enterprise over 43.2 min budget:
+ e.g., 10 additional min → Enterprise uptime = 99.87% → breach 0.03% →
+ credit = 82 institutions × avg MRR × 10% × 0.3 = ~₹1.4L)
+```
+
+**When breach IS detected:**
+```
+⚠ SLA BREACH DETECTED
+────────────────────────────────────────────────────────────────────────────
+Enterprise tier breached: actual uptime 99.87% vs target 99.9%
+82 Enterprise institutions × avg MRR ₹58,300 × credit rate 10% × breach 0.3%
+
+Credit obligation: ₹1,43,600
+
+[Acknowledge & Create Credit Notes]   [Override — No Credit (reason required)]
+```
+
+- "Acknowledge & Create Credit Notes" → POST `/exec/incidents/actions/create-credits/` → creates `ServiceCredit` records for all 82 institutions → triggers batch credit note generation via billing API → CFO email notification
+- "Override — No Credit": requires CTO to type reason; creates `CreditOverride` audit record
+- Auto-calculation runs server-side; formula: `breach_pct = (target_uptime - actual_uptime) / 0.001` · `credit_amt = avg_mrr × credit_rate_per_0.1pct × breach_pct`
+- Calculator result cached at `incident:sla_calc:{incident_id}` TTL 3600s
+
+**Database additions:**
+```python
+class IncidentPostMortem(models.Model):
+    incident        = models.OneToOneField("Incident", on_delete=models.CASCADE)
+    title           = models.CharField(max_length=100)
+    root_cause      = models.TextField()
+    contributing_factors = models.JSONField(default=list)
+    impact          = models.TextField()
+    status          = models.CharField(max_length=20,
+                        choices=[("draft","Draft"),("in_review","In Review"),("closed","Closed")])
+    authored_by     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                         related_name="postmortems_authored")
+    closed_by       = models.ForeignKey(settings.AUTH_USER_MODEL, null=True,
+                                         on_delete=models.SET_NULL, related_name="postmortems_closed")
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+
+class PostMortemActionItem(models.Model):
+    postmortem      = models.ForeignKey(IncidentPostMortem, on_delete=models.CASCADE,
+                                         related_name="action_items")
+    task            = models.CharField(max_length=200)
+    owner           = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    due_date        = models.DateField()
+    status          = models.CharField(max_length=20,
+                        choices=[("open","Open"),("done","Done"),("cancelled","Cancelled")])
+    completed_at    = models.DateTimeField(null=True)
+
+
+class SLACreditCalculation(models.Model):
+    """Auto-calculated credit obligation per incident."""
+    incident        = models.OneToOneField("Incident", on_delete=models.CASCADE)
+    calculation_json= models.JSONField()     # full breakdown per tier
+    total_credit_inr= models.DecimalField(max_digits=12, decimal_places=2)
+    acknowledged_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True,
+                                         on_delete=models.SET_NULL)
+    acknowledged_at = models.DateTimeField(null=True)
+    overridden      = models.BooleanField(default=False)
+    override_reason = models.TextField(blank=True)
+    credits_created = models.BooleanField(default=False)
+```
+
+---
+
 ## 12. Component References
 
 | Component | Used in |
