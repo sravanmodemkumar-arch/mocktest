@@ -6,7 +6,7 @@
 > **Read Access:** DBA (Role 15)
 > **File:** `c-10-scaling.md`
 > **Priority:** P1
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G11 (Exam Day Mode tab)
 
 ---
 
@@ -19,7 +19,7 @@
 - `/engineering/scaling/?part=lambda-config` — Lambda concurrency config table
 - `/engineering/scaling/?part=ecs-config` — ECS task scaling config
 - `/engineering/scaling/?part=rds-config` — RDS replica scaling config
-- `/engineering/scaling/?part=redis-config` — ElastiCache scaling config
+- `/engineering/scaling/?part=memcached-config` — ElastiCache scaling config
 - `/engineering/scaling/?part=exam-calendar` — upcoming exam events + capacity forecast
 - `/engineering/scaling/?part=simulation` — capacity simulation tool
 
@@ -46,7 +46,7 @@ The capacity simulation tool is the most powerful feature: "If 80,000 students s
 
 | Role | Access Level | Permissions |
 |---|---|---|
-| Platform Admin (10) | Level 5 | Full view + all write: change concurrency · scale ECS · add/remove RDS replicas · add/remove Redis nodes |
+| Platform Admin (10) | Level 5 | Full view + all write: change concurrency · scale ECS · add/remove RDS replicas · add/remove Memcached nodes |
 | DevOps / SRE (14) | Level 4 | Full view + all write actions |
 | DBA (15) | Level 4 — Read | View RDS scaling config + exam calendar; cannot modify |
 
@@ -87,7 +87,7 @@ The capacity simulation tool is the most powerful feature: "If 80,000 students s
 | Provisioned Concurrency (exam-critical) | Sum of warm instances for exam functions | < minimum for next event = amber |
 | ECS Min Tasks (celery) | Minimum configured task count | < recommended for next event = amber |
 | RDS Replicas | Current count | < 2 = amber (single replica = risk) |
-| Redis Shards | Current node count (3 shards × 2 = 6 nodes) | < 6 = amber |
+| Memcached Nodes | Current cluster node count (3 nodes) | < 3 = amber |
 | Days to Next Exam Peak | Days until next high-load event | — (informational) |
 
 ---
@@ -203,38 +203,35 @@ The capacity simulation tool is the most powerful feature: "If 80,000 students s
 
 ---
 
-### Section 6 — ElastiCache Redis Scaling
+### Section 6 — ElastiCache Memcached Scaling
 
-**Purpose:** Configure Redis cluster node/shard scaling.
+**Purpose:** Configure Memcached cluster node scaling.
 
 **Current Configuration:**
 
 | Dimension | Value |
 |---|---|
-| Cluster mode | Enabled |
-| Total shards | 3 |
-| Nodes per shard | 2 (1 primary + 1 replica) |
-| Total nodes | 6 |
-| Node type | cache.r6g.xlarge |
-| Memory per node | 26.32 GB |
-| Total cluster memory | 157.9 GB |
-| Max keys at capacity | ~50M (estimated) |
-| Current keys | 38.4M (77% of capacity) |
+| Cluster nodes | 3 |
+| Node type | cache.r6g.large |
+| Memory per node | 6.38 GB |
+| Total cluster memory | 19.1 GB |
+| Current memory used | 14.3 GB (75% of capacity) |
+| Hit rate (cluster) | 96.4% |
 
 **Scaling options:**
-- "Add shard" → adds 4th shard (2 nodes); data re-sharded automatically by ElastiCache
-  - Estimated time: 20–40 min
-  - Cost: +₹4,200/month per shard
-- "Add replica to shard" → adds a 2nd or 3rd replica node for read redundancy (read scalability)
-- "Scale up node type" → upgrade from cache.r6g.xlarge to cache.r6g.2xlarge (2× memory)
+- "Add node" → adds a 4th node; ElastiCache rebalances cache distribution automatically
+  - Estimated time: 5–10 min
+  - Cost: +₹2,800/month per node
+- "Scale up node type" → upgrade from cache.r6g.large to cache.r6g.xlarge (2× memory per node)
+  - Requires cluster replacement (brief cache-cold period)
 
 **Scaling recommendation (auto-computed):**
-- If current keyspace > 75% of capacity: amber recommendation: "At current key growth rate (+2.1% per month), capacity limit will be reached in ~10 months. Consider adding a shard."
-- If exam day key estimate (simulate: +5M keys during peak): "Peak keyspace = {n}. Headroom: {n}%."
+- If current memory > 75% of capacity: amber recommendation: "At current memory growth rate, capacity limit will be reached in ~8 months. Consider adding a node."
+- If exam day memory estimate (simulate: +15% memory usage during peak): "Peak memory = {n}%. Headroom: {n}%."
 
 **Memory usage projections:**
-- Chart: current memory + projected growth (3-month linear extrapolation)
-- Peak day simulation: adds expected exam-day key count to projection
+- Chart: current memory usage + projected growth (3-month linear extrapolation)
+- Peak day simulation: adds expected exam-day cache load to projection
 
 ---
 
@@ -301,7 +298,7 @@ For each service, shows: **estimated load → current config → headroom → st
 | Lambda exam-submit | 800 concurrent | 1,000 reserved, 500 provisioned | 25% headroom | ✅ OK |
 | Lambda auth-token | 500 concurrent | 400 reserved | -25% (THROTTLE RISK) | 🚨 Bottleneck |
 | RDS connections | 3,200 connections | 5,000 max (PgBouncer) | 36% headroom | ✅ OK |
-| Redis memory | +4.2M keys | 157.9 GB (77% used → 84% at peak) | 16% headroom | ⚠ Review |
+| Memcached memory | +15% usage during peak | 19.1 GB (75% used → 87% at peak) | 13% headroom | ⚠ Review |
 | ECS celery-worker | 18 tasks needed | 8 desired, max 20 | auto-scales to 18 | ✅ OK |
 
 **Bottleneck detail:**
@@ -310,7 +307,7 @@ For each service, shows: **estimated load → current config → headroom → st
 **Recommended actions panel (auto-generated from simulation results):**
 - "Increase auth-service reserved concurrency: 400 → 600 (50% headroom)"
 - "Increase auth-service provisioned: 50 → 200 (warm instances)"
-- "Monitor Redis Shard 3 memory on exam day — at 84% expected usage"
+- "Monitor Memcached cluster memory on exam day — at 87% expected usage. Consider adding a node."
 
 **"Apply all recommendations" button:**
 - Opens pre-filled confirmation showing all proposed changes
@@ -339,7 +336,7 @@ For each service, shows: **estimated load → current config → headroom → st
 
 **Add/Edit rule (Admin · DevOps):**
 - Rule name
-- Service: Lambda function / ECS service / RDS replica / Redis node
+- Service: Lambda function / ECS service / RDS replica / Memcached node
 - Action: specific config change (typed value, not percentage)
 - Schedule: cron expression OR "N minutes before exam" (exam-calendar-linked)
 - Enabled/disabled toggle
@@ -405,7 +402,7 @@ AutoscalingCapacityPlannerPage
 │   ├── InstanceTable
 │   ├── ConnectionBudgetDisplay
 │   └── AddReplicaModal
-├── RedisScalingSection
+├── MemcachedScalingSection
 │   ├── ClusterConfigTable
 │   └── ScaleActionModals
 ├── ExamCalendarSection
@@ -480,7 +477,7 @@ AutoscalingCapacityPlannerPage
 | Reserved concurrency change | Exam-critical function: cannot reduce below current peak usage × 0.8 without 2FA + warning |
 | Minimum ECS tasks | celery-beat: always 1, locked; celery-worker: min 2 (cannot go below); notification-worker: min 1 |
 | RDS replica minimum | Cannot remove last remaining read replica (minimum: 1 replica at all times) |
-| Redis scaling | Add shard: must have at least 2 nodes per shard (primary + replica); shard count max: 500 (ElastiCache limit) |
+| Memcached scaling | Add node: ElastiCache Memcached supports up to 40 nodes per cluster; scale-out adds distributed capacity with automatic key rebalancing |
 | Simulation student count | Min 100 · Max 500,000 (beyond this, simulation results are unreliable) |
 | Pre-warm schedule | Offset must be between -240 min and -5 min (relative to exam start); positive offset not allowed (cannot pre-warm after exam start) |
 | Batch apply recommendations | 2FA required; must confirm each bottleneck fix individually if more than 5 changes |
@@ -517,9 +514,95 @@ AutoscalingCapacityPlannerPage
 
 | Concern | Strategy |
 |---|---|
-| 68 functions config table | Static config from DB (< 100ms); live metrics column (concurrency) from C-08 Redis cache — no new CloudWatch call |
+| 68 functions config table | Static config from DB (< 100ms); live metrics column (concurrency) from C-08 Memcached cache — no new CloudWatch call |
 | Simulation calculation | Pure arithmetic; server-side Python calculation < 200ms; no external API calls |
 | Exam calendar load | `platform_exam_schedule` joined with student count estimates; month view = at most 31 days × 50 exams = 1,550 rows; < 50ms query |
 | Pre-warm scheduling | Celery beat evaluates exam schedule every hour; pre-warm tasks queued as Celery countdown tasks (`apply_async(countdown=N)`) |
 | Scheduled rule evaluation | Celery beat evaluates all scheduled scaling rules every 5 min; rules with `schedule_type = cron` use `celery-redbeat` for reliable execution |
 | Capacity recommendations | Computed server-side in < 500ms; no LLM or ML involved — purely arithmetic comparison of estimated load vs configured capacity |
+
+---
+
+## Amendment — G11: Exam Day Mode Tab
+
+**Gap addressed:** DevOps could not manually activate a coordinated "exam day mode" — simultaneously pre-warming all exam-critical Lambda provisioned concurrency, scaling ECS tasks to configured max, switching CloudFront to no-cache for API responses, and locking production CI/CD deployments — from a single action.
+
+### New Tab on Auto-scaling & Capacity Planner — Exam Day Mode
+
+**Access:** `/engineering/scaling/?tab=exam-day-mode` — top-level tab on the page.
+
+**Tab Layout:**
+
+**Current State Banner:**
+- If inactive: Green "Exam Day Mode: OFF" with "Activate" button
+- If active: Red pulsing "EXAM DAY MODE ACTIVE — activated {time ago} by {name}" with cost estimate running counter and "Deactivate" button
+
+**Pre-flight Checklist (shown before activation):**
+
+Opens `exam-day-activation-drawer` (600px) when "Activate" is clicked:
+
+**Pre-flight checks (auto-run, 3–5s):**
+
+| Check | Pass | Fail |
+|---|---|---|
+| No active CI/CD deployments in progress | ✅ | ❌ "Deployment running on portal repo — wait or cancel" |
+| No pending Lambda updates | ✅ | ⚠ "Lambda function `exam-submit` has pending config update" |
+| Exam calendar: exam(s) scheduled today | ✅ | ⚠ "No exams in calendar today — unusual activation" |
+| Current concurrency headroom | ✅ 35% | ❌ < 10% headroom — scaling needed first |
+| Last capacity simulation run | ✅ 2 days ago | ⚠ > 7 days — recommend re-running simulation |
+
+**Cost impact estimate:**
+- Current monthly Lambda spend (provisioned concurrency): ₹X
+- Exam Day Mode additional cost (during activation): ₹Y/hour
+- Estimated duration: {configured hours}
+- Total estimated cost: ₹Z
+
+**Activation confirmation:**
+- 2FA required (Platform Admin or DevOps)
+- Confirmation button: "Activate Exam Day Mode — ₹{Z} estimated cost"
+
+**What Exam Day Mode does (on activation — all steps in one Celery job):**
+1. Set all exam-endpoint Lambda provisioned concurrency to configured max values (from `platform_scaling_config` exam-day overrides)
+2. Scale all ECS services to configured exam-day task counts
+3. Switch CloudFront API distribution to no-cache headers (TTL = 0s for `/api/*` paths)
+4. Lock CI/CD production deployments in C-09 (sets `platform:exam_day_mode_active` Memcached key → C-09 production deploy button reads this key)
+5. Set Memcached `platform:exam_day_mode_active = true` key (picked up by C-08, C-09, C-04 poll intervals halving)
+6. Send activation confirmation: Slack (webhook) + email to all DevOps team + Platform Admin
+
+**During Exam Day Mode (active state):**
+- All monitoring pages (C-04, C-08) switch to 15s poll interval
+- CI/CD production deploy button in C-09 shows "🔒 Locked — Exam Day Mode active"
+- Cost estimate counter ticks up in real-time
+- "Deactivate" button always visible (no 2FA needed for deactivation — recovery speed matters)
+
+**Deactivation:**
+- Reverses all 6 activation steps
+- Sends deactivation summary email: activation timestamp · deactivation timestamp · duration · peak metrics during mode (peak Lambda concurrency · peak RDS connections · peak Memcached memory)
+
+**Activation History Table (last 10 activations):**
+
+| Column | Description |
+|---|---|
+| Activated At | Timestamp |
+| Activated By | Staff name |
+| Duration | Hours:minutes |
+| Deactivated By | Staff name |
+| Peak Lambda Concurrency | Highest reached during mode |
+| Peak RDS Connections | Highest reached |
+| Cost | ₹ total cost of activation |
+| Exam Summary | Exams run during this period (from calendar) |
+
+**Data Model Addition — platform_exam_day_activations:**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| activated_by | UUID FK → platform_staff | |
+| activated_at | TIMESTAMPTZ | |
+| deactivated_by | UUID FK → platform_staff | nullable |
+| deactivated_at | TIMESTAMPTZ | nullable |
+| cost_estimate_inr | DECIMAL | computed at activation |
+| actual_cost_inr | DECIMAL | nullable — filled on deactivation |
+| peak_lambda_concurrency | INTEGER | nullable |
+| peak_rds_connections | INTEGER | nullable |
+| celery_task_id | VARCHAR(255) | activation job ID |

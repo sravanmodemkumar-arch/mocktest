@@ -5,7 +5,7 @@
 > **Primary Role:** Platform Admin (Role 10) · Security Engineer (Role 16) · DevOps/SRE (Role 14)
 > **File:** `c-14-secrets.md`
 > **Priority:** P0 — Required before any credential-holding service goes live
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G7 (OAuth App Registry tab) · G8 (Mobile Keys tab) · G18 (Rotation Compliance tab) · G19 (JWT Compromise Response section)
 
 ---
 
@@ -300,7 +300,7 @@ Used for: Suspected or confirmed secret compromise
 **Key differences from standard rotation:**
 - **No overlap window** — old secret value invalidated immediately
 - All consuming services force-restarted (Lambda warm pool flushed)
-- All active sessions using JWT signed with compromised key: invalidated (Redis session deny-list bulk insert)
+- All active sessions using JWT signed with compromised key: invalidated (bulk-insert all active JTIs into `platform_jwt_denied_tokens` ORM deny-list)
 - CERT-In assessment triggered: "Was this secret compromise a data breach? If any student/staff data was accessed using this compromised credential, CERT-In notification required."
 - C-18 incident automatically created
 
@@ -319,7 +319,7 @@ Used for: Suspected or confirmed secret compromise
   2. Update AWS Secrets Manager (AWSCURRENT)
   3. Set old value to AWSPENDING (will be deleted in 15 min — no overlap window for emergency)
   4. Flush Lambda warm pools for all consuming services
-  5. Bulk-invalidate all active sessions (for JWT keys only) via Redis SCAN + DEL
+  5. Bulk-invalidate all active sessions (for JWT keys only): bulk-insert all active JTIs into `platform_jwt_denied_tokens` ORM deny-list
   6. Create C-18 incident
   7. Log to CERT-In incident log (if applicable)
   8. Notify all consuming service owners via email
@@ -413,7 +413,7 @@ Used for: Suspected or confirmed secret compromise
 6. Emergency rotation executes:
    - New key generated in < 1s
    - Old key invalidated immediately (no overlap window)
-   - All 74,000 active JWT tokens invalidated (Redis bulk delete)
+   - All 74,000 active JWT tokens invalidated (bulk-inserted into `platform_jwt_denied_tokens` deny-list)
    - Lambda warm pools flushed
    - Students logged out → must re-login
 7. Duration: ~4 min total
@@ -534,7 +534,7 @@ SecretKeyManagerPage
 | Rotation log immutability | `platform_secret_rotation_log` INSERT-only; same pattern as audit logs throughout platform |
 | Dual-admin emergency rotation | Prevents single-admin social engineering or coercion; both approval tokens delivered via separate email |
 | Propagation force-restart | Lambda warm pool flush logs to `platform_infra_events` (C-08 audit trail) |
-| Session invalidation on JWT rotation | Redis bulk SCAN for `session:*` keys; bulk DEL; < 2 min for 40M key namespace; students must re-login — this is expected behaviour for emergency rotation |
+| Session invalidation on JWT rotation | Bulk-insert all active JTIs into `platform_jwt_denied_tokens` ORM deny-list; JWT middleware checks deny-list on every request; students must re-login — this is expected behaviour for emergency rotation |
 | SAML private key rotation | Requires coordination with Google Workspace admin (SAML metadata must be updated externally); system provides step-by-step instructions in rotation wizard |
 
 ---
@@ -558,9 +558,337 @@ SecretKeyManagerPage
 | Concern | Strategy |
 |---|---|
 | 42 secrets inventory (small scale) | All 42 secrets loaded at once; no pagination needed; full page load < 100ms |
-| AWS Secrets Manager API calls | `DescribeSecret` (metadata only) called for each of 42 secrets; batched; cached Redis 5 min |
+| AWS Secrets Manager API calls | `DescribeSecret` (metadata only) called for each of 42 secrets; batched; cached in Memcached 5 min |
 | Rotation audit (on-demand) | Celery job: 42 × DescribeSecret + GetSecretRotationStatus + Secrets Manager sync check; completes in < 30s |
 | Propagation status polling | Draws from C-04 / C-05 Lambda cold-start telemetry; no new API calls needed |
-| Emergency rotation < 5 min | All steps async via Celery; UI polls job status every 5s; critical path (generate + Secrets Manager update) < 10s; Lambda flush + Redis bulk delete run in parallel |
+| Emergency rotation < 5 min | All steps async via Celery; UI polls job status every 5s; critical path (generate + Secrets Manager update) < 10s; Lambda flush + ORM deny-list bulk insert run in parallel |
 | KMS metrics | CloudWatch `AWS/KMS` namespace; batched with other CloudWatch calls; 5 min cache |
 | Dependency graph rendering | Rendered server-side (Graphviz or D3 pre-computed SVG); 42 secrets × ~3 services each = small graph; render < 200ms |
+
+---
+
+## 12. Amendment — G7: OAuth App Registry Tab
+
+**Assigned gap:** G7 — C-14 stores OAuth client secrets but has no registry of OAuth apps with scopes, redirect URIs, owner, last-used timestamp, or revocation capability.
+
+**Where it lives:** New tab added to the existing page. The page gains a top-level tab strip: **Secrets** (existing sections) · **OAuth Apps** (new) · **Mobile Keys** (G8) · **Rotation Compliance** (G18).
+
+---
+
+### OAuth App Registry Tab
+
+**Purpose:** Provide a complete registry of all OAuth 2.0 applications that have been granted access to the platform's OAuth endpoints — including Google OAuth for staff login, any third-party integrations using OAuth, and SAML SP configurations. Give the Security Engineer the ability to review active apps, audit scope grants, rotate client secrets, and revoke apps that are no longer needed.
+
+**OAuth App Inventory Table:**
+
+| Column | Description |
+|---|---|
+| App Name | Human-readable name (e.g., "Google OAuth — Staff Login") |
+| Client ID | Masked: first 8 chars + `••••` |
+| Type | OAuth 2.0 (Authorization Code) · OAuth 2.0 (Client Credentials) · SAML SP |
+| Scopes Granted | List of OAuth scopes: openid · profile · email · custom scopes |
+| Redirect URIs | Registered callback URIs (count shown; expand to view all) |
+| Owner | Platform staff responsible for this app |
+| Last Used | Timestamp of last successful OAuth token exchange |
+| Status | Active · Inactive (> 90 days no use) · Revoked |
+| Client Secret | Always masked · "Rotate Secret" action |
+| Actions | View detail · Rotate secret · Revoke app |
+
+**Registered OAuth Apps (typical inventory):**
+
+| App | Type | Purpose |
+|---|---|---|
+| Google OAuth — Staff Login | OAuth 2.0 Auth Code | Staff SSO via Google Workspace |
+| Razorpay Webhook Receiver | OAuth 2.0 Client Credentials | Razorpay payment webhooks |
+| GitHub Actions — CI/CD | OAuth 2.0 Client Credentials | CI/CD pipeline platform API access |
+| Sentry Error Reporting | OAuth 2.0 Client Credentials | Error tracking integration |
+| HackerOne Bug Bounty | OAuth 2.0 Client Credentials | HackerOne platform API |
+
+**OAuth App Detail Drawer (oauth-app-drawer, 560px):**
+
+Tabs: Details · Scope Audit · Token History
+
+**Tab — Details:**
+- Full client ID (unmasked after 2FA challenge)
+- All registered redirect URIs (editable list — add/remove with 2FA)
+- Allowed grant types
+- Token lifetime: access token TTL + refresh token TTL
+- PKCE required: Yes / No
+- Owner + created by + created at
+
+**Tab — Scope Audit:**
+- List of all scopes this app is allowed to request
+- Per-scope: last used · frequency · "Remove scope" action (2FA)
+- Unused scopes (> 90 days not requested): amber badge — "Consider removing"
+
+**Tab — Token History:**
+- Last 50 token exchange events: timestamp · actor · scope requested · token lifetime · IP
+- "Any suspicious token requests?" — flag for Security Engineer review
+
+**Add New OAuth App:**
+"Register New App" button → modal:
+- App name + description + owner
+- Type selector
+- Redirect URI(s)
+- Scopes to grant (multi-select from allowed scope list)
+- Client secret auto-generated (shown once at registration — never again); stored in Secrets Manager
+
+**Revoke App:**
+- Confirmation modal: "Revoking this app will immediately invalidate all tokens issued to it. Any service using this app will stop working. Confirm?"
+- 2FA required
+- On revoke: all active tokens for this client ID invalidated (ORM deny-list insert); client marked "Revoked" in registry
+
+**Data model:**
+
+**platform_oauth_apps**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| app_name | VARCHAR(200) | |
+| client_id | VARCHAR(100) | unique |
+| client_secret_arn | VARCHAR(512) | Secrets Manager ARN (never stored in DB) |
+| type | ENUM | auth_code/client_credentials/saml_sp |
+| redirect_uris | JSONB | array of URIs |
+| scopes_granted | JSONB | array of scope strings |
+| owner_id | UUID FK → platform_staff | |
+| status | ENUM | active/inactive/revoked |
+| last_used_at | TIMESTAMPTZ | nullable |
+| created_by | UUID FK → platform_staff | |
+| created_at | TIMESTAMPTZ | |
+| revoked_at | TIMESTAMPTZ | nullable |
+| revoked_by | UUID FK → platform_staff | nullable |
+
+---
+
+## 13. Amendment — G8: Mobile Keys Tab
+
+**Assigned gap:** G8 — Mobile Engineer (Role 13) has zero access to C-14, but Mobile Engineers own the Hive AES-256 key and FCM server key and need to see rotation schedules to plan mobile app releases. A key rotation without Mobile Engineer awareness causes the app to fail decryption of locally stored data.
+
+**Where it lives:** New read-only tab added to the Secret & Key Manager page (alongside OAuth App Registry). Mobile Engineer (Role 13) is granted access to this tab only — all other tabs remain restricted to Security/Admin/DevOps.
+
+---
+
+### Mobile Keys Tab
+
+**Purpose:** Provide Mobile Engineers with read-only visibility into the rotation schedule and health of secrets that directly affect mobile app functionality. Mobile Engineers do not need to see all platform secrets — only those that require mobile release coordination.
+
+**Access:** Mobile Engineer (Role 13) — read-only. Security Engineer (Role 16) + Admin (Role 10) — full view (same as their existing access to main Secrets tab).
+
+**Mobile-Relevant Secrets Table:**
+
+Filtered view showing only secrets in the `mobile` category and third-party secrets consumed by mobile apps:
+
+| Secret Name | Purpose | Last Rotated | Next Rotation Due | Days to Rotation | Rotation Impact on Mobile | Status |
+|---|---|---|---|---|---|---|
+| hive-aes-256-key | Flutter Hive local DB encryption | Jan 2026 | Jan 2027 | 286 days | ⚠ HIGH — app must ship key update before rotation or local data unreadable | ✅ Healthy |
+| ios-push-cert-p8 | iOS APNs push notification certificate | Jan 2026 | Jan 2027 | 286 days | Medium — rotation causes push gap until new cert deployed | ✅ Healthy |
+| android-keystore-ref | Android signing keystore reference | Jan 2023 | Manual only | — | ⚠ HIGH — keystore rotation requires Play Store re-submission | ✅ Active |
+| fcm-server-key | Firebase Cloud Messaging server key | Jan 2026 | Jan 2027 | 286 days | Medium — rotation requires FCM project key update | ✅ Healthy |
+
+**Rotation Impact Legend (shown as help text):**
+- HIGH: Mobile app release required before or simultaneous with key rotation — coordinate with Security Engineer at least 2 weeks before rotation date
+- Medium: Service degradation possible during rotation; coordinate timing
+- Low: Transparent to mobile app; no release coordination needed
+
+**"Request Rotation Delay" button (Mobile Engineer only):**
+If a rotation is due but a new mobile app release is not yet deployed, the Mobile Engineer can request a brief delay:
+- Opens a request form: reason + proposed new rotation date (max 30-day extension)
+- Request sent to Security Engineer for approval via platform notification
+- Security Engineer approves/rejects from their Secrets view
+- Approved delays recorded in `platform_secret_registry` and shown in the rotation calendar
+
+**Rotation Coordination Checklist (shown 30 days before rotation due):**
+The tab displays a coordination checklist for each upcoming HIGH-impact rotation:
+- New app version with updated key support: deployed to App Store / Play Store?
+- Minimum app version enforced (via force-update prompt)?
+- Old key material will be retained in Secrets Manager AWSPREVIOUS for overlap window?
+- Confirm with Security Engineer: rotation window selected outside exam hours?
+
+**No secret values shown** — same masking policy as the rest of C-14. Mobile Engineers see only metadata.
+
+---
+
+## 14. Amendment — G18: Rotation Compliance Tab
+
+**Assigned gap:** G18 — C-14 shows per-secret rotation history but has no aggregate view: overall compliance %, which secrets are overdue, secrets that have never been rotated. No bulk rotation trigger for overdue items.
+
+**Where it lives:** New tab in the Secret & Key Manager page (alongside OAuth Apps and Mobile Keys).
+
+---
+
+### Rotation Compliance Tab
+
+**Purpose:** Give the Security Engineer an aggregate compliance view across all secrets — not just individual secret health, but the platform's overall rotation discipline. Drive the compliance percentage to 100% before audits, and provide a bulk rotation trigger to clear overdue items efficiently.
+
+**Compliance Summary Banner:**
+
+Large top-of-tab banner showing the overall rotation compliance score:
+
+- Overall compliance: **87%** (37/42 secrets within schedule)
+- Broken down by category:
+  - JWT Signing Keys: 100% (2/2)
+  - Database Credentials: 100% (4/4)
+  - Third-party API Keys: 75% (6/8 — 2 overdue)
+  - OAuth Secrets: 100% (3/3)
+  - Infrastructure: 67% (4/6 — 2 never rotated)
+  - Mobile: 80% (4/5)
+  - AI/ML Keys: 50% (2/4 — 2 overdue)
+
+Colour: green ≥ 95% · amber 80–94% · red < 80%
+
+---
+
+**Compliance Detail Table:**
+
+All secrets listed with compliance-focused columns:
+
+| Secret Name | Category | Rotation Schedule | Last Rotated | Overdue By | Never Rotated | Compliance Status |
+|---|---|---|---|---|---|---|
+| jwt-access-signing-key | JWT | Quarterly | Feb 2026 | — | No | ✅ Compliant |
+| cloudflare-api-token | Infrastructure | Annual | — | — | Yes | ❌ Never rotated |
+| openai-api-key | AI/ML | Quarterly | Sep 2025 | 5 months | No | ❌ 5 months overdue |
+| github-actions-pat | Infrastructure | Annual | Jan 2025 | 2 months | No | ❌ 2 months overdue |
+
+**Status Values:**
+- ✅ Compliant — rotated within schedule
+- ⚠ Due soon — rotation due in < 30 days
+- ❌ Overdue — past scheduled rotation date
+- ❌ Never rotated — secret has never been rotated since creation (and rotation schedule is not "Never")
+- ℹ Rotation = Never — justification on file (excluded from compliance %)
+
+**Bulk Actions:**
+
+"Trigger rotation for all overdue secrets" button:
+- Only enabled for Security Engineer or Admin
+- Opens confirmation modal listing all overdue secrets (names + overdue duration)
+- User can uncheck specific secrets to exclude from bulk rotation
+- On confirm: Celery job triggers standard rotation for each selected secret sequentially (not parallel — reduces simultaneous Lambda cold-start impact)
+- Progress shown: "Rotating {n}/{total} overdue secrets"
+- Each rotation requires 2FA — bulk rotation uses a single TOTP entry that covers all items in the batch (Security Engineer confirms once for the batch)
+- Rotation history entry created per secret with "bulk_rotation_batch_{batch_id}" tag
+
+**Compliance History Chart:**
+- Monthly compliance % trend for the last 12 months (line chart)
+- Shows improvement/regression over time
+- Target line at 95% (platform compliance SLA)
+
+**Audit Export:**
+"Export compliance report" → CSV or PDF:
+- All secrets with last rotation date, schedule, compliance status
+- Overall compliance % + category breakdown
+- Generated-by + timestamp + SHA-256 hash of report (for audit integrity)
+- Used for annual VAPT evidence and internal security audits
+
+---
+
+## 15. Amendment — G19: JWT Compromise Response Section
+
+**Assigned gap:** G19 — No guided workflow for responding to JWT signing key compromise. Security Engineer must manually execute 6 steps with no coordination or audit trail.
+
+**Where it lives:** New dedicated section within the Secret Detail Drawer (Section 4) for JWT signing key secrets specifically. When a drawer is opened for a secret in the `jwt` category, an additional tab appears: **Compromise Response**.
+
+---
+
+### JWT Compromise Response Tab (in Secret Detail Drawer)
+
+**Visible only for:** Secrets with `category = jwt` (jwt-access-signing-key, jwt-refresh-signing-key)
+
+**Purpose:** Guide the Security Engineer through a structured, audited 6-step response to a JWT signing key compromise. Each step is checked off in sequence; partial completion is saved so the engineer can hand off to another admin without losing progress.
+
+---
+
+**Incident Context (top of tab):**
+
+Before starting the response, the engineer documents the incident:
+- Compromise type: Exposed in code · Leaked to logs · Phishing · Insider threat · Compromised service · Unknown
+- Estimated time of compromise: date-time picker (used to scope affected sessions)
+- Estimated blast radius: "Sessions created after {compromise time} may use tokens signed with the compromised key"
+- Linked C-18 incident: select existing incident or "Create new incident" (auto-fills incident title)
+
+---
+
+**6-Step Response Checklist:**
+
+Each step shows: status (Not started / In progress / Complete) · completed by · completed at · notes field
+
+**Step 1 — Revoke compromised key (Emergency Rotation)**
+
+- Triggers the Emergency Rotation workflow (Path B in Section 6)
+- No overlap window — old key immediately invalidated in AWS Secrets Manager
+- New key generated and deployed to AWSCURRENT
+- Lambda warm pools flushed for all consuming services
+- Step marked complete when Secrets Manager confirms new version active
+
+**Step 2 — Bulk-invalidate affected sessions**
+
+- Scope: all JTIs issued after the estimated compromise time
+- Query: `platform_jwt_denied_tokens` + active session table — identify all tokens issued after compromise timestamp
+- Batch-insert into `platform_jwt_denied_tokens` ORM deny-list with `expires_at` = now + 15 days
+- Progress display: "Invalidating {n} tokens issued after {compromise_time}"
+- On complete: all affected users must re-authenticate
+- Step marked complete when batch insert confirmed
+
+**Step 3 — Force re-login notification**
+
+- Affected user count shown: "~12,400 sessions will be terminated"
+- Notification options:
+  - In-app message on next page load: "Your session has been reset due to a security update. Please log in again." (default — no detail about compromise)
+  - Email notification: option to send SES email to all affected accounts
+- "Send notification" button → Celery task sends notifications
+- Step marked complete when notification Celery task completes
+
+**Step 4 — CERT-In incident log**
+
+- Checklist prompt: "Was any student or staff data accessed using the compromised key?"
+  - Yes → CERT-In report required (6-hour deadline countdown starts from compromise time, not detection time)
+  - No → Log as "contained — no confirmed data access" in CERT-In incident log
+  - Unknown → Treat as Yes (conservative approach) — CERT-In report required
+- "Open CERT-In Report Generator" button → links to C-13 G17 workflow pre-filled with this incident
+- Step marked complete when CERT-In assessment documented (even if "No report needed")
+
+**Step 5 — DPO email notification (if DPDPA breach)**
+
+- If CERT-In step assessed as breach: DPDPA 72-hour notification also triggered
+- DPO email draft: pre-filled from linked C-18 incident + step 1-2 data
+- "Send DPO notification" → sends SES email to Data Protection Officer
+- "Mark DPO notified" → if sent externally (outside platform)
+- Step marked complete when DPO notification logged
+
+**Step 6 — Verify new key rollout**
+
+- Propagation status check: all consuming Lambda services must be on AWSCURRENT
+- Shows Propagation Status tab data (same as Tab 3 in Secret Detail Drawer)
+- All services must show "AWSCURRENT" status before step can be marked complete
+- If any service still on AWSPREVIOUS after Lambda flush: "Force restart" button available here too
+- Final verification: "Test JWT generation and validation" → platform generates a test JWT with new key + validates it (sanity check that new key is functioning correctly)
+- Step marked complete when all services show AWSCURRENT + test JWT passes
+
+---
+
+**Completion:**
+
+When all 6 steps are complete:
+- Summary shown: "JWT compromise response complete — Duration: 22 min · All 6 steps verified"
+- "Close response" button → archives the 6-step record to `platform_jwt_compromise_responses` table
+- Linked C-18 incident auto-updated: "JWT compromise response complete" note added
+
+**Data model:**
+
+**platform_jwt_compromise_responses**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| secret_id | UUID FK → platform_secret_registry | |
+| incident_id | UUID FK → platform_security_incidents | nullable |
+| compromise_type | ENUM | code_exposure/log_leak/phishing/insider/compromised_service/unknown |
+| estimated_compromise_at | TIMESTAMPTZ | |
+| tokens_invalidated | INTEGER | count of JTIs invalidated in step 2 |
+| certIn_required | BOOLEAN | assessed in step 4 |
+| dpdpa_required | BOOLEAN | assessed in step 5 |
+| steps_completed | JSONB | per-step: status/completed_by/completed_at/notes |
+| started_by | UUID FK → platform_staff | |
+| started_at | TIMESTAMPTZ | |
+| completed_at | TIMESTAMPTZ | nullable |
+| total_duration_seconds | INTEGER | nullable |

@@ -79,7 +79,7 @@ Beyond real-time monitoring, this page also manages the API version lifecycle �
 - "Open Incident" button (Admin/Backend/DevOps — pre-fills C-18 with current health data)
 
 **Exam Day Mode Banner (shown when active exam detected):**
-- Triggered when `platform:active_exam_count` Redis key > 0
+- Triggered when `platform:active_exam_count` Memcached key > 0
 - Amber/red banner: "🎓 EXAM IN PROGRESS — {n} active exams · {k} submissions in last 5 min · SLA monitoring active"
 - SLA panel auto-expands in exam day mode
 
@@ -103,7 +103,7 @@ Beyond real-time monitoring, this page also manages the API version lifecycle �
 **Data Flow:**
 - KPI strip: `GET /engineering/api-health/?part=kpi` — 30s HTMX poll
 - All metrics from CloudWatch Metrics API (GetMetricStatistics or GetMetricData batch)
-- Results cached in Redis 25s to avoid CloudWatch API rate limiting (400 requests/sec limit)
+- Results cached in Memcached 25s to avoid CloudWatch API rate limiting (400 requests/sec limit)
 
 ---
 
@@ -141,7 +141,7 @@ Beyond real-time monitoring, this page also manages the API version lifecycle �
 - SLA panel: `GET /engineering/api-health/?part=sla-panel` — 15s HTMX poll (faster than general table)
 - During active exam: poll interval drops to 10s
 - P99 data from CloudWatch Metrics; provisioned concurrency from Lambda GetFunctionConcurrency API
-- Redis key `platform:sla_breach_active` set to true on breach; cleared on recovery — drives the red banner
+- Memcached key `platform:sla_breach_active` set to true on breach; cleared on recovery — drives the red banner
 
 ---
 
@@ -198,7 +198,7 @@ Beyond real-time monitoring, this page also manages the API version lifecycle �
 **Performance:**
 - 68 endpoints × 5 metrics = 340 data points per refresh
 - Batched into single CloudWatch GetMetricData call (max 500 metrics/call)
-- Results cached Redis 25s
+- Results cached Memcached 25s
 
 ---
 
@@ -299,7 +299,7 @@ Beyond real-time monitoring, this page also manages the API version lifecycle �
 - Directed graph (node = service, edge = call relationship)
 - Current endpoint highlighted in blue
 - Upstream callers (who calls this endpoint)
-- Downstream dependencies (what this endpoint calls): DynamoDB · RDS · Redis · S3 · external APIs (Razorpay · SES · FCM)
+- Downstream dependencies (what this endpoint calls): DynamoDB · RDS · Memcached · S3 · external APIs (Razorpay · SES · FCM)
 - Each downstream node: health badge (green/amber/red) based on current status
 - Edge labels: avg latency of that call leg (from X-Ray tracing)
 
@@ -582,7 +582,7 @@ APIHealthMonitorPage
 
 | Scenario | Handling |
 |---|---|
-| CloudWatch API throttling (>400 req/s) | Batched GetMetricData calls; Redis 25s cache prevents repeat calls; if throttled: stale data shown with amber "Metrics delayed" indicator |
+| CloudWatch API throttling (>400 req/s) | Batched GetMetricData calls; Memcached 25s cache prevents repeat calls; if throttled: stale data shown with amber "Metrics delayed" indicator |
 | All endpoints show zero traffic | Could be CloudWatch delay (1–2 min) or genuine outage; system checks Lambda invocation count from a different source (Lambda GetFunctionStatistics) as second opinion |
 | New Lambda function deployed not in registry | Deployment pipeline (C-09) auto-registers new functions in `platform_api_endpoint_registry`; until registered, function not monitored — deployment hook ensures registration before traffic is routed |
 | Exam in progress and SLA breach | Auto-creates C-18 incident with P0 severity; PagerDuty fires; Div B war room link included in incident; all on-call engineers paged simultaneously |
@@ -600,9 +600,9 @@ APIHealthMonitorPage
 | 68 endpoints × 5 metrics per refresh | Single batched CloudWatch GetMetricData call (supports up to 500 metric queries per call); one API call per 30s refresh cycle |
 | CloudWatch cost | GetMetricData: $0.01 per 1,000 metrics requested; at 340 metrics × 2 calls/min = 720 metrics/min → ~$0.43/day; acceptable |
 | Live log tail | CloudWatch FilterLogEvents called only when Log tab is open; not polled in background |
-| SLA panel faster refresh (15s/10s) | Separate Redis cache key for exam-critical 6 endpoints; smaller payload; independent of full 68-endpoint refresh |
+| SLA panel faster refresh (15s/10s) | Separate Memcached cache key for exam-critical 6 endpoints; smaller payload; independent of full 68-endpoint refresh |
 | Exam day mode | No additional infrastructure needed; same monitoring stack; poll interval change only |
 | X-Ray data latency | X-Ray has ~1-min processing delay; Dependency Map is not real-time by design — acceptable for dependency visualisation |
 | Table virtual scroll | 68 rows is small; no virtual scroll needed; all rows loaded at once |
 | Alerts evaluation | Celery beat runs alert rule evaluation every 60s; 68 endpoints × N rules = single batched CloudWatch query; evaluation < 2s |
-| Page load target | KPI + SLA panel: < 300ms (served from Redis); full table: < 600ms (CloudWatch batch query + Redis cache) |
+| Page load target | KPI + SLA panel: < 300ms (served from Memcached); full table: < 600ms (CloudWatch batch query + Memcached cache) |

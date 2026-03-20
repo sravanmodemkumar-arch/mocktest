@@ -109,7 +109,7 @@ DORA metrics on this page give engineering leadership visibility into deployment
 
 **Data Flow:**
 - Grid state: GitHub Actions API `GET /repos/{owner}/{repo}/actions/runs?per_page=1` for each of 12 repos (12 concurrent API calls)
-- Cached in Redis 30s
+- Cached in Memcached 30s
 - HTMX poll 30s
 
 ---
@@ -487,7 +487,7 @@ CICDPipelineManagerPage
 
 | Scenario | Handling |
 |---|---|
-| GitHub API rate limit | GitHub API: 5,000 req/hour authenticated; 12 repos × polling = 24 req/min = well within limit; Redis 30s cache prevents excess calls |
+| GitHub API rate limit | GitHub API: 5,000 req/hour authenticated; 12 repos × polling = 24 req/min = well within limit; Memcached 30s cache prevents excess calls |
 | GitHub itself down | Cached last-known status shown with "GitHub data unavailable" amber banner; approval queue still functional (stored in platform DB) |
 | Approval queue item expires (pipeline auto-cancelled by GitHub after 72h) | Platform marks approval as "expired"; logs entry; author notified to re-run pipeline |
 | Two engineers approve same pending deployment simultaneously | First approval succeeds; second returns "Already approved" notice; duplicate approval logged |
@@ -501,9 +501,9 @@ CICDPipelineManagerPage
 
 | Concern | Strategy |
 |---|---|
-| 12 repo status polling | 12 parallel GitHub API calls (async); results cached Redis 30s; total fetch < 500ms |
+| 12 repo status polling | 12 parallel GitHub API calls (async); results cached Memcached 30s; total fetch < 500ms |
 | Pipeline run table | 50 rows per page; index on `repo + started_at + status`; < 50ms query |
-| Live stage updates (running pipelines) | GitHub Actions API polled every 30s; running stage status stored in Redis with 35s TTL |
+| Live stage updates (running pipelines) | GitHub Actions API polled every 30s; running stage status stored in Memcached with 35s TTL |
 | DORA metrics calculation | Pre-computed nightly by Celery beat; stored in `platform_dora_snapshots` table; page load reads from snapshot (< 10ms) |
 | Log streaming | GitHub Actions log endpoint streams chunked response; 30s poll for running; one-time fetch for completed |
 | Approval queue | Always < 20 items (small team); no pagination needed; in-memory sort |

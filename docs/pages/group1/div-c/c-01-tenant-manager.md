@@ -6,7 +6,7 @@
 > **Read Access:** Backend Engineer (Role 11) · DevOps/SRE (Role 14) · DBA (Role 15) · Security Engineer (Role 16)
 > **File:** `c-01-tenant-manager.md`
 > **Priority:** P0 — Platform cannot run without tenant provisioning
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G29 (Tenant Storage Quota)
 
 ---
 
@@ -87,7 +87,7 @@ Every action on this page has the highest blast radius in the entire system — 
 - If last-refresh > 10 min — show stale data warning in amber
 
 **Performance Considerations:**
-- Tenant count badge served from Redis cache key `platform:tenant_count` with 60s TTL
+- Tenant count badge served from Memcached (django.core.cache, key `platform:tenant_count`) with 60s TTL
 - Full page load target: < 400ms (table lazy-loaded after KPI strip)
 
 **Mobile Behavior:**
@@ -117,17 +117,17 @@ Every action on this page has the highest blast radius in the entire system — 
 
 | Card | Metric | Source | Refresh |
 |---|---|---|---|
-| Total Tenants | 2,050 | `platform_tenants` COUNT | 60s Redis cache |
-| Active | Count where `status = active` | `platform_tenants` | 60s |
-| Suspended | Count where `status = suspended` | `platform_tenants` | 60s |
+| Total Tenants | 2,050 | `platform_tenants` COUNT | 60s Memcached |
+| Active | Count where `status = active` | `platform_tenants` | 60s Memcached |
+| Suspended | Count where `status = suspended` | `platform_tenants` | 60s Memcached |
 | Provisioning | Count where `status = provisioning` | Celery job queue | 30s poll |
-| Schema Errors | Schemas failing health check | C-11 health job | 5 min cache |
-| New This Month | Tenants provisioned in last 30 days | `provisioned_at` filter | 5 min cache |
+| Schema Errors | Schemas failing health check | C-11 health job | 5 min Memcached |
+| New This Month | Tenants provisioned in last 30 days | `provisioned_at` filter | 5 min Memcached |
 
 **Data Flow:**
 - KPI strip loaded via `GET /engineering/tenants/?part=kpi`
 - HTMX polls `part=kpi` every 60s with guard `[!document.querySelector('.drawer-open,.modal-open')]`
-- All values served from Redis; Redis populated by background Celery beat task every 60s
+- All values served from Memcached (django.core.cache); populated by background Celery beat task every 60s
 
 **Role-Based Behavior:**
 - Same KPI strip visible to all roles with access to this page
@@ -140,8 +140,8 @@ Every action on this page has the highest blast radius in the entire system — 
 - If Celery is down and provisioning count cannot be fetched → card shows "--" with amber icon
 
 **Performance Considerations:**
-- All 6 metrics fetched in a single Redis pipeline call (< 5ms)
-- If Redis unavailable: fallback direct DB query (slower, amber indicator shown)
+- All 6 metrics fetched in a single Memcached `get_many` call (< 5ms)
+- If Memcached unavailable: fallback direct DB query (slower, amber indicator shown)
 
 **Mobile Behavior:**
 - Cards scroll horizontally on mobile; shows 3 cards visible with scroll hint
@@ -254,7 +254,7 @@ Every action on this page has the highest blast radius in the entire system — 
 **Data Flow:**
 - Table loaded via `GET /engineering/tenants/?part=table`
 - 100 rows per page; next batch loaded on scroll via HTMX `hx-trigger="revealed"`
-- Student count per tenant: cached in Redis per-tenant key; stale if > 24h shown with grey italic
+- Student count per tenant: cached in Memcached per-tenant key; stale if > 24h shown with grey italic
 - Sort: query param `sort=name&dir=asc` passed to backend
 
 **Role-Based Behavior:**
@@ -277,7 +277,7 @@ Every action on this page has the highest blast radius in the entire system — 
 **Performance Considerations:**
 - Table uses virtual scrolling for rows beyond viewport (no DOM bloat with 2,050 rows)
 - Student counts loaded asynchronously after table renders (non-blocking)
-- Redis stores tenant list snapshot (`platform:tenant_list`) refreshed every 120s
+- Memcached stores tenant list snapshot (key `platform:tenant_list`) refreshed every 120s
 - Table render target: < 200ms from data receipt
 
 **Mobile Behavior:**
@@ -423,7 +423,7 @@ Every action on this page has the highest blast radius in the entire system — 
 - Bar chart: Exam submissions per month (last 6 months)
 
 **Data Flow:**
-- Usage data: per-tenant Redis counters + daily S3 aggregated snapshots
+- Usage data: per-tenant Memcached counters + daily S3 aggregated snapshots
 - Charts: pre-computed JSON from Celery daily aggregation job
 - Tab loads via `GET /engineering/tenants/?part=drawer-usage&tenant_id={id}`
 - Refresh interval: 10 min (poll guard active when drawer open)
@@ -565,7 +565,7 @@ Every action on this page has the highest blast radius in the entire system — 
   - ✅ Admin account created + welcome email queued
   - ✅ Subdomain DNS record registered
   - ✅ Cloudflare WAF rule applied for new subdomain
-  - ✅ Redis namespace initialised
+  - ✅ Memcached keys initialised for plan limits
   - ✅ S3 prefix created: `tenants/{id}/`
   - ✅ Plan limits written to platform config
 
@@ -602,13 +602,13 @@ Every action on this page has the highest blast radius in the entire system — 
 | 4 | Create admin account + send welcome email | 5–10s |
 | 5 | Register subdomain in DNS / Cloudflare | 10–20s |
 | 6 | Apply WAF rules for subdomain | 5–10s |
-| 7 | Initialise Redis namespace + plan limits | 2–5s |
+| 7 | Initialise Memcached keys + plan limits | 2–5s |
 | 8 | Create S3 prefix + default assets | 3–8s |
 
 **Data Flow:**
 - Progress polled via `GET /engineering/tenants/?part=progress&job_id={id}` every 5s
 - Poll guard: continues even if drawer-open (provisioning is critical; must not miss failure)
-- Backend: Celery job publishes step status to Redis key `provision:job:{id}:status`
+- Backend: Celery job publishes step status to Memcached key `provision:job:{id}:status`
 - On completion: modal shows success state with "View New Tenant" button
 - On failure: modal shows failed step with error message + "Retry from failed step" button (Admin only)
 
@@ -641,15 +641,15 @@ Every action on this page has the highest blast radius in the entire system — 
 
 **On suspend:**
 - `POST /api/tenants/{id}/suspend/` with reason + notes + duration
-- Redis key `tenant:{id}:status` set to `suspended` immediately → all portal requests return 503 with suspension message
+- Memcached key `tenant:{id}:status` set to `suspended` immediately → all portal requests return 503 with suspension message
 - Active exam submissions: graceful pause (current answers saved; exam timer paused)
-- Active admin sessions for that tenant: terminated within 30s (session invalidated via Redis)
+- Active admin sessions for that tenant: terminated within 30s (session invalidated via Memcached)
 - Institution primary admin: email notification with reason + "Contact support" link
 - Audit log entry created
 
 **Reinstate Flow:**
 - "Reinstate" in ⋮ menu → confirmation modal (no 2FA required for reinstate, but reason field required)
-- On reinstate: Redis key cleared → portal active within 30s → institution admin email notification
+- On reinstate: Memcached key cleared → portal active within 30s → institution admin email notification
 
 **Edge Cases:**
 - Attempt to suspend a tenant currently in provisioning state: blocked with "Cannot suspend while provisioning is in progress"
@@ -692,7 +692,7 @@ Every action on this page has the highest blast radius in the entire system — 
 - Actions on hard delete:
   - PostgreSQL schema: `DROP SCHEMA tenant_{id} CASCADE`
   - S3 prefix: `aws s3 rm s3://bucket/tenants/{id}/ --recursive`
-  - Redis namespace: `DEL tenant:{id}:*` (SCAN-based)
+  - Memcached keys for tenant: cleared (django.core.cache delete_many with tenant prefix)
   - Platform_tenants row: status → `deleted` (soft row retained for audit trail)
   - Cloudflare WAF rule for subdomain: removed
   - DNS record: removed
@@ -971,13 +971,13 @@ TenantManagerPage
 | Celery worker down during provisioning | Celery retry with exponential backoff (3 retries); after 3 failures: alert to DevOps via C-18 incident; partial schema cleaned up |
 | Subdomain conflict race condition | DB unique constraint as final guard; optimistic lock check done in application layer first; if constraint violation: return 409 with "Subdomain taken" |
 | PostgreSQL schema limit | PostgreSQL has no hard schema count limit; however, monitoring alert set at 2,500 schemas (amber) and 2,800 (red) to give time for DB capacity planning |
-| Network partition during hard delete | S3 deletion is idempotent; schema drop confirmed via subsequent query; Redis cleanup is best-effort (Celery retry); audit log entry marked `partial_delete` if any step incomplete |
+| Network partition during hard delete | S3 deletion is idempotent; schema drop confirmed via subsequent query; Memcached key cleanup is best-effort (Celery retry); audit log entry marked `partial_delete` if any step incomplete |
 | Admin email domain MX failure | SES delivery tracked; if welcome email bounces → amber flag on tenant row; notification to Platform Admin |
 | Concurrent suspension + deletion | DB-level row lock on `platform_tenants` during status change; second operation returns 409 "Another operation is in progress" |
 | Large tenant deletion (> 500GB schema) | Hard delete uses `DROP SCHEMA ... CASCADE` inside a Celery job; Celery timeout extended to 2h for large schemas; admin notified of extended duration |
 | GST number change | Triggers notification to billing team; GST change requires approval from Finance division (Div D) |
 | PgBouncer pool exhaustion during provisioning | New tenant's schema connections reserved only after step 6 completes; PgBouncer pool not impacted during provisioning |
-| Tenant count badge race (Redis vs DB) | Redis cache invalidated on every tenant status change; if cache miss: DB query used with Redis repopulation |
+| Tenant count badge race (cache vs DB) | Memcached cache invalidated on every tenant status change; if cache miss: DB query used with Memcached repopulation |
 
 ---
 
@@ -986,7 +986,7 @@ TenantManagerPage
 | Concern | Strategy |
 |---|---|
 | 2,050-tenant table render | Server-side pagination (100/page) + virtual scroll in browser; never load all 2,050 rows to DOM |
-| KPI strip freshness | Redis cache with 60s TTL; Celery beat refreshes every 55s to prevent cache miss |
+| KPI strip freshness | Memcached (django.core.cache) with 60s TTL; Celery beat refreshes every 55s to prevent cache miss |
 | Student count per tenant | Async load after table render; cached 24h per tenant; stale indicator if > 24h |
 | Search across 2,050 tenants | `pg_trgm` trigram GIN indexes on searchable columns; search < 50ms P99 |
 | Provisioning throughput | Celery worker concurrency = 10; can provision 10 tenants simultaneously; each takes 15–25 min; throughput = ~25 new tenants/hour |
@@ -995,3 +995,61 @@ TenantManagerPage
 | Impersonation session cleanup | Celery beat checks and cleans expired impersonation tokens every 30s; no manual cleanup needed |
 | Peak exam day impact | Tenant Manager is internal engineering tool; isolated from exam submission path; no performance dependency on exam load |
 | Read-only engineer access | Read queries served from PostgreSQL read replica to offload primary; write operations routed to primary only |
+
+---
+
+## Amendment — G29: Tenant Schema Storage Quota
+
+**Gap addressed:** Platform Admin had no visibility into per-tenant schema storage size or quota thresholds. No alerts existed when a tenant approached storage limits; the first signal was a hard disk-full error affecting all tenants sharing the RDS instance.
+
+### Changes to Tenant List Table (Section 4)
+
+A **Storage** column is added to the tenant list table between "Students" and "Admin Email":
+
+| Column | Description | Width |
+|---|---|---|
+| Storage | Current schema size · quota · % bar | 130px |
+
+**Bar colour rules:**
+- < 70% → green
+- 70–90% → amber ("Approaching storage limit")
+- > 90% → red ("Near storage limit — upgrade plan")
+- 100% → red pulsing + row highlight ("Storage full — uploads blocked")
+
+Storage size sourced from `pg_total_relation_size` (ORM annotation via `select_related` + raw SQL aggregate); cached 5 min per tenant in Memcached.
+
+### Changes to Tenant Detail Drawer (Section 5) — Storage Tab
+
+A fifth tab **Storage** is added to the tenant-detail-drawer after the Audit tab.
+
+**Storage tab displays:**
+
+| Section | Content |
+|---|---|
+| Quota summary | Current size · quota (GB) · % used · bar with colour coding |
+| Top-10 tables by size | Table name · data size · index size · total — sorted by total descending |
+| Index sizes | Aggregated index size for tenant's schema |
+| Quota editor | GB input field (plan minimum enforced) · Save (2FA-gated) · "Reset to plan default" link |
+| Alert config | Daily alert threshold (default 80%) · alert recipient (primary admin email or platform admin email) |
+| Per-plan defaults | Starter: 2 GB · Growth: 10 GB · Pro: 25 GB · Enterprise: custom (shown as read-only reference) |
+
+**Quota edit save action:** `PATCH /api/tenants/{id}/storage-quota/` → 2FA challenge → success toast → Memcached cache invalidated for this tenant's storage metric.
+
+### Background Jobs
+
+- **Daily Celery beat task** (`check_tenant_storage_quotas`): runs at 02:00 IST — queries `pg_total_relation_size` for all 2,050 tenant schemas using a single raw SQL batch query (avoids 2,050 individual queries) → writes results to `platform_tenant_storage` table (tenant_id · size_bytes · checked_at) → for each tenant exceeding 80% threshold: sends email alert to platform admin + institution primary admin.
+- **Auto read-only at 100%:** If any tenant reaches 100% quota → Celery task marks tenant `storage_full=True` → portal file upload and media storage endpoints return 413 for that tenant → institution admin notified immediately.
+
+### Data Model Addition
+
+**platform_tenant_storage** table (shared schema):
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| tenant_id | UUID FK → platform_tenants | |
+| size_bytes | BIGINT | latest measured size |
+| quota_bytes | BIGINT | current quota (may differ from plan default if overridden) |
+| checked_at | TIMESTAMPTZ | last measurement timestamp |
+| alert_sent_at | TIMESTAMPTZ | nullable — last alert sent (prevents duplicate alerts) |
+| storage_full | BOOLEAN | default False |

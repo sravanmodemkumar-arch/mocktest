@@ -5,7 +5,7 @@
 > **Primary Role:** Platform Admin (Role 10) · Frontend Engineer (Role 12) · DevOps/SRE (Role 14)
 > **File:** `c-06-cdn-assets.md`
 > **Priority:** P2
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G3 (Performance Monitor tab)
 
 ---
 
@@ -82,7 +82,7 @@ The most common use case is cache invalidation: after a CSS or JS deployment, th
 **Data Flow:**
 - CloudFront metrics from CloudWatch `AWS/CloudFront` namespace (global — `us-east-1` region, CloudFront metrics are always us-east-1)
 - Cost data from AWS Cost Explorer API (daily granularity, 1-day delay)
-- Assets count from Redis cache (S3 ListObjects expensive — cached 10 min)
+- Assets count from Memcached cache (S3 ListObjects expensive — cached 10 min)
 
 ---
 
@@ -450,9 +450,68 @@ CDNAssetManagerPage
 
 | Concern | Strategy |
 |---|---|
-| S3 ListObjects for asset browser | Paginated (max 1,000 per call); directory tree loaded lazily on expand; cached 10 min in Redis |
+| S3 ListObjects for asset browser | Paginated (max 1,000 per call); directory tree loaded lazily on expand; cached 10 min in Memcached |
 | CloudFront metrics | Same CloudWatch batching pattern as C-04; metrics in `us-east-1` (CloudFront global namespace) |
 | Asset browser search | Client-side filter for < 500 files per directory; server-side for larger directories |
 | Upload throughput | Browser-direct presigned URL upload to S3; no server bandwidth used; S3 can handle 3,500 PUT/s per prefix |
 | Invalidation status polling | 15s HTMX poll only while InProgress invalidations exist; stops polling when all completed |
+
+---
+
+## Amendment — G3: Performance Monitor Tab
+
+**Gap addressed:** Frontend Engineer had no view of Core Web Vitals (LCP/FID/CLS), JS error rate, or real-user latency percentiles. Performance regressions went undetected until user complaints.
+
+### New Tab on CDN & Asset Manager — Performance Monitor
+
+**Access:** `/engineering/cdn/?tab=performance` — top-level tab alongside Invalidation and Asset Browser tabs.
+
+**Data source:** AWS CloudWatch RUM (Real User Monitoring) — JavaScript agent embedded in portal pages collects real-user data and streams it to CloudWatch RUM.
+
+**Layout:**
+
+**Page Path Selector:**
+- Dropdown of top-50 tracked page paths (e.g., `/dashboard/` · `/exam/take/` · `/results/` · `/login/`)
+- "All pages" aggregate view as default
+- Time range picker: Last 1h · 6h · 24h · 7 days · 30 days
+
+**Core Web Vitals Panel (4 metrics, per selected page/time range):**
+
+| Metric | Good | Needs Improvement | Poor | Description |
+|---|---|---|---|---|
+| LCP (Largest Contentful Paint) | < 2.5s | 2.5–4s | > 4s | Time until main content visible |
+| FID (First Input Delay) | < 100ms | 100–300ms | > 300ms | Time until page responds to first click |
+| CLS (Cumulative Layout Shift) | < 0.1 | 0.1–0.25 | > 0.25 | Visual stability score |
+| TTFB (Time to First Byte) | < 800ms | 800ms–1.8s | > 1.8s | Server response latency |
+
+Each metric shown as: P75 value · P95 value · colour badge (green/amber/red) · 7-day trend sparkline
+
+**Alert Threshold Config (per metric):**
+- LCP amber threshold: configurable (default 2.5s) · red threshold (default 4s)
+- Saved per-Frontend-Engineer; affects badge colour in this view only (not a platform-wide alert)
+
+**JS Error Rate Panel:**
+- Error rate %: JS errors / page views (last 24h)
+- Top 5 error messages: error message · count · affected page paths · first seen · last seen
+- Error trend: 7-day daily bar chart
+- Each error row clickable → `cdn-perf-drawer` with full stack trace samples
+
+**Page Load Time Trend:**
+- Line chart: median page load time per day (7 days)
+- Overlay: P95 line
+
+**Device / OS Breakdown:**
+- Pie chart: Desktop vs Mobile vs Tablet split
+- Top OS + browser versions table (sorted by session count)
+
+**cdn-perf-drawer (per page path row):**
+- Web Vitals Trend: 30-day daily chart for all 4 metrics
+- Error Log: top errors for this path with stack traces
+- Device Breakdown: pie chart for this specific path
+- Geographic breakdown: top 5 states (India) by session count + LCP P75 per state
+
+**Data Flow:**
+- CloudWatch RUM API: `GetAppMonitorData` called with metric filters per page path; results cached Memcached 5 min
+- Error data: `GetAppMonitorData` with `event_type = "com.amazon.rum.js_error_event"`; cached 5 min
+- No additional infrastructure required — CloudWatch RUM already deployed; only the portal UI to query it is new
 | CDN cost data freshness | AWS Cost Explorer has 1-day delay; data shown with "(as of yesterday)" note; real-time estimate calculated from CloudFront bandwidth × pricing table |

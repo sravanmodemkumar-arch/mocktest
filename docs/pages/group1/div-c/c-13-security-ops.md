@@ -6,7 +6,7 @@
 > **Read Access:** DevOps/SRE (Role 14)
 > **File:** `c-13-security-ops.md`
 > **Priority:** P0 — Required before first institution goes live
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G6 (VAPT Schedule tab) · G16 (Data Localization Audit tab) · G17 (CERT-In Report tab) · G24 (Security Audit Log tab)
 
 ---
 
@@ -134,7 +134,7 @@ The page provides both real-time threat detection (failed auth bursts, suspiciou
 **Data Flow:**
 - WAF rules from AWS WAFV2 API (GetWebACL + ListWebACLs)
 - Hit rate from CloudWatch WAF metrics
-- Cached Redis 5 min; full refresh on page load
+- Cached in Memcached 5 min; full refresh on page load
 - Rule changes applied via WAFV2 UpdateWebACL API
 
 ---
@@ -172,7 +172,7 @@ The page provides both real-time threat detection (failed auth bursts, suspiciou
 
 **Data Flow:**
 - Source: auth-service Lambda CloudWatch logs (`failed_login` events)
-- Aggregated by Celery job every 15 min into `platform_failed_auth_stats` Redis sorted set
+- Aggregated by Celery job every 15 min into `platform_failed_auth_stats` ORM table (keyed by IP + 15-min bucket)
 - Real-time feed: last 100 failed login events (15s poll)
 
 ---
@@ -235,7 +235,7 @@ The page provides both real-time threat detection (failed auth bursts, suspiciou
 - Expired token accepted: automatic alert to Backend team (indicates server-side bug) + C-18 incident
 
 **Manual actions per event:**
-- "Revoke token" → adds `jti` to Redis deny-list (`token:denied:{jti}`)
+- "Revoke token" → adds `jti` to `platform_jwt_denied_tokens` ORM table (with `expires_at` field; Celery nightly cleanup removes expired entries)
 - "Lock account" → locks the associated account
 - "View full JWT payload" → decoded (non-sensitive fields only; signature not exposed)
 - "Create security incident" → pre-fills C-18
@@ -557,7 +557,7 @@ SecurityOpsDashboardPage
 | Accept CVE risk (critical) | Requires Platform Admin co-approval · justification min 100 chars · max acceptance period: 30 days |
 | CERT-In report | Must submit within 6h of breach detection; overdue triggers escalation email to CTO |
 | DPDPA notification | Must submit within 72h; overdue triggers legal team notification |
-| JWT deny-list | Token revocation entries: 15-day TTL in Redis (longer than any valid JWT lifespan) |
+| JWT deny-list | Token revocation entries stored in `platform_jwt_denied_tokens` ORM table with `expires_at` set to 15 days (longer than any valid JWT lifespan); Celery nightly task deletes expired rows |
 | VAPT finding close | Requires evidence attachment (PR link / test result) before marking as Fixed |
 | IP block permanent | Admin + Security only · 2FA · reason required |
 
@@ -598,7 +598,386 @@ SecurityOpsDashboardPage
 | Failed auth aggregation | CloudWatch Logs Insights query aggregated every 15 min by Celery; UI shows last-computed result (not real-time) + live event stream (last 100 events) |
 | WAF metrics | CloudWatch WAF namespace; batched with other CloudWatch calls; 5-min cache |
 | JWT anomaly detection | Lambda middleware writes anomaly events to SQS; Celery consumer processes and writes to DB; 30s processing lag acceptable |
-| Heatmap rendering | Pre-aggregated buckets (15-min × IP/country/tenant); stored in Redis sorted sets; heatmap rendered server-side as SVG; no D3 in browser |
+| Heatmap rendering | Pre-aggregated buckets (15-min × IP/country/tenant) stored in `platform_failed_auth_stats` ORM table; heatmap rendered server-side as SVG; no D3 in browser |
 | CVE database | pip-audit + Snyk run in CI/CD (not on this page); results webhook into platform; page reads from DB; no on-demand scanning except "Run scan" button |
 | CERT-In/DPDPA countdowns | Client-side countdown (JS) seeded from server-provided `deadline_at` timestamp; no server polling for countdown itself |
-| Security posture score | Computed by Celery beat every hour; stored in Redis; page load reads from cache < 5ms |
+| Security posture score | Computed by Celery beat every hour; stored in Memcached (1h TTL); page load reads from cache < 5ms |
+
+---
+
+## 12. Amendment — G6: VAPT Schedule Tab
+
+**Assigned gap:** G6 — VAPT scheduling and vendor management is missing; C-13 shows VAPT results but the Security Engineer cannot schedule engagements, track scope, or log vendor communications.
+
+**Where it lives:** New tab added to the VAPT Results Panel (Section 10). The panel gets two tabs: **Findings** (existing) and **Schedule** (new, described here).
+
+---
+
+### VAPT Schedule Tab
+
+**Purpose:** Allow the Security Engineer to plan and manage VAPT engagements end-to-end — from scheduling the engagement and defining scope, to tracking vendor communications and closing the engagement when all findings are remediated. This ensures the platform always has an up-to-date, documented VAPT programme rather than ad-hoc one-off assessments.
+
+**Layout:** Three panels — Upcoming Engagements · Engagement Detail Drawer · Vendor Directory
+
+---
+
+**Panel 1 — Engagement Calendar & List**
+
+A combined list + mini-calendar showing all past, active, and upcoming VAPT engagements. Each engagement card shows:
+
+- Engagement name (e.g., "Annual VAPT 2026 — External")
+- Vendor name + contact
+- Type: External VAPT · Internal Red Team · Bug Bounty · Automated (OWASP ZAP) · Cloud Config Review
+- Scope summary: "Web application — all public endpoints + /engineering/* internal routes"
+- Date range: start → end (or recurring for automated scans)
+- Status: Scheduled · In Progress · Findings Review · Remediation · Closed
+- Open findings count badge (links to Findings tab filtered by this engagement)
+- Next milestone: "Kickoff call: 2026-04-01 09:00 IST"
+
+**Actions:**
+- "New Engagement" button → vapt-schedule-drawer (see below)
+- "View details" → vapt-schedule-drawer opens for existing engagement
+- Status filter: All / Upcoming / In Progress / Remediation / Closed
+
+---
+
+**vapt-schedule-drawer (720px)**
+
+Tabs: **Details · Scope · Communications · Milestones**
+
+**Tab 1 — Details:**
+- Engagement name (text input)
+- Type selector (dropdown)
+- Vendor: select from vendor directory or add new
+- Lead contact at vendor: name + email
+- Internal owner: select from platform staff (Security Engineer / Admin)
+- Date range: start date + end date
+- Cost (₹): budgeted + actual (actual filled after close)
+- Status: managed via milestones (auto-advances)
+- Notes: free-text textarea
+
+**Tab 2 — Scope:**
+- Scope definition: checklist + free text
+  - Public web app endpoints (/api/*)
+  - Internal engineering routes (/engineering/*)
+  - Mobile apps (iOS + Android)
+  - Cloud infrastructure (AWS: RDS, ECS, Lambda, S3, WAF)
+  - CI/CD pipeline (GitHub Actions)
+  - Third-party integrations (Razorpay, Firebase, SES)
+- Out-of-scope exclusions: free text (e.g., "student data — no live data access; use anonymised staging only")
+- Data sensitivity note: required field — describes what data vendor may encounter and what access controls are in place
+- NDA signed: checkbox + upload NDA document (stored in S3)
+- Rules of engagement: agreed testing window hours, notification contacts for emergencies during testing
+
+**Tab 3 — Communications:**
+- Log of all communications with the vendor during the engagement:
+  - Each entry: timestamp · direction (inbound/outbound) · channel (email/call/Slack) · summary · attachments
+  - "Add communication log" → inline form
+  - Upload: vendor scope confirmation · interim report · final report · remediation verification letter
+- Documents uploaded are stored in S3 (encrypted); displayed as download links with uploaded-by and timestamp
+
+**Tab 4 — Milestones:**
+- Pre-defined milestone sequence per engagement type:
+  - External VAPT: Contract signed → NDA signed → Kickoff call → Testing in progress → Draft report received → Findings reviewed → Remediation started → Re-test → Closed
+  - Automated scan: Scheduled → Running → Results imported → Findings reviewed → Closed
+- Each milestone: checkbox (mark complete) + completion date + notes
+- Completion of all milestones auto-sets engagement status to "Closed"
+- Overdue milestones (target date passed, not complete): highlighted amber
+
+**Data model:**
+
+**platform_vapt_engagements**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| name | VARCHAR(200) | |
+| type | ENUM | external/internal_red_team/bug_bounty/automated/cloud_config |
+| vendor_id | UUID FK → platform_vapt_vendors | nullable (automated = null) |
+| internal_owner_id | UUID FK → platform_staff | |
+| status | ENUM | scheduled/in_progress/findings_review/remediation/closed |
+| start_date | DATE | |
+| end_date | DATE | nullable |
+| scope_definition | JSONB | scope checklist + free text |
+| cost_budgeted | DECIMAL | nullable |
+| cost_actual | DECIMAL | nullable |
+| nda_s3_key | VARCHAR(512) | nullable |
+| created_at | TIMESTAMPTZ | |
+| created_by | UUID FK → platform_staff | |
+
+---
+
+## 13. Amendment — G16: Data Localization Audit Tab
+
+**Assigned gap:** G16 — No dashboard verifies that all student PII (S3 buckets, RDS, Lambda environments, CloudFront origins) remains within ap-south-1 (Mumbai). A DPDPA 2023 violation would go undetected until an external audit or breach.
+
+**Where it lives:** New standalone tab in the Security Operations Dashboard page header tab bar. The page gains a top-level tab strip: **Overview** (all existing sections) · **Data Localization** (new) · **CERT-In Report** (G17) · **Security Audit Log** (G24).
+
+---
+
+### Data Localization Audit Tab
+
+**Purpose:** Continuously verify that all AWS resources holding student PII are located in ap-south-1 (Mumbai) as required by DPDPA 2023. Surface any drift — a new S3 bucket created in us-east-1, a Lambda environment variable referencing a cross-region resource — before it becomes a compliance violation.
+
+**Compliance header:**
+
+A summary banner showing overall data localization status:
+- Green: "All PII resources confirmed in ap-south-1 ✅ — Last audited: 2h ago"
+- Amber: "1 resource flagged for review — non-PII resource in us-east-1 (CloudFront distribution)"
+- Red: "⚠ DPDPA VIOLATION RISK: PII resource detected outside ap-south-1. Immediate action required."
+
+Last audit run timestamp + "Run audit now" button (triggers on-demand Celery task; takes 5–10 min).
+
+---
+
+**Resource Audit Table:**
+
+Rows are AWS resources; columns indicate localization status:
+
+| Resource Type | Resource Name / ARN | Region | PII Classification | Status | Last Checked |
+|---|---|---|---|---|---|
+| RDS — Primary | platform-rds-primary | ap-south-1 | PII (student data, exam results) | ✅ Compliant | 2h ago |
+| RDS — Replica 1 | platform-rds-replica-1 | ap-south-1 | PII | ✅ Compliant | 2h ago |
+| RDS — Replica 2 | platform-rds-replica-2 | ap-south-1 | PII | ✅ Compliant | 2h ago |
+| S3 — Student uploads | platform-student-uploads | ap-south-1 | PII (question images, answer sheets) | ✅ Compliant | 2h ago |
+| S3 — Audit logs | platform-audit-logs | ap-south-1 | PII (audit trail of student actions) | ✅ Compliant | 2h ago |
+| S3 — CDN assets | platform-cdn-assets | us-east-1 | Non-PII (static JS/CSS) | ✅ Exempt (CDN assets — no PII) | 2h ago |
+| Lambda — auth-service | auth-service-prod | ap-south-1 | PII-processing | ✅ Compliant | 2h ago |
+| Lambda — exam-service | exam-service-prod | ap-south-1 | PII-processing | ✅ Compliant | 2h ago |
+| ElastiCache — Memcached | platform-cache | ap-south-1 | Non-PII (transient cache) | ✅ Compliant | 2h ago |
+| SES — Email sending | SES identity | ap-south-1 | PII (student email addresses used) | ✅ Compliant | 2h ago |
+| S3 Glacier — Archive | platform-archive | ap-south-1 | PII (archived exam data) | ✅ Compliant | 2h ago |
+
+**PII Classification rules** (used by the audit Celery task):
+- PII: any resource storing or processing student name · email · phone · exam results · payment data · login history
+- PII-processing: any compute resource (Lambda, ECS) that handles PII in transit (even if no storage)
+- Non-PII: static assets, CI/CD artifacts, build caches (no student data)
+- Exempt: CloudFront distributions (edge by design) and CDN asset S3 buckets (no PII)
+
+**Filter:** All / PII only / PII-processing only / Non-compliant only
+
+**Audit detail drawer (localization-audit-drawer):**
+- Per-resource: full ARN · creation date · encryption status (KMS key region verified) · cross-region replication status (if any) · last-modified date
+- For flagged resources: specific violation detail + recommended remediation action
+
+**Cross-region replication check:**
+S3 cross-region replication is separately verified: any S3 bucket with CRR enabled that replicates PII to a non-ap-south-1 region is flagged as a violation even if the source bucket is in ap-south-1.
+
+**Environment variable scan:**
+Lambda environment variables are scanned for cross-region ARN references (e.g., an RDS endpoint in eu-west-1). Any PII-processing Lambda with a cross-region dependency is flagged.
+
+**Audit schedule:** Celery beat runs the full audit every 6 hours. Results written to `platform_data_localization_audit` table. On any new violation detected: security incident auto-created in C-18 + security-alert Slack notification to Security Engineer.
+
+**Data model:**
+
+**platform_data_localization_audit**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| resource_arn | VARCHAR(512) | |
+| resource_type | VARCHAR(100) | rds/s3/lambda/elasticache/ses/glacier |
+| resource_name | VARCHAR(200) | |
+| region | VARCHAR(50) | |
+| pii_classification | ENUM | pii/pii_processing/non_pii/exempt |
+| is_compliant | BOOLEAN | |
+| violation_detail | TEXT | nullable |
+| audited_at | TIMESTAMPTZ | |
+| run_id | UUID | groups all resources in one audit run |
+
+---
+
+## 14. Amendment — G17: CERT-In Report Tab
+
+**Assigned gap:** G17 — Security Engineer must file CERT-In 6-hour incident reports but has no structured template or generator. Reports are drafted manually under time pressure, risking non-compliance with the statutory 6-hour deadline.
+
+**Where it lives:** New top-level tab in the Security Operations Dashboard (alongside Data Localization, described in G16).
+
+---
+
+### CERT-In Report Tab
+
+**Purpose:** Generate structured, CERT-In-compliant incident reports from existing incident data in the platform. Remove the manual drafting burden so the Security Engineer can focus on response rather than paperwork, while ensuring the statutory 6-hour deadline is never missed.
+
+**Layout:** Two panels — Active Report Queue · Completed Reports Archive
+
+---
+
+**Panel 1 — Active Report Queue**
+
+All security incidents that require CERT-In reporting but have not yet been submitted, sorted by deadline (most urgent first).
+
+**Incident card (per incident):**
+
+- Incident title and severity
+- Detected at timestamp
+- Countdown timer (large, colour-coded): "Report in 4h 22m 08s" → amber at 2h → red at 1h → pulsing "OVERDUE" if past deadline
+- Report status: Not started · Draft in progress · Ready to submit · Submitted
+- "Generate Report" / "Edit Draft" / "Submit" button based on status
+
+---
+
+**Report Generator (cert-in-report-drawer, 800px)**
+
+Opens on "Generate Report". Pulls data from the linked C-18 incident record and pre-fills all CERT-In mandatory fields.
+
+**Pre-filled from C-18 incident:**
+- Incident reference number (platform internal ID)
+- Date and time of detection
+- Date and time of first evidence (if earlier than detection)
+- Affected systems (from C-18 affected services list)
+- Attack timeline (from C-18 event log)
+
+**Fields the Security Engineer must complete or verify:**
+
+Section A — Incident Identification:
+- Official incident name (as it will appear in the CERT-In report — editable text)
+- CERT-In incident category: select from dropdown (Phishing / Compromise of Critical Systems / Data Breach / Ransomware / DDoS / Malware / Brute Force / SQL Injection / Other — per CERT-In 2022 guidelines)
+- Date/time of first occurrence (may differ from detection)
+- Date/time organisation became aware
+
+Section B — Technical Details:
+- Attack vector: select (Network / Email / Web application / Insider / Unknown)
+- Indicators of compromise (IOCs): text area for IP addresses, domains, hashes detected
+- Affected systems: pre-filled from C-18 — editable list of services/servers
+- Data types potentially compromised: checkboxes (Student PII / Exam data / Payment data / Staff credentials / System configuration / None — under investigation)
+- Estimated number of affected data principals (individuals)
+- Whether attacker had persistence: Yes / No / Unknown
+
+Section C — Impact Assessment:
+- Was student exam continuity affected: Yes / No
+- Estimated financial impact: optional
+- Is the incident ongoing or contained: Ongoing / Contained / Unknown
+
+Section D — Actions Taken:
+- Immediate response actions (pre-filled from C-18 timeline): editable
+- Containment measures applied
+- Whether law enforcement has been notified: Yes / No / In progress
+
+Section E — Organisation Details (pre-filled from platform config — not editable in report):
+- Organisation name
+- CIN / PAN
+- Sector: EdTech
+- SPOC (Single Point of Contact): name + email + phone (from platform_system_config)
+- Reporting officer designation
+
+**Validation:** All mandatory CERT-In fields must be filled before enabling "Generate PDF". Optional fields flagged with "(optional)" label.
+
+**Generate PDF:**
+- Produces a formatted PDF matching CERT-In's standard incident report template
+- PDF preview shown in drawer before download
+- "Download PDF" button
+- PDF stored in S3 (encrypted); accessible from Completed Reports Archive
+
+**Submit workflow:**
+- "Mark as submitted to CERT-In" → modal: enter CERT-In acknowledgement number + submission timestamp + submission channel (CERT-In portal / email at incident@cert-in.org.in)
+- On submit: incident record updated; countdown timer stopped; security incident in C-18 updated with "CERT-In reported" status
+- If submitted past deadline: system records the delay + reason (for internal audit trail)
+
+**DPO Notification (if DPDPA-applicable):**
+- If incident is flagged as a DPDPA data breach (set in C-18): a second "Generate DPB Notification" button appears
+- Same workflow but uses Data Protection Board notification template (72h deadline)
+- DPO email generated with statutory language pre-filled
+
+---
+
+**Panel 2 — Completed Reports Archive**
+
+Table of all submitted and closed CERT-In reports:
+
+| Incident | Reported By | Submitted At | Within Deadline | Ack Number | CERT-In Category | PDF |
+|---|---|---|---|---|---|---|
+| Credential stuffing — 842 accounts | Arjun (Security) | 4h after detection | ✅ Yes (within 6h) | CERT-IN-2026-04782 | Brute Force | Download |
+| API data exposure — tenant_042 | Arjun (Security) | 7h after detection | ❌ No (1h overdue) | CERT-IN-2026-03291 | Data Breach | Download |
+
+Overdue submissions permanently flagged in archive (non-editable after close — audit trail).
+
+---
+
+## 15. Amendment — G24: Security Audit Log Tab
+
+**Assigned gap:** G24 — No dedicated, append-only security audit trail for WAF rule changes, secret view events, 2FA bypass events, OAuth app registrations, and permission escalations. External auditors have no single source of truth.
+
+**Where it lives:** New top-level tab in the Security Operations Dashboard (alongside Data Localization and CERT-In Report).
+
+---
+
+### Security Audit Log Tab
+
+**Purpose:** Provide an append-only, tamper-evident log of all security-relevant actions taken within the platform — covering WAF changes, secrets access, 2FA events, access level changes, and escalation triggers. This log is the primary evidence artefact for external security audits and CERT-In/DPDPA investigations.
+
+**Immutability guarantee:** Entries in `platform_security_audit_log` are never updated or deleted by the application layer. The table has a `CHECK` constraint rejecting UPDATE and DELETE at the database role level used by the platform. The DBA superuser role can delete rows but this action itself is captured by PostgreSQL audit logging. Entries older than 7 years are archived to S3 Glacier (WORM Object Lock) before deletion.
+
+---
+
+**Audit Log Table:**
+
+| Column | Description |
+|---|---|
+| Timestamp | UTC timestamp (precision: millisecond) |
+| Actor | Staff name + role + email |
+| Event Type | Category (see event type taxonomy below) |
+| Action | Specific action taken |
+| Target | What was affected (resource name / user / IP / rule ID) |
+| IP Address | Actor's source IP |
+| Result | Success · Failure · Blocked |
+| Detail | JSON payload expandable on row click |
+
+**Event Type Taxonomy:**
+
+| Category | Events Captured |
+|---|---|
+| WAF | Rule added · Rule modified · Rule deleted · IP block added · IP block removed · Rule reorder |
+| Secrets | Secret viewed (masked — view event only, not value) · Secret rotated · Secret created · Secret deleted · Secret ARN retrieved |
+| Authentication | 2FA bypass used · 2FA code failure (staff) · Emergency access activated · Session terminated by admin |
+| Access Control | Role assigned · Role revoked · Access level changed · Permission override applied |
+| OAuth | OAuth app registered · OAuth app secret rotated · OAuth app deleted · Scope granted |
+| JWT | Token manually revoked · Deny-list entry added · JWT anomaly action taken |
+| Escalation | Escalation chain triggered · OOO toggle set · Test alert sent · Escalation acknowledged |
+| CERT-In / DPDPA | Incident created · Report generated · Report submitted · DPB notification sent |
+| Data Localization | Audit run triggered · Violation flagged · Violation resolved |
+| Platform Config | System config changed · Maintenance mode toggled · Feature flag changed |
+
+**Filtering:**
+- Event category (multi-select)
+- Actor (staff name or role search)
+- Date range (from/to — exact timestamps)
+- Result: All / Success / Failure / Blocked
+- Target: free text search (e.g., WAF rule name, secret ARN)
+- Free-text search across Action and Detail fields
+
+**Export:**
+- "Export to CSV" — filtered results exported to S3 and download link returned (large exports async via Celery)
+- "Export to PDF" — formatted audit report for external auditors: date range header, filtered events, platform name, exported-by name and timestamp, SHA-256 hash of export for integrity verification
+
+**Immutability indicators:**
+- "Append-only" badge on the tab
+- Footer: "This log is append-only. No entry can be modified or deleted by any application-layer action. Entries are retained for 7 years per CERT-In and IT Act requirements."
+- Each row has a row-level SHA-256 hash (computed at insert time from: timestamp + actor_id + event_type + action + target + result) — displayed on row expand; auditors can re-verify hash against exported data
+
+**Integration points:**
+- WAF rule changes in Section 3 → written here automatically
+- Secret view in C-14 → written here automatically
+- 2FA events in C-02 staff auth → written here automatically
+- Role/permission changes in C-02 → written here automatically
+- Escalation triggers in C-02 G30 → written here automatically
+- JWT revocation in Section 6 → written here automatically
+
+**Data model:**
+
+**platform_security_audit_log**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| timestamp | TIMESTAMPTZ | millisecond precision; set by DB trigger (not application) |
+| actor_id | UUID FK → platform_staff | nullable for system-initiated events |
+| actor_role | SMALLINT | role at time of action (denormalised — role may change later) |
+| actor_ip | INET | |
+| event_category | VARCHAR(50) | waf/secrets/authentication/access_control/oauth/jwt/escalation/certIn/data_localization/platform_config |
+| event_type | VARCHAR(100) | specific event name |
+| action | TEXT | human-readable action description |
+| target | VARCHAR(512) | resource identifier |
+| result | ENUM | success/failure/blocked |
+| detail | JSONB | full event payload (never contains secret values) |
+| row_hash | CHAR(64) | SHA-256 of (timestamp + actor_id + event_type + action + target + result) — computed at insert |

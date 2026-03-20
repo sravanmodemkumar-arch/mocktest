@@ -6,7 +6,7 @@
 > **Read Access:** Backend Engineer (Role 11) · DevOps/SRE (Role 14)
 > **File:** `c-11-database.md`
 > **Priority:** P0 — Required before first institution goes live
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G5 (DB Configuration tab) · G20 (Manual VACUUM action) · G26 (Index Create/Drop actions)
 
 ---
 
@@ -123,7 +123,7 @@ The DBA uses this page daily: triage slow queries, confirm autovacuum is running
 **Data Flow:**
 - Source: `pg_stat_statements` extension on primary RDS instance
 - Queried via `psycopg2` from DBA service Lambda (internal only, not public API)
-- Results cached Redis 2 min per threshold setting
+- Results cached Memcached 2 min per threshold setting
 - 60s HTMX poll when slow query tab is active
 
 ---
@@ -547,10 +547,146 @@ DatabaseAdminDashboardPage
 
 | Concern | Strategy |
 |---|---|
-| pg_stat_statements query | Single query on primary; results cached Redis 2 min; at 2,051 schemas × 50+ tables each, stat_statements can have thousands of rows — limited to top-500 by mean duration for display |
+| pg_stat_statements query | Single query on primary; results cached Memcached 2 min; at 2,051 schemas × 50+ tables each, stat_statements can have thousands of rows — limited to top-500 by mean duration for display |
 | Schema browser (2,051 schemas) | Pre-computed by Celery every 2h; stored in `platform_schema_stats` table; page query: < 50ms against this table |
 | Index health scan (2,051 schemas) | Celery job with progress tracking; runs exclusively at off-peak (configured 02:00–05:00); skips active tenant schemas with high write load |
-| Connection monitor live data | `pg_stat_activity` query runs every 30s; targeted query (only columns needed, not `*`); cached 25s in Redis |
+| Connection monitor live data | `pg_stat_activity` query runs every 30s; targeted query (only columns needed, not `*`); cached 25s in Memcached |
 | Lock monitor | `pg_locks` joined with `pg_stat_activity`; fast query (locks table is always small); 15s poll when lock monitor tab is open |
 | Replication lag | CloudWatch RDS `ReplicaLag` metric (30s granularity); supplemented by direct `pg_stat_replication` query for byte-level precision |
 | Autovacuum status | `pg_stat_user_tables` grouped by dead tuple ratio; one query per instance; cached 5 min |
+
+---
+
+## Amendment — G5: DB Configuration Tab
+
+**Gap addressed:** DBA could monitor but not change RDS parameter groups (work_mem, max_connections, autovacuum settings) or PgBouncer pool sizes from the portal.
+
+### New Top-Level Tab — DB Configuration
+
+**Access:** `/engineering/database/?tab=db-config`
+
+**Section A — RDS Parameter Group Editor:**
+
+| Parameter | Current Value | Pending Value | Requires Restart | Editable By |
+|---|---|---|---|---|
+| `work_mem` | 4MB | — | No | DBA + Admin |
+| `shared_buffers` | 25% of RAM | — | Yes | Admin only |
+| `max_connections` | 500 | — | Yes | Admin only |
+| `autovacuum_vacuum_scale_factor` | 0.05 | — | No | DBA + Admin |
+| `checkpoint_completion_target` | 0.9 | — | No | DBA + Admin |
+| `effective_cache_size` | 75% of RAM | — | No | DBA + Admin |
+| `random_page_cost` | 1.1 | — | No | DBA + Admin |
+
+**Edit flow:** Inline edit per row → "Apply" button → if `Requires Restart = Yes`: 2FA required + confirmation "This change requires an RDS reboot. All connections will be dropped for ~60s during reboot. Confirm?" → queued as Celery job → calls AWS RDS `ModifyDBParameterGroup` API. **Non-restart changes:** Applied immediately via `ModifyDBParameterGroup` with `ApplyMethod: immediate`.
+
+**"Pending Reboot" indicator:** If any restart-required changes are pending but not yet applied: amber banner "2 parameter changes pending RDS reboot. Schedule during maintenance window."
+
+**Section B — PgBouncer Configuration Editor:**
+
+| Setting | Current Value | Description | Editable By |
+|---|---|---|---|
+| `pool_size` (default per DB) | 10 | Max server connections per pool | DBA + Admin |
+| `max_client_conn` | 10,000 | Maximum client connections to PgBouncer | Admin only |
+| `pool_mode` | transaction | Pooling mode: transaction/session/statement | Admin only (requires PgBouncer restart) |
+| `server_idle_timeout` | 600s | Seconds before idle server connection closed | DBA + Admin |
+| `query_timeout` | 0 (disabled) | Max query duration before disconnect | DBA + Admin |
+
+**Per-tenant pool override:** Table showing all 2,050 tenant schemas with their individual `pool_size` override (if any). "Add override" → tenant selector + pool_size value → saves to PgBouncer config.
+
+**"Reload PgBouncer config" button (DBA + Admin · no 2FA):** Sends SIGHUP to PgBouncer process (ECS task signal) → reloads config without dropping connections.
+
+**Section C — PostgreSQL Role/Grant Manager:**
+
+Read-only tree showing grant hierarchy per tenant schema. Actions:
+- "Grant read-only role to {staff}" → creates `GRANT SELECT ON ALL TABLES IN SCHEMA tenant_{id} TO {role}` — 2FA required
+- "Revoke access from {role}" — 2FA required
+- "Create reporting user" → generates read-only DB user with scoped schema access
+
+All DDL logged in `platform_dba_audit_log` table.
+
+---
+
+## Amendment — G20: Manual VACUUM ANALYZE Action
+
+**Gap addressed:** DBA could see autovacuum status per table but could not trigger a manual VACUUM ANALYZE from the portal. Had to SSH directly into RDS, creating an audit gap and access control risk.
+
+### Context Menu Action — Manual VACUUM on Table Row
+
+**Trigger:** Right-click or ⋮ menu on any table row in the autovacuum status view → "Trigger VACUUM ANALYZE"
+
+**Confirmation Modal:**
+- Table name (full schema-qualified)
+- Estimated duration: based on last vacuum duration for this table + current dead tuple count
+- Last autovacuum: timestamp of last autovacuum run
+- Dead tuples: current dead tuple count (from `pg_stat_user_tables.n_dead_tup`)
+- Warning if table is > 1GB: "Large table. VACUUM may run 30–90 min. PostgreSQL will continue serving reads/writes during VACUUM (no table lock)."
+- "Confirm VACUUM ANALYZE" button (DBA + Admin · no 2FA for VACUUM — it's a maintenance operation)
+
+**Execution:**
+- Celery task: connects to RDS via dedicated DBA superuser role (fetched from AWS Secrets Manager at task runtime) using a direct connection (bypasses PgBouncer — VACUUM must run on dedicated connection)
+- Executes: `VACUUM (ANALYZE, VERBOSE) schema_name.table_name`
+- Progress: `pg_stat_progress_vacuum` polled every 5s → HTMX push to `vacuum-progress-drawer` showing:
+  - Phase: scanning / vacuuming / index cleanup / heap cleanup
+  - Heap blks total / scanned / vacuumed (% complete)
+  - Rows removed / dead tuples removed
+- On completion: result summary (rows processed · dead tuples removed · index pages reclaimed · duration) logged to `platform_dba_audit_log`
+
+**Schema-wide VACUUM (Platform Admin only · 2FA required):**
+Available from the Schema tab header: "VACUUM all tables in this schema" → runs VACUUM ANALYZE on all tables sequentially in a single Celery job.
+
+---
+
+## Amendment — G26: Index Create/Drop Actions
+
+**Gap addressed:** DBA could not create or drop indexes from the portal. Had to access RDS directly, bypassing audit controls.
+
+### Context Menu Actions — Index Management on Index Health Table Row
+
+**Trigger A — Create Index (from table context menu):**
+
+**Index Create Drawer (index-action-drawer · 480px):**
+- Table selector (pre-filled from context menu row)
+- Column(s) multi-select (from schema introspection of that table's columns)
+- Index type: btree (default) · hash · gin (for JSONB/array) · gist (for geometric/full-text) · brin (for large time-series)
+- Optional partial WHERE condition: text input (e.g., `WHERE status = 'active'`)
+- Index name: auto-suggested (`idx_{table}_{columns}`) + editable
+- Concurrency: always `CREATE INDEX CONCURRENTLY` (no table lock) — not configurable
+- Estimated build time: computed from table row count × pg_stats estimate (shown before confirm)
+- Estimated size: computed from column data types × row count × fill factor
+- "Create Index" button (DBA + Admin · 2FA required for production indexes)
+
+**Execution:**
+- Celery task: executes `CREATE INDEX CONCURRENTLY {name} ON {schema}.{table} ({columns}) WHERE {condition}` via DBA superuser role
+- Progress: polled every 10s from `pg_stat_progress_create_index` → HTMX push showing: phase · blocks done / total · tuples done
+- On completion: success toast + `platform_dba_audit_log` entry (DDL statement · actor · duration · index size)
+
+**Trigger B — Drop Index (from index health table context menu · red trash icon):**
+
+**Index Drop Confirmation Modal:**
+- Index name (full schema-qualified)
+- Index size on disk
+- Last used timestamp (from `pg_stat_user_indexes.idx_scan` last scan time)
+- Warning if last used < 7 days: amber "This index was used recently. Dropping may cause query slowdowns."
+- Warning if index is a PRIMARY KEY or UNIQUE constraint: "Cannot drop constraint index via this action. Use ALTER TABLE instead."
+- Confirmation: must type index name to confirm
+- 2FA required
+- Executes: `DROP INDEX CONCURRENTLY {schema}.{index_name}` (concurrent drop available in PG 12+)
+
+**REINDEX Action (from ⋮ menu on bloated indexes):**
+- "REINDEX index" → `REINDEX INDEX CONCURRENTLY {schema}.{index_name}` — rebuilds index without dropping it; use for bloated/corrupted indexes
+- No confirmation required (read-heavy safe operation) · DBA + Admin · logged in audit table
+
+**All DDL logged in platform_dba_audit_log:**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| schema_name | VARCHAR(80) | |
+| table_name | VARCHAR(100) | |
+| ddl_statement | TEXT | full SQL |
+| operation | ENUM | create_index / drop_index / reindex / vacuum / vacuum_analyze / grant / revoke / param_change |
+| actor_id | UUID FK → platform_staff | |
+| celery_task_id | VARCHAR(255) | |
+| duration_seconds | FLOAT | nullable |
+| result_summary | JSONB | nullable |
+| created_at | TIMESTAMPTZ | |

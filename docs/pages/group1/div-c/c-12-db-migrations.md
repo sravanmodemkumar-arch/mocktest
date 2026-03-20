@@ -6,7 +6,7 @@
 > **Read Access:** DevOps/SRE (Role 14)
 > **File:** `c-12-db-migrations.md`
 > **Priority:** P1
-> **Status:** ✅ Spec done
+> **Status:** ⬜ Amendment pending — G12 (Migration Matrix tab) · G13 (Restore Verification tab)
 
 ---
 
@@ -556,7 +556,208 @@ BackupMigrationManagerPage
 |---|---|
 | Migration across 2,051 schemas | Celery worker applies migrations sequentially per schema (not parallel — parallel schema migrations risk RDS connection exhaustion); 12–15 schemas/min throughput; total ~2.5–3h for full run |
 | Migration progress display | Celery job updates `platform_migrations.applied_schemas` counter every 100 schemas; HTMX polls progress endpoint every 10s |
-| Snapshot list (30-day window) | RDS DescribeDBSnapshots returns max 100 results per call; paginated; cached Redis 10 min |
+| Snapshot list (30-day window) | RDS DescribeDBSnapshots returns max 100 results per call; paginated; cached in Memcached 10 min |
 | PITR restore duration | AWS handles restore; platform polls RDS DescribeDBInstances every 60s for status; no timeout (can take 45 min) |
 | Schema archival | Bulk export to S3 via `COPY TO` command (PostgreSQL native); 200–500 MB/min per schema; S3 multipart upload for files > 100 MB |
 | Snapshot size tracking | Snapshot sizes not available in real-time from AWS (delayed reporting); values cached 1h; shown with "(est.)" label |
+
+---
+
+## 12. Amendment — G12: Migration Matrix Tab
+
+**Assigned gap:** G12 — Migration Matrix: full schema-by-schema migration state grid.
+
+**Where it lives:** New tab added to the existing Migration Status Panel (Section 5). The panel gets two tabs: **Summary** (existing overview metrics + pending migrations table) and **Migration Matrix** (new grid described here).
+
+---
+
+### Migration Matrix Tab
+
+**Purpose:** Give the DBA a complete, schema-level view of migration state across all 2,051 schemas — not just which migrations are pending platform-wide, but exactly which schemas are behind and by how much, per Django app.
+
+**Grid layout:**
+
+The matrix is a dense data grid — rows are schemas, columns are Django apps. Each cell shows the latest applied migration for that app in that schema, colour-coded by pending count.
+
+**Column headers:**
+
+- Schema Name (sticky left column)
+- Tenant Name (sticky second column)
+- One column per Django app (exams · students · billing · notifications · analytics · reports · platform · auth — 8 apps total)
+- Total Pending (computed: sum of pending migrations across all apps for this schema)
+- Last Migration Timestamp (most recent migration applied to any app in this schema)
+
+**Cell content:**
+
+Each app cell shows the short migration name (last applied) and a colour badge based on pending migration count for that app in that schema:
+
+| Pending Count | Colour | Meaning |
+|---|---|---|
+| 0 | Green | Fully up to date |
+| 1–3 | Amber | Slightly behind — low urgency |
+| > 3 | Red | Significantly behind — investigate |
+
+**Filtering and sorting:**
+
+- Filter by: App name · Status (all / has pending / has red) · Tenant name search
+- Sort by: Total Pending (desc by default) · Schema name · Last migration timestamp
+- Pagination: 100 schemas per page (21 pages for all 2,051 schemas)
+- "Show only schemas with pending migrations" toggle — collapses the view to only affected rows
+
+**Drill-down:** Clicking any cell opens the Migration Detail Drawer (Section 6) pre-filtered to that schema and app combination, showing the specific pending migrations and their SQL preview.
+
+**Bulk action — "Apply pending to all schemas" button:**
+
+Located above the grid. Disabled if no schemas have pending migrations. On click:
+
+1. Summary modal shows: total schemas with pending migrations · total pending migrations · estimated duration · snapshot status
+2. If no recent snapshot: amber warning with "Take snapshot before continuing" button
+3. Pre-flight checklist (same as Section 7) displayed inline — must pass before enabling "Begin"
+4. On confirm: Celery job starts; progress modal appears over the grid (full-screen overlay):
+   - Live progress bar: {n}/2,051 schemas processed
+   - Current schema being processed: schema name + tenant name
+   - Running totals: Applied ✅ · Failed ❌ · Skipped (no pending) ⏭
+   - Speed: schemas/min · estimated time remaining
+   - "Stop migration" button: halts job after current schema completes (not mid-schema)
+5. On completion: progress modal shows final report with "View failed schemas" link if any failures
+
+**Schema-level context menu (right-click or ⋯ on row):**
+
+- Apply all pending migrations for this schema — runs Celery task for single schema only
+- View migration history for this schema
+- Copy schema name
+
+**Data source:** `platform_migration_schema_log` joined with `platform_migrations` — queried fresh on tab load; no Memcached caching (migration state must be real-time accurate).
+
+---
+
+## 13. Amendment — G13: Restore Verification Tab
+
+**Assigned gap:** G13 — Restore Verification: automated test-restore from RDS snapshot to ephemeral instance with integrity checks.
+
+**Where it lives:** New tab added to the RDS Snapshot Management panel (Section 3). The panel gets two tabs: **Snapshot List** (existing) and **Restore Verification** (new, described here).
+
+**Purpose:** The backup is only as good as the restore. This tab allows the DBA to trigger a non-destructive test restore from any RDS snapshot to an isolated ephemeral RDS instance, run automated integrity checks, and confirm that the backup is actually usable before an incident forces reliance on it.
+
+---
+
+### Restore Verification Tab
+
+**Layout:** Three panels — Source Selection · Verification Status · Verification History
+
+---
+
+**Panel 1 — Source Selection**
+
+The DBA selects a snapshot to test-restore from the existing snapshot list (filtered to "Available" status only). Selection shows:
+
+- Snapshot name and creation timestamp
+- Size (GB)
+- Type (Automated / Manual / Pre-migration)
+- Encrypted: ✅
+
+Ephemeral instance configuration (pre-filled, not editable by default):
+- Instance class: db.t3.medium (cost-optimised for verification — not production class)
+- Region: same as primary RDS
+- Multi-AZ: disabled (ephemeral; no HA needed)
+- Estimated restore time: ~20–30 min for a db.t3.medium
+- Estimated cost for verification run: ₹ per hour × estimated verification duration (shown before starting)
+
+"Begin Restore Verification" button — requires DBA or Admin role. No 2FA required (read-only operation; ephemeral instance isolated from live traffic).
+
+---
+
+**Panel 2 — Verification Status**
+
+Displayed once a verification run is in progress or recently completed. Shows a step-by-step progress tracker:
+
+**Step 1 — Restore ephemeral instance**
+
+- Triggers RDS RestoreDBInstanceFromDBSnapshot API to create a new isolated instance named `verify-{snapshot_id}-{timestamp}`
+- Polls RDS DescribeDBInstances every 60s for "available" status
+- Typically 20–30 min; progress shown as animated spinner + elapsed time
+
+**Step 2 — Run verification checks**
+
+Once the ephemeral instance is available, a Celery task connects to it using read-only DBA credentials and runs five automated checks:
+
+| Check | Description | Pass Condition |
+|---|---|---|
+| Table count match | Count tables in each schema on ephemeral vs expected count from last known-good baseline | Ephemeral count ≥ baseline count (allows for new tables; flags missing tables) |
+| Row count sample | Sample 10 tables per schema (largest by estimated row count); compare row counts to live DB within tolerance | Each sampled table row count within ±5% of live DB |
+| Referential integrity — FK chain 1 | exam_submissions → students → tenants | 0 orphaned records |
+| Referential integrity — FK chain 2 | question_answers → questions → question_banks | 0 orphaned records |
+| Referential integrity — FK chain 3 | billing_invoices → tenant_subscriptions → tenants | 0 orphaned records |
+| Referential integrity — FK chain 4 | audit_log_entries → platform_staff | 0 orphaned records |
+| Referential integrity — FK chain 5 | exam_results → exam_sessions → exams | 0 orphaned records |
+
+Each check shows: ✅ Pass · ❌ Fail · ⏳ Running · ⏭ Skipped (if prior step failed)
+
+**Step 3 — Auto-decommission**
+
+After all checks complete (pass or fail), the ephemeral RDS instance is automatically deleted:
+- RDS DeleteDBInstance API with SkipFinalSnapshot = true
+- Decommission confirmed once DescribeDBInstances returns "deleted" status
+- If decommission fails (AWS API error): amber alert + "Retry decommission" button (DBA must not leave ephemeral instances running — billed hourly)
+
+**Overall result:**
+
+| Outcome | Display |
+|---|---|
+| All checks pass | Green banner — "Restore verification passed ✅ — Snapshot {name} confirmed restorable. Ephemeral instance decommissioned." |
+| One or more checks fail | Red banner — "Restore verification failed ❌ — {n} check(s) failed. See detail below. Ephemeral instance decommissioned." |
+| Restore itself failed | Red banner — "Ephemeral restore failed — AWS error: {message}. Snapshot may be corrupt." |
+
+**Failed check detail:** Each failed check shows the exact discrepancy:
+- Table count: "Expected 47 tables in tenant_001 — found 44 (missing: exam_correction_fields, analytics_snapshots, billing_adjustments)"
+- Row count: "Table exam_submissions in tenant_042: ephemeral 412,300 rows vs live 498,200 rows — 17.3% deviation (threshold: 5%)"
+- FK chain: "3 orphaned exam_submissions records found — exam_session_id references non-existent exam_sessions rows"
+
+---
+
+**Panel 3 — Verification History**
+
+Table of the last 20 verification runs:
+
+| Column | Description |
+|---|---|
+| Run Date | Timestamp when verification started |
+| Snapshot | Snapshot name tested |
+| Snapshot Date | When the snapshot was taken |
+| Initiated By | DBA / Admin name |
+| Duration | Total time from restore start to decommission |
+| Result | ✅ All pass · ❌ {n} failures · ⚠ Restore failed |
+| Detail | "View report" link → opens verification-report-drawer |
+
+**Verification report drawer (verification-report-drawer):**
+- Full check-by-check result breakdown
+- Ephemeral instance ID used (for AWS CloudTrail audit trail)
+- Cost of verification run (from AWS Cost Explorer — shown post-completion with 1h delay)
+- "Retry verification with same snapshot" button
+
+**Data model:**
+
+**platform_restore_verifications**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| snapshot_id | UUID FK → platform_rds_snapshots | |
+| ephemeral_instance_id | VARCHAR(255) | AWS RDS instance identifier |
+| status | ENUM | restoring / verifying / decommissioning / passed / failed / error |
+| initiated_by | UUID FK → platform_staff | |
+| started_at | TIMESTAMPTZ | |
+| completed_at | TIMESTAMPTZ | nullable |
+| duration_seconds | INTEGER | nullable |
+
+**platform_restore_verification_checks**
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| verification_id | UUID FK → platform_restore_verifications | |
+| check_name | VARCHAR(100) | table_count_match / row_count_sample / fk_chain_1..5 |
+| status | ENUM | pending / running / passed / failed / skipped |
+| detail | JSONB | discrepancy detail for failed checks |
+| started_at | TIMESTAMPTZ | nullable |
+| completed_at | TIMESTAMPTZ | nullable |
