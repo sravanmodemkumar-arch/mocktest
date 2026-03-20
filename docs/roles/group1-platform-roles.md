@@ -115,13 +115,32 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division E — Video & Learning (3 roles)
+## Division E — Video & Learning (11 roles)
+
+> Phase 1 roles (31–33) handle YouTube curation and channel management.
+> Phase 2 roles (82–89) form the in-house video production pipeline.
+> Every MCQ question in the bank (Div D) can have a corresponding explanatory video produced by this division.
+
+**Curation & Channel (Phase 1)**
 
 | # | Role | Level | Owns |
 |---|---|---|---|
 | 31 | Video Curator | 2 | Map YouTube videos → subject → topic → exam type |
 | 32 | Playlist Manager | 2 | Create structured learning paths per syllabus/exam |
 | 33 | YouTube Channel Manager | 2 | EduForge official channel — uploads, playlists, metadata |
+
+**Production Pipeline (Phase 2)**
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 82 | Content Producer — Video | 2 | End-to-end production pipeline mgmt; commission briefs; SLA ownership; final publish | Cannot approve scripts (Reviewer 84 does that) |
+| 83 | Video Scriptwriter | 2 | Author scripts from MCQ briefs; incorporate SME-provided explanation text | Cannot approve own scripts; cannot upload animation/edit assets |
+| 84 | Script Reviewer | 2 | Review scripts for factual accuracy, pedagogy, language quality; approve or return | Cannot author scripts; cannot publish |
+| 85 | Motion Graphics / Animation Artist | 2 | Create animated explainer videos from approved scripts; upload animation exports | Cannot approve own work; cannot publish to YouTube |
+| 86 | Graphics Designer — Video | 2 | Thumbnails, lower-thirds, chapter cards, intro/outro motion assets | Cannot upload animation or final edit files |
+| 87 | Video Editor | 2 | Assemble final video from animation + VO + graphics; colour grade; export at spec | Cannot upload subtitle files; cannot publish |
+| 88 | Subtitle & Localisation Editor | 2 | Add subtitles (EN + regional languages: HI, TE, UR); verify timing sync | Cannot approve final video; cannot upload animation/edit assets |
+| 89 | Video Quality Reviewer | 2 | Final QA gate — accuracy check, A/V quality, subtitle sync, spec compliance; pass or fail | Cannot publish directly; PASS routes to Publish Queue for Producer (82) |
 
 ---
 
@@ -263,7 +282,7 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | B — Product & Design | 5 |
 | C — Engineering | 8 |
 | D — Content & Academics | 13 |
-| E — Video & Learning | 3 |
+| E — Video & Learning | 11 (3 Phase 1 + 8 Phase 2) |
 | F — Exam Day Operations | 5 |
 | G — Background Verification | 3 |
 | H — Data & Analytics | 5 |
@@ -274,7 +293,7 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | M — Finance & Billing | 6 |
 | N — Legal & Compliance | 4 |
 | O — HR & Administration | 3 |
-| **Total** | **81** |
+| **Total** | **89** |
 
 ---
 

@@ -221,6 +221,61 @@ Which exam papers have included this question:
 - Confirmation modal shows count: "Archive {N} questions? This removes them from the active pool permanently."
 - On confirm: Celery task archives all N questions atomically. Progress toast during execution for batches > 10.
 
+**Tab 5: Video Production (MCQ-to-Video Integration)**
+
+Shows the video production status for this question. Visible to all Div D roles with page access.
+
+**Video Status Row:**
+
+| State | Display |
+|---|---|
+| No video job | "No explanatory video" · grey camera icon · "Create Video Job →" button (Producer/Director only) |
+| Job exists — In Production | "Video in production" · blue camera icon · Stage badge (e.g. "In Animation") · "View in E-05 →" link |
+| Job exists — Published (single language) | "Video published ✅" · green camera icon · YouTube thumbnail + title · YouTube URL (external link) · "View in Library →" link to E-01 |
+| Job exists — Published (multiple languages) | "Video published ✅ — {N} languages" · green camera icon · Language pills inline: 🇬🇧 EN · 🇮🇳 HI (each a clickable external link to that language's YouTube URL) · "View all in E-01 Library →" |
+| Job exists — Published (multi-audio track) | "Video published ✅ — Multi-language" · One YouTube link · small note: "Audio language selectable on YouTube" |
+| Job exists — On Hold | "Video on hold ⏸" · amber camera icon · "View in E-05 →" link |
+
+**Multi-language video status table** (shown when ≥1 language variant job exists for this question):
+
+| Language | Status | YouTube Link | Library |
+|---|---|---|---|
+| 🇬🇧 EN | ✅ Published | [Watch on YouTube ↗] | [View in E-01 →] |
+| 🇮🇳 HI | ✅ Published | [Watch on YouTube ↗] | [View in E-01 →] |
+| TE | 🔵 In Production | — | — |
+| UR | ⬜ No job | — | [Create variant →] (Producer/Director only) |
+
+"[Create variant →]" opens the language variant creation modal in E-05, pre-filled with this question's parent job ID and the selected language.
+
+**If multiple video jobs exist for this question** (e.g. a remake — both with the same question_id): list each job in a small table: Job Title · Language · Status · "View in E-05 →".
+
+**"Create Video Job" button** (Content Producer 82 and Content Director 18 only):
+
+- Opens Create Video Job modal (640px):
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| Job Title | Text input | Yes | Pre-filled: "{Subject} — {Topic} — {Question short_id}" |
+| Content Type | Select | Yes | Default: Problem Walkthrough |
+| Priority | Select | Yes | Default: Normal |
+| Overall SLA (days) | Number | Yes | Default from E-12 config |
+| Language | Select | Yes | Default: EN |
+| Notes to Scriptwriter | Textarea | No | Max 300 chars |
+
+- On "Create Job":
+  - POST to `/content/video/production/jobs/create-from-question/`
+  - Creates `video_production_job` with `question_id = content_question.id`, `source = MCQ`
+  - Celery task `seed_production_brief_from_question` populates `video_script.seed_text` with question body + correct answer + explanation
+  - ✅ "Production job created — script seeded from question" toast 4s
+  - Tab refreshes to show "Video in production" state
+
+**MCQ table column — Video Status badge (read-only, for Producer/Director view):**
+- Small camera icon appended to the question row in the results table (visible to Content Producer 82 and Content Director 18 only):
+  - ⬜ (grey) = No video
+  - 🔵 (blue) = In Production
+  - ✅ (green) = Published
+  - ⏸ (amber) = On Hold
+
 ---
 
 ### Section 6 — Export
@@ -399,6 +454,7 @@ ORDER BY rank DESC
 | Div F Exam Operations | Div F reads D-11 | Published question pool for exam paper construction | Shared `content_question` table with `state = 'PUBLISHED'` + access level filter |
 | Div F Results | Div F → D-11 | Exam usage data (`content_question_exam_usage`) | Div F writes usage records after exam construction |
 | D-18 Reports | D-11 → D-18 | Export functionality shared | D-18 uses the same export Celery task with different filter presets |
+| **E-05 Production Job Tracker** | D-11 → E-05 | "Create Video Job" action on question drawer creates `video_production_job` with `question_id` FK. Script seeded from question body + answer + explanation. | Django view POST → creates `video_production_job` record; Celery task seeds script. |
 
 ---
 
@@ -458,6 +514,7 @@ ORDER BY rank DESC
 | Extend Valid Until (G5) | ✅ "Expiry date extended to {date}" (Success 4s) |
 | Export queued | ℹ "Export started — you'll be notified when the file is ready" (Info 6s) |
 | Export blocked — upcoming exam | ⚠ "{N} questions blocked from export — tagged to upcoming exams" (Warning persistent) |
+| Video job created | ✅ "Production job created — script seeded from question" (Success 4s) |
 
 ### Loading States
 - MCQ table: 8-row skeleton on initial load, filter apply, page change, search.
@@ -480,10 +537,13 @@ Filter panel on mobile: bottom sheet (slides up from bottom). Date pickers are n
 - "Export" button: Director (18) and Approver (29). SMEs see read-only (no export button).
 - Author filter in Advanced Filter Panel: Director only. SMEs and Reviewers cannot filter by author (DPDPA — prevents SMEs from looking up each other's questions by name).
 - Bulk Re-Tag checkbox column: Approver only. Not shown for other roles.
+- Video Status camera icon column: Content Producer (82) and Content Director (18) only. Hidden for SMEs, Reviewers, Approvers.
+- "Create Video Job" button in Drawer Tab 5: Content Producer (82) and Content Director (18) only. Other roles see Tab 5 as read-only (video status only, no create button).
 
 ---
 
 *Page spec complete.*
 *Amendments applied: G2 (Unpublish → Amendment Review workflow in drawer) · G4 (Access Level filter + Approver access level change) · G5 (Expiry status filter + Approver Extend Valid Until)*
 *Gap amendments: Gap 5 (Archive individual question + Bulk Archive in MCQ drawer + MCQ results table — Approver only) · Gap 14 (Notes tab full spec with search, sortable table, filter parity with MCQ tab, Archive Note action, Audit Trail link)*
+*Div E integration: Drawer Tab 5 (Video Production status + Create Video Job action for Content Producer/Director) · E-05 integration link in Section 9.*
 *Next file: `d-12-audit-history.md`*

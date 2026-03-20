@@ -13,3 +13,6 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local dev
+local_dev.sqlite3

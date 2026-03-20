@@ -246,6 +246,19 @@ For questions in `AMENDMENT_REVIEW` state (previously published): which active u
 - D-12 audit entry: `action: PublishApproved` · `actor: Approver` · IP + timestamp
 - For passage set questions (G9): "Approve + Publish" on one question checks if all other questions in the set have `PENDING_APPROVAL`. If yes: "Approve and publish this question as part of Set {set_id}? All {N} questions in the passage set will be published together." If any question in the set is not yet `PENDING_APPROVAL`: "This question is part of a passage set. The other {N−1} questions must also reach approval before any can be published." — the button is disabled for individual questions within incomplete sets.
 
+**Post-Approval — "Create Video Job?" inline prompt** (shown to Content Producer (82) and Content Director (18) only, immediately after successful publish):
+
+An inline callout appears at the bottom of the drawer:
+
+> 📹 **Create explanatory video for this question?**
+> {Subject} · {Topic} · {Question short_id}
+> [Create Video Job] [Skip]
+
+- **"Create Video Job":** Creates `video_production_job` with `question_id = content_question.id`, `source = MCQ`, taxonomy pre-filled from question tags. Celery task seeds `video_script.seed_text` from question body + correct answer + explanation. ✅ "Production job created" toast 4s. Callout replaced with a "Video job created ✅" badge.
+- **"Skip":** Dismisses prompt. No job created. No toast.
+- **Not shown to:** Question Approver (29), Reviewers, SMEs — server-side conditional on role.
+- **After Bulk Approve + Publish (Section 5):** No per-question prompt. A single post-completion toast: "{N} questions published. [Create video jobs for all →]" — link navigates to E-05 Tab 3 (MCQ Import), pre-filtered to the batch of just-published question IDs.
+
 **"Send Back to Reviewer"** (orange):
 - Note ≥ 15 chars required + reason category
 - State: `PENDING_APPROVAL` → `UNDER_REVIEW` (re-assigned to the original reviewing Reviewer)
@@ -497,6 +510,7 @@ All 500 questions are now in `AMENDMENT_REVIEW` state. They appear in the Amendm
 | D-05 Director Dashboard | D-05 reads D-04 | Approval queue depth, amendment count, KPI data | Same `content_question` table — no API call |
 | D-13 Quality Analytics | D-04 → D-13 | Difficulty Re-Tag actions feed difficulty calibration tab | `content_question_audit_log` with `action: TagAmendment` — D-13 query joins this table |
 | Content Director notifications | D-04 → D-05 | Emergency unpublish triggers Director in-app notification | Celery task creates `content_director_notification` record polled by D-05 HTMX |
+| **E-05 Production Job Tracker** | D-04 → E-05 | After Approve + Publish: optional "Create Video Job?" prompt for Content Producer / Director. Creates `video_production_job` with `question_id` FK and `source=MCQ`. | Post-approval inline prompt (see Section 6 — Approval Drawer, Video Job prompt); Celery task seeds script. |
 
 ---
 
@@ -582,10 +596,12 @@ All tabs: 50 rows, numbered pagination controls. Published Questions tab default
 - "Emergency Bulk Unpublish" button: Approver only. Always visible in red at top-right (not behind a menu — emergency access must be immediate).
 - 2FA prompt: Approver only. Never shown to Director in read-only mode.
 - "Difficulty Re-Tag", "Access Level Change" post-publish: Approver only on Published tab.
+- "Create Video Job?" inline prompt: Content Producer (82) and Content Director (18) only — shown after successful Approve + Publish. Hidden from Approver (29), Reviewers, SMEs.
 
 ---
 
 *Page spec complete.*
 *Amendments applied: G2 (Amendment Review + unpublish workflow) · G4 (Access Level post-publish change) · G5 (Extend Valid Until) · G7 (Committee Review — Approver receives only after 2 reviewer passes, 2FA on amendment) · G8 (Emergency Bulk Unpublish < 60s for 500 questions)*
 *Gap amendments: Gap 5 (Individual Archive + Bulk Archive action in Published Questions tab — Section 8) · Gap 15 (Passage Set approval context — Drawer Tab 4 with full set status, "Approve Entire Set" button)*
+*Div E integration: Post-approval "Create Video Job?" prompt in Drawer action bar (Section 6) for Content Producer/Director · E-05 integration link in Section 8.*
 *Next file: `d-05-director-dashboard.md`*
