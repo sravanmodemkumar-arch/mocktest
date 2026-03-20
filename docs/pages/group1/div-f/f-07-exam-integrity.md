@@ -114,7 +114,7 @@ All proctoring flags across all exams. Volume can be high — a single 74K exam 
 
 **Auto-escalation indicator:** Flags auto-escalated by Celery (flag_count ≥ threshold) show `[Auto-escalated]` badge. Integrity Officer reviews the resulting case in Tab 2.
 
-**Auto-escalation deduplication:** Before creating a new auto-escalated case, the `analyze_exam_integrity` Celery task checks for an existing OPEN or UNDER_INVESTIGATION case with the same `(exam_schedule_id, institution_id, case_type)`. If one exists, the newly triggered flags are appended to the existing case (a log entry is added: "Additional flags auto-linked by system") rather than creating a duplicate. Only if no matching open case exists is a new `FMC-` case created. This prevents the same incident from generating multiple separate cases across multiple Celery task runs.
+**Auto-escalation deduplication:** Before creating a new auto-escalated case, the `analyze_exam_integrity` Celery task checks for an existing OPEN or UNDER_INVESTIGATION case with the **exact same** `(exam_schedule_id, institution_id, case_type)` — string-matched precisely. A MASS_COPYING case and a PAPER_LEAK case for the same exam/institution are **separate** (different case_type). If one matching open case exists: flags appended, log entry added "Additional flags auto-linked by system." Only if no exact match found is a new `FMC-` case created. If Integrity Officer believes two different-type cases are related, they can manually link flags between cases using [Link More Flags].
 
 ---
 
@@ -251,7 +251,7 @@ OPEN → UNDER_INVESTIGATION → INSTITUTION_NOTIFIED / LEGAL_ESCALATED → CLOS
 | → CLOSED_CONFIRMED | [Close — Confirmed] | Requires closure notes |
 | → CLOSED_DISMISSED | [Close — Dismissed] | Requires dismissal notes |
 
-**[Notify Institution]:** triggers an in-app notification to institution admin. DPDPA: notification text uses role labels and case type — no student names. Also triggers F-06 broadcast (optional — opens broadcast wizard with `malpractice_notification` template pre-selected).
+**[Notify Institution]:** opens confirmation modal before sending: "Notify institution of malpractice case #{case_id} for exam {exam}? This sends an in-app notification to institution admin (and optional WhatsApp broadcast). **Once sent, notification cannot be unsent.** Confirm?" [Notify] `bg-[#EF4444]` · [Cancel]. On confirm: sets `case.status → INSTITUTION_NOTIFIED`, `institution_notified_at = now()`, sends in-app + optional F-06 broadcast. DPDPA: notification text uses role labels and case type only — no student names.
 
 #### Drawer Tab 4 — Activity Log
 
@@ -283,7 +283,9 @@ The primary tool for post-exam malpractice detection. Integrity Officer runs ana
 
 Table: IP group → session count → percentage answered identically. Sessions sharing an IP AND having >80% identical answers = high anomaly score.
 
-**DPDPA:** IP addresses are hashed for display — shown as `IP-HASH-{6chars}`. Full IPs available only to Platform Admin (10).
+**DPDPA:** IP addresses are hashed for display using SHA-256, shown as first 6 hex chars: `IP-HASH-{6chars}`. Collision probability at 74K concurrent sessions is negligible. Full unhashed IPs visible only to Platform Admin (10) via raw data export. All other roles see hashed display only.
+
+**CRITICAL flag min count override:** Default filter `Min Flag Count = 3` is overridden for CRITICAL severity — all CRITICAL flags are shown regardless of flag count, even single occurrences. This prevents a single high-impact anomaly (e.g., exam submitted in 5 seconds) from being filtered out by the noise-reduction default.
 
 **Section B — Answer Similarity Analysis**
 
@@ -291,7 +293,7 @@ For each question, percentage of sessions that selected each option:
 
 `BarChart` — expected: answer options should follow a distribution. A single option chosen by >90% of students = question is too easy OR systematic answer sharing.
 
-**Anomalous question list:** Questions where >85% chose same answer AND that question has LOW difficulty rating in D-09 taxonomy. Flagged for review.
+**Anomalous question list:** Questions where >85% chose same answer AND the D-09 tagged difficulty is MEDIUM or HARD (legitimately EASY questions tagged as such in D-09 are suppressed — high agreement on an easy question is expected and not anomalous). If D-09 metadata is unavailable, threshold is applied without the difficulty filter. Coordinator can adjust the anomaly detection threshold (default 85%) in F-09 Integrity Defaults.
 
 **Section C — Submit Time Distribution**
 
@@ -381,6 +383,8 @@ Reason: {reason}"
 [Approve Hold] `bg-[#EF4444]` · [Reject Hold Request] → with rejection reason
 
 **On dual approval:** `exam_schedule.integrity_hold = True`. Both actors logged. ⚠️ "Result hold placed" toast 8s.
+
+**Hold rejection loop prevention:** If Ops Manager rejects a hold request: Integrity Officer notified in-app with rejection reason. Can resubmit immediately with a modified reason, or after 1 hour with the same reason. If resubmitting within 1 hour with an identical reason: Ops Manager sees "Re-submitted after earlier rejection — reason unchanged." After 3 rejections of the same case within 24 hours, further hold requests for that case require Platform Admin (10) approval rather than Ops Manager.
 
 ### Legal Escalation Modal (560px)
 

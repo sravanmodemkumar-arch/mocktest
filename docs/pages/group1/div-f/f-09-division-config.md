@@ -100,13 +100,15 @@ Configuration for live exam operations (F-01, F-02 behaviour).
 
 Live status of the critical Celery Beat tasks that power Division F automation. Refreshed on page load and every 60s via HTMX.
 
-| Task | Schedule | Last Run | Next Run | Status |
-|---|---|---|---|---|
-| `auto_activate_exam` | Per exam `scheduled_start` | {datetime or `—`} | {datetime or Disabled} | ✅ OK / ❌ FAILED / — Disabled |
-| `auto_complete_exam` | Per exam `scheduled_end + grace` | {datetime or `—`} | {datetime or Disabled} | ✅ OK / ❌ FAILED / — Disabled |
-| `update_exam_ops_snapshots` | Every {snapshot_frequency}s | {datetime} | {datetime} | ✅ OK / ❌ FAILED |
-| `close_answer_key_objection_window` | Per objection window close | {datetime or `—`} | {datetime or `—`} | ✅ OK / ❌ FAILED |
-| `auto_close_support_tickets` | Nightly 02:00 IST | {datetime} | Next midnight | ✅ OK / ❌ FAILED |
+| Task | Schedule | Last Run | Last Run Ago | Next Run | Status |
+|---|---|---|---|---|---|
+| `auto_activate_exam` | Per exam `scheduled_start` | {datetime or `—`} | {e.g. "2h ago"} | {datetime or Disabled} | ✅ OK / ❌ FAILED / — Disabled |
+| `auto_complete_exam` | Per exam `scheduled_end + grace` | {datetime or `—`} | {e.g. "45m ago"} | {datetime or Disabled} | ✅ OK / ❌ FAILED / — Disabled |
+| `update_exam_ops_snapshots` | Every {snapshot_frequency}s | {datetime} | {e.g. "28s ago"} | {datetime} | ✅ OK / ❌ FAILED |
+| `close_answer_key_objection_window` | Per objection window close | {datetime or `—`} | {e.g. "3h ago"} | {datetime or `—`} | ✅ OK / ❌ FAILED |
+| `auto_close_support_tickets` | Nightly 02:00 IST | {datetime} | {e.g. "6h ago"} | Next 02:00 IST | ✅ OK / ❌ FAILED |
+
+**Stale detection:** If `update_exam_ops_snapshots` last ran > 4 minutes ago (8× the snapshot frequency at 30s default), or `auto_activate_exam` / `auto_complete_exam` should have run but hasn't (exam `scheduled_start` is in the past and status is still SCHEDULED): row shows ⚠️ amber "Expected to run — may be delayed." Section D refreshes every 30s via HTMX.
 
 **Status rules:**
 - `✅ OK` — last run completed successfully (Celery task result = SUCCESS)
@@ -272,6 +274,8 @@ Pagination: 25 rows. **Export:** [Download Change Log CSV].
 |---|---|
 | Snapshot frequency reduced to < 15s | Validation block: "Snapshot frequency below 15s is not allowed. This would overload PostgreSQL at exam scale. Min: 15s." |
 | Auto-compute disabled but exam completes | Coordinator sees exam in F-04 Computation Queue with banner: "Auto-compute is disabled — trigger computation manually." |
+| Auto-compute toggle changed mid-exam | Toggle change takes effect for **new exams starting after the change**. Active exams retain the config state from when they were scheduled. Rationale: changing auto-compute mid-exam would create inconsistent behaviour for exams in progress. Recommendation: avoid toggling during exam window. |
+| Config lock deadline changed retroactively | New deadline applies only to exam schedules **created after the config change**. Existing DRAFT/SCHEDULED exams retain the deadline computed at their creation time. No bulk retroactive update — manage per-exam in F-01 if needed. |
 | SLA CRITICAL > SLA HIGH | Inline validation: "CRITICAL SLA must be less than HIGH SLA. ({N} > {M})" |
 | Two Ops Managers edit config simultaneously | Last write wins. "Config was updated by another session since you opened this page. Reload to see latest values before saving." |
 | Notification rate raised above API tier capacity | No server-side block — Engineering (Div C) must manage API tier. Warning inline: "Ensure Meta API tier supports this rate. Contact DevOps before raising." |

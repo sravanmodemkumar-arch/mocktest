@@ -603,4 +603,51 @@ answer_key status → FINAL (F-05) + exam_result_computation.status=COMPLETED
 
 ---
 
+---
+
+## Cross-Page Critical Workflows
+
+### 1. Objection Accepted → Rescore → Re-publish → Notify (F-05 → F-04 → F-06)
+
+```
+F-05: Objection accepted for Q15 (B → C)
+    └── exam_answer_key_entry updated (correct_option = C)
+    └── compute_exam_results queued (deduplication via rescoring_pending_additional_changes)
+    └── exam_result_publication.status → DRAFT
+    └── in-app notification to Results Coordinator (36): "Rescoring triggered for {Exam} — review and re-approve results."
+
+F-04: Coordinator opens pending review
+    └── Sees updated score distribution
+    └── Runs validation checks
+    └── [Approve & Publish] → publish_exam_results Celery task
+    └── in-app prompt: "Results published. Send result notification? [Send Now via F-06] [Skip]"
+    └── auto_send if F-09 config enabled
+
+F-06: Notification Manager or auto-trigger sends result_announcement broadcast
+    └── Recipient list re-queried fresh at send time (opt-outs excluded)
+    └── Per-recipient variables resolved from tenant schema (score, student_ref)
+```
+
+**SLA continuity across F-03 escalation to F-02 incident:** When F-03 ticket status → ESCALATED (ticket linked to `exam_session_incident`), the ticket's own SLA timer **stops** (ticket is no longer directly being resolved). The incident has no independent SLA — Ops Manager manages it operationally. When the incident is resolved, the linked ticket must be closed manually in F-03. SLA breaches are only counted against the original ticket up to the escalation point.
+
+### 2. Integrity Case → Result Withhold → Resolution (F-07 → F-04 → F-07)
+
+```
+F-07: Integrity Officer opens malpractice case FMC-{YYYYMMDD}-{seq}
+    └── [Place Result Hold]: Step 1 (Integrity Officer submits)
+    └── Step 2: Ops Manager approves → exam_schedule.integrity_hold = True
+    └── F-04: [Approve & Publish] disabled for this exam until hold lifted
+
+F-07: After investigation → [Close — Confirmed] or [Close — Dismissed]
+    └── If Confirmed: institution notified (modal confirmation before send); Legal escalation if needed
+    └── [Lift Result Hold]: dual approval again → integrity_hold = False
+    └── F-04: [Approve & Publish] now available
+```
+
+### 3. Config Lock Flow (F-09 → F-01 → F-02)
+
+Config lock deadline (`config_lock_required_before_hours`) set in F-09 → applies to all new exam schedules in F-01 → F-02 "Starting Soon" panel computes ⚠️ "Not Locked" using the same config value (live HTMX refresh every 30s picks up F-09 config changes).
+
+---
+
 *Division F pages list complete. 9 pages covering the full exam operations lifecycle: configure → monitor live → support → compute results → publish answer key → notify → detect integrity issues → analyse → configure ops settings.*

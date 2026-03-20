@@ -68,7 +68,7 @@ At 2,050 institutions, exam scheduling is a bulk operation. A single national SS
 | 3 | Active Right Now | Count with status = `ACTIVE` |
 | 4 | Exams This Month | Count with `scheduled_start` in current calendar month |
 
-**Awaiting Config Lock tile:** if count > 0, pulse amber border. Clicking filters Tab 1 to show only those exams.
+**Awaiting Config Lock tile:** if count > 0, pulse amber border. Clicking applies filter `?filter=awaiting_lock` to Tab 1 (status = SCHEDULED + start < now + 24h + config_locked_at IS NULL). Filter persists in URL and survives page reload.
 
 ---
 
@@ -177,6 +177,8 @@ Triggered by [Configure] on any row.
 | Negative Marking Factor | Number input (decimal) | Default from template; 0 = disabled; 0.25 = standard; 0.33 = 1/3; 1 = equal penalty |
 | Marks per Correct Answer | Number input (decimal) | Default from paper config; typically 1 or 2 |
 | Partial Marking | Toggle | Default OFF |
+
+**Marks consistency validation:** After entering Marks per Correct Answer, compute read-only preview: "Max possible score: {marks_per_correct × total_questions} marks." If this exceeds `exam_question_paper.total_marks`, show red inline: "⚠️ This marks value would allow a maximum of {N} marks, exceeding the paper's total ({M}). Adjust marks or verify paper config."
 
 **Section C — Section-Level Config** (shown only if paper has sections)
 
@@ -322,6 +324,10 @@ Conflict detection: if any institution already has an overlapping exam scheduled
 
 **[Confirm Bulk Schedule]** → creates `exam_schedule` records for all institutions. Shows progress indicator if batch > 50 institutions. ✅ "{N} exams scheduled" toast.
 
+**Zero-institution validation:** [Confirm Bulk Schedule] is disabled if selected institution count = 0. Inline message: "Select at least 1 institution to proceed." Shown below the institution list in Step 2.
+
+**Conflict detection with per-institution overrides:** After a per-institution override sets a different start time in Step 3, the conflict detection algorithm in Step 4 re-runs using each institution's **effective** start/end time (base schedule ± override). Example: if base start = 10:00 and institution A has +30 min start override, conflict check uses 10:30 as institution A's start.
+
 ---
 
 ### Tab 4 — Calendar View
@@ -412,6 +418,32 @@ Lock configuration now?"
 | Notify institution? | Toggle | Default ON — creates in-app notification to institution admin |
 
 **[Confirm Reschedule]** → creates new `exam_schedule` with `rescheduled_from_id = original.id`, original status → RESCHEDULED, Celery task migrates student registrations. ✅ "Schedule rescheduled — new schedule created for {datetime}" toast 4s.
+
+### Config Unlock Confirmation Modal (400px)
+
+**Trigger:** [Unlock Configuration] in Drawer Tab 4 — Ops Manager (34) only.
+
+"⚠️ Unlock exam configuration for **{Exam Name}** at **{Institution}**?
+
+This reverses the config lock gate. The exam can be reconfigured until re-locked. **This is an emergency action — exams within 30 minutes of start cannot be unlocked.**
+
+After unlocking:
+- Config Specialist (90) can edit paper, duration, and scoring rules
+- You must re-lock before the exam starts"
+
+| Field | Required | Notes |
+|---|---|---|
+| Unlock Reason | Yes | Text area; min 30 chars — logged permanently in `exam_ops_action_log` |
+| Notify Config Specialist? | Toggle | Default ON — in-app notification to Config Specialist (90): "Config unlocked for {Exam} — review and re-lock before exam starts." |
+
+[Confirm Unlock] `bg-[#EF4444]` · [Cancel]
+
+**On confirm:** `exam_schedule.status → SCHEDULED`, `config_locked_at` and `config_locked_by_id` cleared, `CONFIG_UNLOCK` logged to `exam_ops_action_log`.
+⚠️ "Config unlocked — lock again before exam starts" toast 8s.
+
+**Hard block:** Cannot unlock if `scheduled_start ≤ now() + 30 min`. Show: "Cannot unlock — exam starts in less than 30 minutes. Emergency changes must go through Platform Admin."
+
+---
 
 ### Bulk Cancel Modal (400px)
 
@@ -504,6 +536,8 @@ SCHEDULED or CONFIG_LOCKED ──[Reschedule]──► RESCHEDULED       │
 |---|---|
 | Config lock attempted with unassigned paper | Block: "Cannot lock — question paper is not assigned. Assign a published paper first." |
 | Config lock attempted with start < 30 min away | Block: "Cannot lock — exam starts in less than 30 minutes. Contact Ops Manager for emergency protocol." |
+| DRAFT schedule with `scheduled_start` in the past | [Confirm Schedule] is blocked: "Cannot confirm — scheduled start time is in the past. Update start time before confirming." Schedule remains DRAFT. Shown as "Overdue DRAFT" amber row in Tab 1 table. |
+| [Confirm Schedule] when start < now + 1h | Block: "Cannot confirm — exam starts too soon (less than 1 hour). Reschedule or contact Ops Manager." |
 | Bulk schedule: institution already has overlapping exam | Row highlighted red in Step 4 preview. User must explicitly check "Proceed despite overlap" per institution, or deselect them. Not a hard block — business may intentionally schedule back-to-back. |
 | Edit attempted on CONFIG_LOCKED schedule | All form fields disabled. Tooltip: "Config is locked. Contact Exam Operations Manager to unlock if change is required." |
 | Bulk schedule creates > 200 schedules | Progress modal with Celery task progress: "Created {N} of {total} schedules…" — polling `?part=bulk-progress&task_id={id}` every 3s. |
@@ -541,7 +575,9 @@ SCHEDULED or CONFIG_LOCKED ──[Reschedule]──► RESCHEDULED       │
 | Tablet (768–1279px) | Table: Exam + Institution + Start + Status + Actions only; drawer full-width |
 | Mobile (<768px) | Card layout; drawer = full screen bottom sheet |
 
+**Drawer Tab 2 — Section C (Section-Level Config) on tablet/mobile:** Section grid becomes scrollable table with sticky Section Name column. Each row = one section; columns: Section · Questions · Time Limit · Mandatory · Min Attempt. Horizontal scroll if > 4 sections.
+
 ---
 
 *Page spec complete.*
-*F-01 covers: schedule creation → per-exam config → bulk scheduling → config lock gate → institution overrides → calendar view.*
+*F-01 covers: schedule creation → per-exam config (with marks consistency validation) → bulk scheduling (zero-institution guard, override-aware conflict detection) → config lock gate → Config Unlock Modal → institution overrides → calendar view → state machine (DRAFT past-start guard).*
