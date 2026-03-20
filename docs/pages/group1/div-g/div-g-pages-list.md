@@ -180,6 +180,7 @@ One BGV run for a staff member. A staff member may have multiple verifications o
 | `id` | UUID | — |
 | `staff_id` | FK → `bgv_staff` | — |
 | `verification_type` | varchar | Enum: `INITIAL` · `RENEWAL` · `RE_VERIFICATION` |
+| `status` | varchar | Workflow state enum: `DOCUMENTS_PENDING` · `DOCUMENTS_RECEIVED` · `READY_FOR_VENDOR` · `VENDOR_SENT` · `VENDOR_RETURNED` · `AWAITING_SUPERVISOR_REVIEW` · `COMPLETE` · `CANCELLED`. Updated at each workflow stage. |
 | `initiated_by_id` | FK → auth.User | BGV Executive (40) or system (Celery for renewal) |
 | `initiated_at` | timestamptz | — |
 | `assigned_to_id` | FK → auth.User | BGV Executive assigned to process this verification |
@@ -188,17 +189,20 @@ One BGV run for a staff member. A staff member may have multiple verifications o
 | `vendor_sent_at` | timestamptz | Nullable |
 | `vendor_returned_at` | timestamptz | Nullable |
 | `vendor_result` | varchar | Enum: `PENDING` · `CLEAR` · `FLAGGED` · `INCONCLUSIVE` · `ERROR` |
-| `vendor_result_detail` | text | Vendor-provided result summary |
+| `vendor_result_detail` | text | Vendor-provided result summary (normalized from vendor schema) |
 | `vendor_result_document_url` | varchar | R2 private URL — vendor report PDF |
-| `pocso_flag` | boolean | Default false — set by vendor or BGV Executive |
+| `submission_attempt_count` | int | Default 0 — incremented on each vendor API call attempt |
+| `last_submission_error` | text | Nullable — last vendor API error message; cleared on success |
+| `pocso_flag` | boolean | Default false. Set via two paths: (1) vendor webhook sets `pocso_flag=true` in result → Celery auto-creates `bgv_pocso_case`; (2) BGV Ops Supervisor checks POCSO checkbox during FLAGGED approval → sets flag → Celery creates case. Deduplication: Celery checks for existing open case on same `staff_id + verification_id` before creating. |
 | `pocso_offense_type` | varchar(300) | Nullable — filled when `pocso_flag = true` |
 | `reviewed_by_id` | FK → auth.User | BGV Ops Supervisor who approved final decision |
 | `reviewed_at` | timestamptz | Nullable |
-| `final_result` | varchar | Enum: `PENDING` · `CLEAR` · `FLAGGED` · `INCONCLUSIVE` · `CANCELLED` |
-| `sla_due_at` | timestamptz | `initiated_at + bgv_config.sla_days_per_check_type` |
-| `expiry_date` | date | Nullable — set when `final_result = CLEAR`; `initiated_at + bgv_config.validity_years` |
+| `final_result` | varchar | Enum: `PENDING` · `CLEAR` · `CLEAR_OVERRIDE` · `FLAGGED` · `INCONCLUSIVE` · `CANCELLED`. `CLEAR_OVERRIDE` = supervisor overrode vendor FLAGGED to CLEAR; flagged in audit log. |
+| `sla_due_at` | timestamptz | `initiated_at + bgv_config.doc_collection_sla_days` (working days, Mon–Fri IST, excluding national holidays) |
+| `expiry_date` | date | Nullable — set when `final_result IN (CLEAR, CLEAR_OVERRIDE)`; `clear_date + bgv_config.validity_years` |
 | `renewal_notified` | boolean | Whether renewal reminder sent |
 | `renewal_notified_at` | timestamptz | Nullable |
+| `version` | int | Default 1 — incremented on each save; used for optimistic locking in supervisor approval modal |
 | `created_at` | timestamptz | — |
 | `updated_at` | timestamptz | — |
 
@@ -293,13 +297,20 @@ POCSO Act 2012 — flagged staff with child protection offences.
 | `offense_date` | date | Nullable — if known from vendor report |
 | `offense_jurisdiction` | varchar(200) | Court/police jurisdiction |
 | `source` | varchar | Enum: `BGV_VENDOR` · `MANUAL_FLAG` · `ANONYMOUS_TIP` |
-| `action_status` | varchar | Enum: `OPEN` · `UNDER_REVIEW` · `INSTITUTION_NOTIFIED` · `NCPCR_REPORTED` · `EMPLOYMENT_SUSPENDED` · `CLOSED` |
+| `action_status` | varchar | Enum: `OPEN` · `UNDER_REVIEW` · `INSTITUTION_NOTIFIED` · `NCPCR_REPORTED` · `POLICE_REPORTED` · `EMPLOYMENT_SUSPENDED` · `CLOSED` |
 | `institution_notified` | boolean | Default false |
 | `institution_notified_at` | timestamptz | Nullable |
 | `institution_notification_method` | varchar | Enum: `EMAIL` · `IN_APP` · `PHONE_CALL` · `FORMAL_NOTICE` |
 | `ncpcr_reported` | boolean | Default false |
-| `ncpcr_ref` | varchar(100) | NCPCR case reference number |
+| `ncpcr_ref` | varchar(100) | NCPCR case reference number; `PENDING` if report filed but ref not yet received |
 | `ncpcr_reported_at` | timestamptz | Nullable |
+| `police_reported` | boolean | Default false — FIR filed with local police per POCSO Section 19(1) |
+| `fir_ref` | varchar(100) | FIR number from local police station |
+| `fir_filed_at` | timestamptz | Nullable |
+| `police_station` | varchar(200) | Police station name and jurisdiction |
+| `scwc_reported` | boolean | Default false — State Child Welfare Committee notified per jurisdiction |
+| `scwc_ref` | varchar(100) | SCWC reference number |
+| `scwc_reported_at` | timestamptz | Nullable |
 | `handled_by_id` | FK → auth.User | POCSO Compliance Officer (41) or POCSO Reporting Officer (78) |
 | `created_at` | timestamptz | — |
 | `updated_at` | timestamptz | — |
@@ -327,32 +338,149 @@ Immutable audit trail for all BGV actions. Append-only — no updates or deletes
 
 ---
 
+### `bgv_vendor_transaction`
+
+API transaction log for all vendor communications. Append-only.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | UUID | — |
+| `vendor_id` | FK → `bgv_vendor` | — |
+| `verification_id` | FK → `bgv_verification` | Nullable — null for health-check pings |
+| `direction` | varchar | Enum: `OUTBOUND` (to vendor) · `INBOUND` (webhook from vendor) |
+| `endpoint` | varchar | API path called or webhook path received |
+| `payload_hash` | varchar(64) | SHA-256 of request/response payload — stored for audit without PII exposure |
+| `http_status` | int | HTTP response code |
+| `result` | varchar | Enum: `SUCCESS` · `ERROR` · `TIMEOUT` |
+| `duration_ms` | int | API call duration |
+| `error_message` | text | Nullable — error detail if result = ERROR |
+| `is_test` | boolean | Default false — true for test verification requests from G-05 |
+| `created_at` | timestamptz | — |
+
+---
+
+### `bgv_institution_communication`
+
+Log of all communications sent to or about an institution regarding BGV compliance.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | UUID | — |
+| `institution_id` | int | — |
+| `communication_type` | varchar | Enum: `IN_APP` · `EMAIL` · `PHONE_CALL` · `FORMAL_NOTICE` |
+| `subject` | varchar(300) | e.g. "Document reminder — 3 staff pending" |
+| `notes` | text | Free text — for phone calls and meeting notes |
+| `created_by_id` | FK → auth.User | — |
+| `created_at` | timestamptz | — |
+
+---
+
+### `bgv_operational_config`
+
+Singleton (always `id = 1`). All Division G policy settings. Fully documented in G-08.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | int | Always 1 |
+| `validity_years` | int | BGV validity period (default 3) |
+| `renewal_lead_days` | int | Renewal reminder lead time (default 30) |
+| `second_reminder_days` | int | Second reminder (default 7; 0 = disabled) |
+| `expiry_grace_days` | int | Grace after expiry (default 0; max 14) |
+| `doc_collection_sla_days` | int | Working days for institution to upload docs (default 5) |
+| `doc_review_sla_hours` | int | BGV Executive review SLA (default 4) |
+| `vendor_submission_sla_hours` | int | READY_FOR_VENDOR → VENDOR_SENT (default 2) |
+| `result_review_sla_hours` | int | Vendor result → final decision (default 8) |
+| `flagged_notify_sla_hours` | int | Supervisor approves FLAGGED → Manager notifies institution (default 24) |
+| `default_vendor_id` | FK → `bgv_vendor` | Pre-selected vendor in G-02 submission modal |
+| `default_checks` | varchar[] | Default check types for new verifications |
+| `at_risk_threshold_pct` | decimal | AT_RISK lower bound (default 80) |
+| `noncompliant_threshold_pct` | decimal | NON_COMPLIANT upper bound (default 79) |
+| `auto_escalate_noncompliant_days` | int | Auto-escalate after N days NON_COMPLIANT (0 = disabled; default 14) |
+| `auto_suspend_on_pocso_create` | boolean | Suspend staff access on POCSO case creation (default false) |
+| `notify_email_enabled` | boolean | (default true) |
+| `notify_copy_to_manager` | boolean | (default true) |
+| `sla_uses_working_days` | boolean | If true, SLA calculated in working days (Mon–Fri IST, excl. national holidays). Default true. |
+| `data_retention_clear_years` | int | Retention for CLEAR verifications after expiry (default 3) |
+| `data_retention_flagged_years` | int | Retention for FLAGGED (non-POCSO) verifications (default 5) |
+| `data_retention_pocso_years` | int | Retention for POCSO cases post-closure (default 10; regulatory minimum) |
+| `updated_at` | timestamptz | — |
+| `updated_by_id` | FK → auth.User | — |
+
+---
+
+### `bgv_config_log`
+
+Change log for all `bgv_operational_config` updates.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | UUID | — |
+| `tab` | varchar | Enum: `VERIFICATION_POLICY` · `DOCUMENT_REQUIREMENTS` · `SLA` · `NOTIFICATIONS` · `COMPLIANCE_THRESHOLDS` |
+| `setting_key` | varchar | e.g. `validity_years` |
+| `old_value` | text | JSON-encoded |
+| `new_value` | text | JSON-encoded |
+| `changed_by_id` | FK → auth.User | — |
+| `changed_at` | timestamptz | — |
+| `note` | varchar(300) | Optional reason |
+
+---
+
+### Data Retention Policy
+
+DPDPA 2023 and POCSO Act 2012 mandate specific retention periods. Celery task `archive_and_purge_old_bgv_records` runs monthly on the 1st at 03:00 IST.
+
+| Record Type | Retention Period | Action at Expiry |
+|---|---|---|
+| BGV documents (CLEAR verification, expired) | 3 years after verification expiry | Purge from R2; audit log entry retained |
+| BGV verification records (CLEAR) | 3 years after expiry date | Anonymise PII fields; retain for compliance count |
+| BGV verification records (FLAGGED, non-POCSO) | 5 years from `reviewed_at` | Anonymise PII; retain case outcome |
+| BGV verification records (INCONCLUSIVE) | 3 years from `reviewed_at` | Anonymise PII |
+| BGV documents (FLAGGED/POCSO) | 10 years from case closure | Retain in R2 cold storage |
+| POCSO case records | 10 years from `closed_at` | Cannot be deleted; anonymise only on court order |
+| Vendor API transaction logs | 2 years | Purge payload hash; retain counts for performance reports |
+| Audit log entries | 7 years | Read-only; never deleted |
+
+Archival: anonymised records replace `full_name` with `[REDACTED]` and remove `file_url` references. All purge events logged in `bgv_audit_log` with `action = DATA_PURGED`.
+
+---
+
 ## Cross-Page Critical Workflows
 
 ### Workflow 1 — Initial Verification (Full Cycle)
-1. Institution submits request via portal → `bgv_verification` created (DOCUMENTS_PENDING) → **G-02** queue
-2. BGV Executive (40) collects documents → **G-03** document checklist
-3. BGV Executive submits to vendor → **G-03** submit action → vendor API call
-4. Vendor returns CLEAR → BGV Executive marks reviewed → `bgv_staff.bgv_status = CLEAR` → **G-04** institution compliance % updates
-5. Vendor returns FLAGGED → BGV Executive escalates → **BGV Ops Supervisor (92) approval modal** → **G-03**
-6. Supervisor approves FLAGGED → BGV Manager (39) notifies institution → **G-04** institution record updated
+1. Institution submits request via portal → `bgv_verification` created (status: `DOCUMENTS_PENDING`) → **G-02** queue
+2. BGV Executive (40) collects documents → **G-03** document checklist → status: `DOCUMENTS_RECEIVED`
+3. Documents complete → BGV Executive marks `READY_FOR_VENDOR` → selects vendor → submits → status: `VENDOR_SENT`
+4. Vendor returns CLEAR → status: `VENDOR_RETURNED` → BGV Executive marks CLEAR → status: `COMPLETE` → `bgv_staff.bgv_status = CLEAR` → **G-04** coverage % updates
+5. Vendor returns FLAGGED → status: `VENDOR_RETURNED` → BGV Executive submits for review → status: `AWAITING_SUPERVISOR_REVIEW`
+6. BGV Ops Supervisor (92) approves FLAGGED → status: `COMPLETE` → BGV Manager (39) notified → institution notification within 24h SLA → **G-04** updated
 
-### Workflow 2 — POCSO Flag
-1. Vendor result: `pocso_flag = true` → Celery auto-creates `bgv_pocso_case` → **G-06** POCSO queue
-2. POCSO Compliance Officer (41) / POCSO Reporting Officer (78) reviews case → **G-06** case detail
-3. Officer files NCPCR report → `ncpcr_ref` stored → `ncpcr_reported = true`
-4. Officer notifies institution → `institution_notified = true`
-5. BGV Manager (39) suspends institution access for that staff member if needed
+### Workflow 2 — POCSO Flag (two paths)
+**Path A — Vendor auto-flag:**
+1. Vendor webhook delivers result with `pocso_flag = true`
+2. Celery `create_pocso_case_from_verification` fires: checks for existing open case on same `staff_id + verification_id`; if none → creates `bgv_pocso_case` → status: `OPEN`
+3. POCSO Officer (41) / Reporting Officer (78) alerted in-app → **G-06** POCSO queue
+
+**Path B — Supervisor manual detection:**
+1. Vendor result FLAGGED (without pocso_flag) → BGV Ops Supervisor reviewing in **G-03**
+2. Supervisor checks "POCSO offense" checkbox → sets `bgv_verification.pocso_flag = true` + `pocso_offense_type`
+3. On [Confirm Approval]: same Celery task fires with deduplication check
+
+**Both paths then follow:**
+4. Officer reviews case → **G-06** case detail
+5. Files NCPCR report (< 24h) + FIR with local police + SCWC notification per jurisdiction
+6. Institution notified → staff access suspended if applicable
+7. Case closed with NCPCR ref + FIR ref + closure reason
 
 ### Workflow 3 — Renewal Pipeline
-1. Celery nightly: identifies verifications with `expiry_date ≤ today + 30 days`
-2. Creates `bgv_verification` (type: RENEWAL, status: DOCUMENTS_PENDING)
-3. Institution notified via notification hub
-4. Renewal appears in **G-02** queue with "RENEWAL DUE" badge
-5. Processed same as initial; CLEAR status maintained until renewal result received
+1. Celery `auto_create_bgv_renewals` (nightly 01:00 IST): identifies `bgv_staff` where `current_verification.expiry_date ≤ today + renewal_lead_days` AND no active RENEWAL/RE_VERIFICATION in progress
+2. Creates `bgv_verification` (type: `RENEWAL`, status: `DOCUMENTS_PENDING`, assigned_to_id: NULL)
+3. Institution admin notified via notification hub
+4. Renewal appears in **G-02** queue as "RENEWAL DUE" with amber badge; distributed by Supervisor (92)
+5. Processed same as initial; existing CLEAR status retained until renewal completes
 
 ### Workflow 4 — Institution Non-Compliance Escalation
 1. **G-04** shows institution with `compliance_status = NON_COMPLIANT`
-2. BGV Manager escalates → `bgv_institution_compliance.escalated = true`
-3. Escalation triggers in-app alert to Customer Success (Div J) for follow-up
-4. If unresolved after N days → BGV Manager can request platform access restriction via Platform Admin (10)
+2. If `auto_escalate_noncompliant_days > 0`: Celery `auto_escalate_noncompliant_institutions` (nightly 07:00 IST) sets `compliance_status = ESCALATED` after N days
+3. BGV Manager can also manually escalate → in-app alert to Customer Success Manager (53)
+4. If unresolved after escalation: BGV Manager requests platform access restriction via Platform Admin (10)
+5. Resolution: when institution reaches 100% coverage → `COMPLIANT`; escalation cleared automatically

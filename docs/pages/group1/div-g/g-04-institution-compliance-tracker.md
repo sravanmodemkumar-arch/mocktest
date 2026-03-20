@@ -202,6 +202,56 @@ Used when institution notifies BGV team of a new hire who needs BGV, but institu
 
 ---
 
+### Section F — Bulk Staff Import (CSV)
+
+Used for institution onboarding when multiple staff need BGV simultaneously (new institution onboarding, large coaching centre with 50+ staff, or initial launch where entire existing staff base needs verification).
+
+**[Import Staff from CSV]** button (BGV Manager, Supervisor only).
+
+**Step 1 — Download template:**
+[Download CSV Template] — provides a header row with all required columns.
+
+**Required CSV columns:**
+| Column | Notes |
+|---|---|
+| `institution_bgv_ref` | Institution's own HR ID for this staff |
+| `full_name` | Will be AES-256 encrypted on import |
+| `role_title` | — |
+| `department` | Optional |
+| `date_of_joining` | YYYY-MM-DD |
+| `has_minor_access` | `yes` or `no` — required |
+
+**Step 2 — Upload CSV:**
+- File picker: .csv only; max 5MB; max 500 rows per upload
+- Validation runs client-side preview before server submission
+
+**Step 3 — Preview & Validate:**
+Table showing all rows with validation status:
+- ✅ Valid: ready to import
+- ⚠️ Duplicate detected: `institution_bgv_ref` already exists for this institution — shows existing record
+- ❌ Error: missing required field, invalid date format, etc.
+
+Row-level errors shown inline. Cannot proceed if any ❌ errors exist.
+
+**Duplicate handling:** User selects action for ⚠️ rows: Skip (default) / Update existing record.
+
+**Step 4 — Assign & Import:**
+| Option | Notes |
+|---|---|
+| Assign all to | Select specific BGV Executive, or "Leave unassigned" |
+| Create BGV requests | Toggle ON (default) — creates `bgv_verification` (INITIAL, DOCUMENTS_PENDING) for each imported staff with `has_minor_access = true` |
+
+**[Confirm Import]:**
+- Batch creates `bgv_staff` records (encrypted name)
+- Batch creates `bgv_verification` records for applicable staff
+- Progress bar: "Importing {N} staff…"
+- ✅ "{N} staff imported — {M} BGV requests created" toast 5s
+- Error summary shown if any rows failed post-import
+
+**Import logged in `bgv_audit_log`:** `action = BULK_IMPORT`, `note = "CSV import: {N} staff created, {M} duplicates skipped"`.
+
+---
+
 ## 5. Access Control
 
 | Gate | Rule |
@@ -212,6 +262,7 @@ Used when institution notifies BGV team of a new hire who needs BGV, but institu
 | [Escalate Institution] | BGV Manager (39), Platform Admin (10) |
 | [Send Bulk Reminder] | BGV Manager (39), Supervisor (92) |
 | [Add Staff Member] | BGV Manager (39), Supervisor (92) |
+| [Import Staff from CSV] | BGV Manager (39), Supervisor (92) |
 | [Export Compliance Report CSV] | BGV Manager (39), POCSO Compliance Officer (41), Platform Admin (10) |
 
 ---

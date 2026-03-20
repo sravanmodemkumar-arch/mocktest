@@ -175,10 +175,12 @@ Each entry shows:
 **Standard action steps expected:**
 1. Case Created (auto from BGV result or manual)
 2. Case Under Review (POCSO Officer picks up case)
-3. Institution Notified
-4. NCPCR Report Filed
-5. Employment Suspended (if applicable)
-6. Case Closed
+3. FIR Filed with Local Police (POCSO Section 19(1))
+4. Institution Notified
+5. NCPCR Report Filed
+6. SCWC Notified (State Child Welfare Committee — jurisdiction of the institution's state)
+7. Employment Suspended (if applicable)
+8. Case Closed
 
 Progress indicator shows which steps are complete vs pending.
 
@@ -213,6 +215,43 @@ The primary workflow for mandatory reporting.
 
 **If NCPCR ref not yet received:** [Mark Report Filed — Ref Pending] option. Sets `ncpcr_reported = true` with `ncpcr_ref = PENDING`. POCSO Officer must update with actual ref within 48h (system reminder sent).
 
+#### Police Reporting (FIR) Section
+
+**POCSO Act Section 19(1) mandates reporting to local police. This is separate from and in addition to NCPCR.**
+
+**FIR Filing Form:**
+| Field | Control | Notes |
+|---|---|---|
+| Police Station | Text | Name and location of station with jurisdiction over the institution |
+| FIR Reference Number | Text | FIR number from police station |
+| FIR Filed Date | Date | — |
+| Reporting Officer | Text | Name of police officer who received the complaint |
+| Notes | Textarea (max 300 chars) | Any additional details |
+
+**[Mark FIR Filed]:**
+- Sets `police_reported = true`, `fir_ref`, `fir_filed_at`, `police_station`
+- Logged in `bgv_audit_log` with `action = FIR_FILED`
+
+**Overdue warning:** If NCPCR reported but `police_reported = false` for > 48h: amber inline warning: "⚠️ FIR with local police not yet recorded. POCSO Section 19(1) requires police notification."
+
+#### State Child Welfare Committee (SCWC) Section
+
+**POCSO Act also requires reporting to the SCWC of the state where the offense occurred.**
+
+**SCWC Filing Form:**
+| Field | Control | Notes |
+|---|---|---|
+| State | Select | Pre-filled from institution's registered state |
+| SCWC Name | Auto-filled | e.g. "Maharashtra State Commission for Protection of Child Rights" — from G-08 SCWC contacts config |
+| SCWC Reference Number | Text | Reference number from SCWC acknowledgement |
+| Report Date | Date | — |
+| Reporting Method | Select: EMAIL · PORTAL · FAX | — |
+| Notes | Textarea | — |
+
+**[Mark SCWC Notified]:**
+- Sets `scwc_reported = true`, `scwc_ref`, `scwc_reported_at`
+- Logged in audit log
+
 ---
 
 #### Institution Actions Tab
@@ -245,7 +284,7 @@ Actions to be taken with the institution.
 
 All documents attached to this POCSO case.
 
-Columns: Document Name | Type (VENDOR_REPORT / NCPCR_FILING / CORRESPONDENCE / OTHER) | Uploaded By | Date | [View] | [Delete]
+Columns: Document Name | Type (VENDOR_REPORT / NCPCR_FILING / FIR_COPY / SCWC_CORRESPONDENCE / CORRESPONDENCE / OTHER) | Uploaded By | Date | [View] | [Delete]
 
 [+ Attach Document] — upload supporting documents.
 
@@ -343,7 +382,9 @@ Available when all required steps are complete.
 | POCSO Compliance Officer on leave — case stale | BGV Manager (39) receives escalation after 24h of no action on OPEN cases. Manager can reassign handler. |
 | Duplicate case from vendor + manual flag | Deduplication check as described. If two separate cases exist for same staff: merge prompt for POCSO Officer. Merge retains most recent case ref; links both audit logs. |
 | Vendor report was false positive (verified by police) | Override flow: [Mark as False Positive] — requires BGV Manager + POCSO Officer joint confirmation. Adds note "CLEARED — false positive confirmed by {authority}". Case status → CLOSED with closure type FALSE_POSITIVE_CONFIRMED. BGV staff status reverted to CLEAR. |
-| Institution challenges the offense | Legal Officer (75) adds read-only note. BGV Manager adds note. No system-level action. Must be resolved offline. |
+| Institution challenges the offense | Formal dispute process: institution must submit written challenge within 48h of notification via institution portal. BGV Manager receives challenge; Legal Officer (75) reviews. If contested: BGV Manager adds "DISPUTE_RECEIVED" note to case; 7-day review window. If false positive confirmed → [Mark as False Positive] flow. If offense upheld → Legal Officer (75) adds formal rejection note; BGV Manager notifies institution in writing. Dispute state is not a system status — tracked via case notes and communication log. |
+| NCPCR portal offline at time of filing | [Mark Report Filed — Ref Pending] option (same as no-ref flow). Note added: "NCPCR portal unavailable at time of filing — filed via {method}." Retry for confirmation ref within 72h. |
+| Staff was mid-BGV when terminated | BGV Executive can [Cancel BGV Request] from G-03. If POCSO flag detected after termination → case still created. Institution notification adjusted with note: "Staff no longer employed as of {date} — case reported for record and institutional review." Case proceeds to NCPCR reporting regardless. |
 
 ---
 
@@ -354,6 +395,8 @@ Available when all required steps are complete.
 - Checks all cases with `action_status IN (OPEN, UNDER_REVIEW)` and `created_at < now() - 24h`
 - If `ncpcr_reported = false`: sends in-app notification to POCSO Officer (41), POCSO Reporting Officer (78), BGV Manager (39): "POCSO case {case_ref} has exceeded 24h without NCPCR report. Immediate action required."
 - Notification escalation: if still unreported after 48h → Platform Admin (10) and Legal Officer (75) notified.
+- Checks `ncpcr_ref = PENDING` cases older than 48h → sends reminder to POCSO Officer: "NCPCR reference number not yet recorded for {case_ref}."
+- Checks `police_reported = false` and `ncpcr_reported = true` and case > 48h old → amber reminder to POCSO Officer: "FIR with local police not yet recorded for {case_ref}."
 
 ---
 
@@ -369,6 +412,8 @@ Available when all required steps are complete.
 |---|---|
 | Case created | 🚨 "POCSO case created: {case_ref}" (6s, persistent) |
 | NCPCR report filed | ✅ "NCPCR report recorded — case ref: {ncpcr_ref}" (5s) |
+| FIR filed | ✅ "FIR recorded — ref: {fir_ref}, {police_station}" (4s) |
+| SCWC notified | ✅ "SCWC notification recorded — ref: {scwc_ref}" (4s) |
 | Institution notified | ✅ "Institution notification recorded" (4s) |
 | Staff suspended | ⚠️ "Staff access suspended — Platform Admin notified" (5s) |
 | Case closed | ✅ "POCSO case {case_ref} closed" (4s) |

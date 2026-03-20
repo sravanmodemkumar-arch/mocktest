@@ -91,6 +91,13 @@ Core BGV policy settings.
 | Suspend staff access on POCSO case creation | Toggle | OFF | If ON: staff institution portal access suspended automatically on POCSO case creation (before review). Aggressive. BGV Manager review required before enabling. |
 | POCSO case closure requires NCPCR confirmation | Toggle (locked ON) | ON | Cannot close a POCSO case without `ncpcr_reported = true`. Platform policy. |
 
+#### Section D — Vendor Defaults
+
+| Setting | Control | Default | Notes |
+|---|---|---|---|
+| Default vendor | Searchable select | — | Pre-selected in G-02 vendor submission modal. Only ACTIVE + HEALTHY vendors shown. If default vendor is DOWN at submission time, operator must select manually. |
+| Default checks | Multi-select checkboxes | CRIMINAL · ADDRESS · POLICE_CLEARANCE | Check types pre-selected in G-02 vendor modal for new verifications. Can be overridden per verification. |
+
 **[Save Verification Policy]** ✅ "Verification policy saved — applies to new verifications" toast 4s.
 
 ---
@@ -133,13 +140,16 @@ SLA targets for each stage of the verification process.
 
 These are EduForge BGV team targets — independent of vendor SLA.
 
+**SLA calculation method:** `sla_uses_working_days = true` by default. Working days = Monday–Friday IST, excluding Indian national public holidays. If set to false, SLA is calculated in calendar hours/days.
+
 | Stage | SLA Target | Control | Default | Notes |
 |---|---|---|---|---|
-| Document collection (from request to docs complete) | Days | Number input | 5 | If institution hasn't uploaded documents within N working days: overdue alert in G-02. |
-| Document review (from docs received to ready for vendor) | Hours | Number input | 4 | BGV Executive review SLA. |
-| Vendor submission (from ready to vendor sent) | Hours | Number input | 2 | Time from READY_FOR_VENDOR to VENDOR_SENT. |
-| Result review (from vendor returned to final result) | Hours | Number input | 8 | BGV Executive + Supervisor review after vendor returns result. |
-| FLAGGED notification to institution | Hours | Number input | 24 | After Supervisor approves FLAGGED: BGV Manager must notify institution within N hours. |
+| Document collection (from request to docs complete) | Working days | Number input | 5 | If institution hasn't uploaded documents within N working days: overdue alert in G-02. |
+| Document review (from docs received to ready for vendor) | Working hours | Number input | 4 | BGV Executive review SLA. |
+| Vendor submission (from ready to vendor sent) | Working hours | Number input | 2 | Time from READY_FOR_VENDOR to VENDOR_SENT. |
+| Result review (from vendor returned to final result) | Working hours | Number input | 8 | BGV Executive + Supervisor review after vendor returns result. |
+| FLAGGED notification to institution | Hours | Number input | 24 | After Supervisor approves FLAGGED: BGV Manager must notify institution within N hours. Calendar hours (not working hours) — urgency. |
+| SLA calculation mode | Toggle | Working days (ON) | ON = working days Mon–Fri IST; OFF = calendar days/hours. |
 
 **Validation:** Each SLA must be ≥ 1 (except document collection which is in days, min 1).
 
@@ -225,6 +235,9 @@ Live status of Celery tasks powering Division G automation.
 | `auto_create_bgv_renewals` | Nightly 01:00 IST | {datetime} | Next 01:00 IST | ✅ OK / ❌ FAILED |
 | `monitor_pocso_case_sla` | Hourly | {datetime} | {datetime} | ✅ OK / ❌ FAILED |
 | `auto_escalate_noncompliant_institutions` | Nightly 07:00 IST | {datetime} | Next 07:00 IST | ✅ OK / ❌ FAILED |
+| `notify_manager_flagged_pending` | Hourly | {datetime} | {datetime} | ✅ OK / ❌ FAILED |
+| `retry_failed_vendor_submissions` | Hourly | {datetime} | {datetime} | ✅ OK / ❌ FAILED |
+| `archive_and_purge_old_bgv_records` | Monthly (1st, 03:00 IST) | {datetime} | Next 1st 03:00 | ✅ OK / ❌ FAILED |
 
 Stale detection: if `last_run` > 2× expected interval and task hasn't run: ⚠️ amber "Expected to run — may be delayed."
 
@@ -234,7 +247,46 @@ Refreshed every 60s via HTMX.
 
 ---
 
-### Tab 6 — Change Log
+### Tab 6 — Data Retention & SCWC Config
+
+#### Section A — Data Retention Policy
+
+DPDPA 2023 compliance. Controls when BGV records are purged or anonymised. Celery `archive_and_purge_old_bgv_records` runs monthly.
+
+| Record Type | Retention | Control | Default | Notes |
+|---|---|---|---|---|
+| CLEAR verifications (after expiry) | Years | Number input | 3 | Documents purged from R2 at expiry + N years. Record anonymised (name → [REDACTED]). |
+| FLAGGED verifications (non-POCSO) | Years | Number input | 5 | — |
+| INCONCLUSIVE verifications | Years | Number input | 3 | — |
+| POCSO cases (post-closure) | Years (locked) | 10 | Regulatory minimum — cannot be reduced. Record retained, anonymised only on court order. |
+| Vendor API transaction logs | Years | Number input | 2 | Payload hash purged; counts retained for performance reports. |
+| Audit log entries | Years (locked) | 7 | Cannot be reduced — legal requirement. |
+
+**Note on purge process:** Purge replaces `bgv_staff.full_name` with `[REDACTED]`, removes all `bgv_document.file_url` references (R2 files deleted), and logs a `DATA_PURGED` entry in `bgv_audit_log`. Counts and outcome data are retained for compliance reporting.
+
+**[Save Retention Config]** ✅ "Retention policy saved" toast 4s.
+
+#### Section B — State Child Welfare Committee (SCWC) Contacts
+
+POCSO cases require SCWC notification per the institution's state jurisdiction. Configure SCWC contact info per state.
+
+| Column | Notes |
+|---|---|
+| State | Indian state name |
+| SCWC Name | Full committee name |
+| Contact Email | — |
+| Portal URL | SCWC reporting portal URL (if available) |
+| Notes | Any special reporting procedures |
+
+**[+ Add State SCWC]** — add a row for a state. [Edit] [Delete] per row.
+
+Minimum required: states where EduForge has registered institutions. BGV Manager and POCSO Officer should review against current institution distribution.
+
+**[Save SCWC Config]** ✅ "SCWC contacts saved" toast 3s.
+
+---
+
+### Tab 7 — Change Log
 
 Read-only audit trail of all configuration changes.
 

@@ -307,7 +307,9 @@ Pagination: 25 rows. [Export Audit CSV] (BGV Manager, Platform Admin only).
 | Vendor report PDF missing (URL null) | [Download Vendor Report] button hidden. Warning: "Vendor did not attach a report document. Request report from vendor." |
 | Staff record no longer has_minor_access | Yellow info banner: "This staff member's minor access has been removed. BGV is still valid for record-keeping purposes." |
 | Verification history shows gap | ⚠️ Gap warning as described in Tab 4. BGV Manager notified. |
-| Two supervisors open approval panel simultaneously | Last approval wins. Second approval: "This decision was already approved by {user}. Reload to see final status." |
+| Two supervisors open approval panel simultaneously | Optimistic locking via `bgv_verification.version` field: approval modal fetches current version on open; submit includes version; if version mismatch on save → "This verification was updated by another session since you opened the approval panel. Reload to see latest state." POCSO checkbox conflict (one sets POCSO, other doesn't): reject concurrent submission; user must reload and re-enter. |
+| Staff terminated mid-BGV (VENDOR_SENT or earlier) | BGV Executive or Supervisor can [Cancel BGV Request] from Overview tab. Verification status → `CANCELLED`. `bgv_staff.bgv_status` → `NOT_INITIATED`. Audit note required. If POCSO flag detected in a subsequent vendor return (for a cancelled verification) → POCSO case still auto-created regardless of employment status. |
+| Re-verification also returns INCONCLUSIVE (second vendor) | BGV Manager (39) must review manually. No third automatic re-verification. Options: [Accept as Inconclusive] (institution notified, staff access at institution's discretion), [Request Third-Party Adjudication] (added to notes — manual process), or [Override: CLEAR] (Supervisor — requires strong documented rationale). |
 
 ---
 
