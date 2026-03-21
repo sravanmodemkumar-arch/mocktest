@@ -129,6 +129,8 @@ Group HQ  ›  Transport Management  ›  Driver & Conductor Registry
 - **Fields:** Driver/Conductor Name · Branch · Route (searchable — shows current driver assignment) · Effective Date · Duty Type (Morning / Afternoon / Both) · Notes
 - **Validation:** Cannot assign driver with expired licence · Cannot assign to route in different branch without Director approval
 
+> **Audit trail:** All write actions (route assignment, suspension, status changes) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.4 Modal: `suspend-staff`
 - **Trigger:** Actions → Suspend
 - **Width:** 480px
@@ -142,9 +144,13 @@ Group HQ  ›  Transport Management  ›  Driver & Conductor Registry
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Record synced | "Driver/conductor data synced from HRMS. [N] records updated." | Info | 4s |
+| Sync failed | "HRMS sync failed. Check integration configuration and retry." | Error | 5s |
 | Route assigned | "[Name] assigned to Route [Name]." | Success | 4s |
+| Route assignment failed | "Failed to assign route. Check driver licence compliance or route availability." | Error | 5s |
 | Staff suspended | "[Name] suspended. Branch transport in-charge notified." | Warning | 6s |
+| Suspension failed | "Failed to suspend staff record. Please retry." | Error | 5s |
 | Training reminder sent | "Road safety training reminder sent to [N] staff." | Info | 4s |
+| Reminder failed | "Failed to send training reminders. Please retry." | Error | 5s |
 
 ---
 
@@ -154,7 +160,8 @@ Group HQ  ›  Transport Management  ›  Driver & Conductor Registry
 |---|---|---|---|
 | No staff records | "No Driver/Conductor Records" | "Sync from HRMS to populate the registry." | [Trigger Sync ↻] |
 | No compliance issues | "All Staff Compliant" | "All drivers have valid licences, cleared BGV, and current training." | — |
-| No results for filter | "No Staff Match Filters" | "Adjust branch, role, or status filters." | [Clear Filters] |
+| No filter results | "No Staff Match Filters" | "Adjust branch, role, or status filters." | [Clear Filters] |
+| No search results | "No Staff Found for '[term]'" | "Check the name, employee ID, or licence number." | [Clear Search] |
 
 ---
 
@@ -205,8 +212,11 @@ Group HQ  ›  Transport Management  ›  Driver & Conductor Registry
 | Filter apply | `click` | GET `.../staff/?{filters}` | `#staff-table-section` | `innerHTML` |
 | Tab switch (Drivers/Conductors) | `click` | GET `.../staff/?role={type}` | `#staff-table-section` | `innerHTML` |
 | Open detail drawer | `click` on Name | GET `.../staff/{id}/` | `#drawer-body` | `innerHTML` |
+| Sort | `click` on header | GET `.../staff/?sort={col}&dir={asc/desc}` | `#staff-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../staff/?page={n}` | `#staff-table-section` | `innerHTML` |
 | Assign route submit | `click` | POST `.../staff/{id}/assign-route/` | `#staff-row-{id}` | `outerHTML` |
 | Suspend confirm | `click` | POST `.../staff/{id}/suspend/` | `#staff-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../staff/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

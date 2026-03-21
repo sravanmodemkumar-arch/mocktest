@@ -132,7 +132,17 @@ Sortable. Colour-code: Utilisation < 50% = yellow (underutilised) · > 100% = re
 
 ---
 
-## 6. Empty States
+## 6. Toast Messages
+
+| Action | Toast | Type | Duration |
+|---|---|---|---|
+| Export initiated | "Analytics report export is being prepared." | Info | 4s |
+| Export ready | "Analytics report export ready. Download below." | Success | 4s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
+
+---
+
+## 7. Empty States
 
 | Condition | Heading | Description |
 |---|---|---|
@@ -141,7 +151,7 @@ Sortable. Colour-code: Utilisation < 50% = yellow (underutilised) · > 100% = re
 
 ---
 
-## 7. Loader States
+## 8. Loader States
 
 | Trigger | Loader Type |
 |---|---|
@@ -151,7 +161,7 @@ Sortable. Colour-code: Utilisation < 50% = yellow (underutilised) · > 100% = re
 
 ---
 
-## 8. Role-Based UI Visibility
+## 9. Role-Based UI Visibility
 
 | Element | Transport Director G3 | Fleet Manager G3 | Safety Officer G3 | CFO G1 |
 |---|---|---|---|---|
@@ -164,7 +174,7 @@ Sortable. Colour-code: Utilisation < 50% = yellow (underutilised) · > 100% = re
 
 ---
 
-## 9. API Endpoints
+## 10. API Endpoints
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
@@ -176,6 +186,21 @@ Sortable. Colour-code: Utilisation < 50% = yellow (underutilised) · > 100% = re
 | GET | `/api/v1/group/{group_id}/transport/analytics/route-efficiency/` | JWT (G3+) | Route efficiency matrix |
 | GET | `/api/v1/group/{group_id}/transport/analytics/gps-coverage/` | JWT (G3+) | GPS trend |
 | GET | `/api/v1/group/{group_id}/transport/analytics/driver-compliance/` | JWT (G3+) | Compliance trend |
+| GET | `/api/v1/group/{group_id}/transport/analytics/export/` | JWT (G3+) | Export full analytics report |
+
+## 11. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Date range filter | `change` | GET `.../analytics/kpi-summary/?{filters}` | `#kpi-summary-row` | `innerHTML` |
+| Branch filter | `change` | GET `.../analytics/kpi-summary/?{filters}` | `#kpi-summary-row` | `innerHTML` |
+| Fleet utilisation chart reload | `change` on filters | GET `.../analytics/fleet-utilisation/?{filters}` | `#fleet-utilisation-chart` | `innerHTML` |
+| On-time heatmap reload | `change` on filters | GET `.../analytics/on-time-heatmap/?{filters}` | `#ontime-heatmap` | `innerHTML` |
+| Safety chart reload | `change` on filters | GET `.../analytics/incidents/?{filters}` | `#safety-chart` | `innerHTML` |
+| Cost chart reload | `change` on filters | GET `.../analytics/costs/?{filters}` | `#cost-chart` | `innerHTML` |
+| Route efficiency sort | `click` on header | GET `.../analytics/route-efficiency/?sort={col}&dir={asc/desc}` | `#route-efficiency-table` | `innerHTML` |
+| Open branch drill-down | `click` on heatmap cell | GET `.../analytics/branches/{id}/?month={m}` | `#drawer-body` | `innerHTML` |
+| Export report | `click` | GET `.../analytics/export/?{filters}` | `#export-btn` | `outerHTML` |
 
 ---
 

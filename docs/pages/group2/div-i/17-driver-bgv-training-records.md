@@ -115,8 +115,11 @@ Group HQ  ›  Transport Management  ›  Driver BGV & Training Records
 |---|---|---|---|
 | BGV updated — cleared | "[Name]'s BGV status updated: Cleared." | Success | 4s |
 | BGV updated — failed | "[Name]'s BGV FAILED. Route assignment removed. Director notified." | Warning | 6s |
+| BGV update failed | "Failed to update BGV status. Please retry." | Error | 5s |
 | Training logged | "Training record logged for [Name] — [Training Type]." | Success | 4s |
+| Training log failed | "Failed to log training record. Check completion date and certificate details." | Error | 5s |
 | Bulk training reminder | "Training reminders sent to [N] staff." | Info | 4s |
+| Reminder failed | "Failed to send training reminders. Please retry." | Error | 5s |
 
 ---
 
@@ -126,6 +129,8 @@ Group HQ  ›  Transport Management  ›  Driver BGV & Training Records
 |---|---|---|---|
 | All BGV cleared | "All Staff BGV Cleared" | "No pending or failed BGV records." | — |
 | All training current | "All Training Current" | "All staff have completed required training within validity period." | — |
+| No filter results (BGV) | "No Staff Match Filters" | "Adjust branch or BGV status filters." | [Clear Filters] |
+| No search results | "No Staff Found for '[term]'" | "Check the name or employee ID." | [Clear Search] |
 
 ---
 
@@ -161,6 +166,26 @@ Group HQ  ›  Transport Management  ›  Driver BGV & Training Records
 | POST | `/api/v1/group/{group_id}/transport/staff/training/` | JWT (G3+) | Log training |
 | POST | `/api/v1/group/{group_id}/transport/staff/training/bulk-reminder/` | JWT (G3+) | Send reminders |
 | GET | `/api/v1/group/{group_id}/transport/staff/bgv-training/kpis/` | JWT (G3+) | KPI cards |
+| GET | `/api/v1/group/{group_id}/transport/staff/bgv/export/` | JWT (G3+) | Export BGV records |
+| GET | `/api/v1/group/{group_id}/transport/staff/training/export/` | JWT (G3+) | Export training records |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| BGV table filter | `click` | GET `.../bgv/?{filters}` | `#bgv-table-section` | `innerHTML` |
+| BGV table sort | `click` on header | GET `.../bgv/?sort={col}&dir={asc/desc}` | `#bgv-table-section` | `innerHTML` |
+| BGV table pagination | `click` | GET `.../bgv/?page={n}` | `#bgv-table-section` | `innerHTML` |
+| Training tab switch | `click` | GET `.../training/?type={tab}` | `#training-table-section` | `innerHTML` |
+| Training table sort | `click` on header | GET `.../training/?sort={col}&dir={asc/desc}` | `#training-table-section` | `innerHTML` |
+| Training table pagination | `click` | GET `.../training/?page={n}` | `#training-table-section` | `innerHTML` |
+| BGV search | `input delay:300ms` | GET `.../bgv/?q={val}` | `#bgv-table-body` | `innerHTML` |
+| BGV update submit | `click` | PATCH `.../staff/{id}/bgv/` | `#bgv-row-{id}` | `outerHTML` |
+| Log training submit | `click` | POST `.../training/` | `#training-table-section` | `innerHTML` |
+| Send bulk training reminder | `click` | POST `.../training/bulk-reminder/` | `#reminder-btn` | `outerHTML` |
+| Export | `click` | GET `.../bgv/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (BGV update, training log) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

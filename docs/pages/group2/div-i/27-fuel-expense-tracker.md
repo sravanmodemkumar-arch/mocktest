@@ -118,8 +118,11 @@ Group HQ  ›  Transport Management  ›  Fuel & Expense Tracker
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Fuel fill recorded | "Fuel fill recorded for [Bus No]. Amount: ₹[N]." | Success | 4s |
+| Fuel fill failed | "Failed to record fuel fill. Check odometer reading and litres filled." | Error | 5s |
 | Expense recorded | "Expense recorded for [Bus No]." | Success | 4s |
+| Expense failed | "Failed to record expense. Please retry." | Error | 5s |
 | Efficiency alert | "Fuel efficiency alert for [Bus No]. Fleet Manager notified." | Warning | 5s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
 
 ---
 
@@ -128,6 +131,8 @@ Group HQ  ›  Transport Management  ›  Fuel & Expense Tracker
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No records this month | "No Fuel Records This Month" | "Record the first fuel fill to start tracking." | [+ Record Fuel Fill] |
+| No filter results (fuel) | "No Fuel Records Match Filters" | "Adjust branch, bus number, or date range filters." | [Clear Filters] |
+| No filter results (expenses) | "No Expense Records Match Filters" | "Adjust branch or expense type filters." | [Clear Filters] |
 
 ---
 
@@ -164,6 +169,24 @@ Group HQ  ›  Transport Management  ›  Fuel & Expense Tracker
 | POST | `/api/v1/group/{group_id}/transport/expenses/` | JWT (G3+) | Record expense |
 | GET | `/api/v1/group/{group_id}/transport/fuel/kpis/` | JWT (G3+) | KPI cards |
 | GET | `/api/v1/group/{group_id}/transport/fuel/cost-charts/` | JWT (G3+) | Chart data |
+| GET | `/api/v1/group/{group_id}/transport/fuel/export/` | JWT (G3+) | Export fuel records |
+| GET | `/api/v1/group/{group_id}/transport/expenses/export/` | JWT (G3+) | Export expense records |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Fuel table filter | `click` | GET `.../fuel/?{filters}` | `#fuel-table-section` | `innerHTML` |
+| Fuel table sort | `click` on header | GET `.../fuel/?sort={col}&dir={asc/desc}` | `#fuel-table-section` | `innerHTML` |
+| Fuel table pagination | `click` | GET `.../fuel/?page={n}` | `#fuel-table-section` | `innerHTML` |
+| Expense table filter | `click` | GET `.../expenses/?{filters}` | `#expense-table-section` | `innerHTML` |
+| Expense table sort | `click` on header | GET `.../expenses/?sort={col}&dir={asc/desc}` | `#expense-table-section` | `innerHTML` |
+| Expense table pagination | `click` | GET `.../expenses/?page={n}` | `#expense-table-section` | `innerHTML` |
+| Record fuel fill submit | `click` | POST `.../fuel/` | `#fuel-table-section` | `innerHTML` |
+| Record expense submit | `click` | POST `.../expenses/` | `#expense-table-section` | `innerHTML` |
+| Export fuel | `click` | GET `.../fuel/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (record fuel fill, record expense) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

@@ -152,8 +152,11 @@ Each section listed — click to jump.
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Report generated | "Transport MIS for [Month/Year] generated." | Success | 4s |
+| Generate failed | "Failed to generate MIS report. Ensure all data sources are available." | Error | 5s |
 | Report exported | "MIS report exported as PDF." | Info | 4s |
+| Export failed | "Failed to export report. Please try again." | Error | 5s |
 | Report distributed | "Transport MIS sent to [N] recipients." | Success | 4s |
+| Distribute failed | "Failed to send MIS report. Check recipient email addresses." | Error | 5s |
 
 ---
 
@@ -165,7 +168,18 @@ Each section listed — click to jump.
 
 ---
 
-## 10. Role-Based UI Visibility
+## 10. Loader States
+
+| Trigger | Loader Type |
+|---|---|
+| Page load | Skeleton: report config form + history table |
+| Generate report | Full-page spinner → replaces with report view on success |
+| Report history table | Table body skeleton |
+| Distribute modal | 480px skeleton |
+
+---
+
+## 11. Role-Based UI Visibility
 
 | Element | Transport Director G3 | Fleet Manager G3 | Fee Manager G3 | CFO G1 |
 |---|---|---|---|---|
@@ -178,7 +192,7 @@ Each section listed — click to jump.
 
 ---
 
-## 11. API Endpoints
+## 12. API Endpoints
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
@@ -188,6 +202,19 @@ Each section listed — click to jump.
 | GET | `/api/v1/group/{group_id}/transport/reports/mis/{id}/pdf/` | JWT (G3+) | Download PDF |
 | POST | `/api/v1/group/{group_id}/transport/reports/mis/{id}/distribute/` | JWT (G3+) | Send to recipients |
 | PATCH | `/api/v1/group/{group_id}/transport/reports/mis/{id}/` | JWT (G3+) | Edit issues section |
+
+## 13. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Generate report submit | `click` | POST `.../mis/generate/` | `#report-view` | `innerHTML` |
+| Report history pagination | `click` | GET `.../mis/?page={n}` | `#report-history-section` | `innerHTML` |
+| Open report detail | `click` on Month/Year | GET `.../mis/{id}/` | `#report-view` | `innerHTML` |
+| Edit issues section submit | `click` | PATCH `.../mis/{id}/` | `#issues-section` | `innerHTML` |
+| Distribute confirm | `click` | POST `.../mis/{id}/distribute/` | `#distribute-btn` | `outerHTML` |
+| Download PDF | `click` | GET `.../mis/{id}/pdf/` | `#pdf-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (generate, distribute report; edit issues section) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

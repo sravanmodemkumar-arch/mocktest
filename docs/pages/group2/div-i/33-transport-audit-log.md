@@ -124,6 +124,7 @@ Group HQ  ›  Transport Management  ›  Transport Audit Log
 |---|---|---|---|
 | Export initiated | "Audit log export is being prepared. You'll be notified when ready." | Info | 4s |
 | Export ready | "Audit log export ready. Download below." | Success | 4s |
+| Export failed | "Audit log export failed. Please try again or reduce the date range." | Error | 5s |
 
 ---
 
@@ -177,8 +178,10 @@ Group HQ  ›  Transport Management  ›  Transport Audit Log
 |---|---|---|---|---|
 | Search | `input delay:400ms` | GET `.../audit/?q={val}` | `#audit-table-body` | `innerHTML` |
 | Filter apply | `click` | GET `.../audit/?{filters}` | `#audit-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../audit/?sort={col}&dir={asc/desc}` | `#audit-table-section` | `innerHTML` |
 | Pagination | `click` | GET `.../audit/?page={n}` | `#audit-table-section` | `innerHTML` |
 | Open event detail | `click` on View | GET `.../audit/{id}/` | `#drawer-body` | `innerHTML` |
+| Export | `click` | GET `.../audit/export/?{filters}` | `#export-btn` | `outerHTML` |
 
 ---
 

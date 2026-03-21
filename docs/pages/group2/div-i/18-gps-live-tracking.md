@@ -155,8 +155,11 @@ Search in sidebar: bus number, route, driver name.
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | SOS acknowledged | "SOS for Bus [No] acknowledged. Emergency response initiated." | Warning | 10s |
+| SOS acknowledgement failed | "Failed to acknowledge SOS alert. Please retry immediately." | Error | 6s |
 | Offline alert sent | "Offline alert sent to Branch [Name] for Bus [No]." | Info | 4s |
+| Offline alert failed | "Failed to send offline alert. Check branch notification settings." | Error | 5s |
 | Geo-fence breach acknowledged | "Geo-fence breach acknowledged. Bus [No] back on route." | Info | 4s |
+| Acknowledgement failed | "Failed to acknowledge alert. Please retry." | Error | 5s |
 
 ---
 
@@ -212,7 +215,9 @@ Search in sidebar: bus number, route, driver name.
 | Bus positions auto-refresh | `every 30s` | GET `.../gps/live/` | `#bus-markers-data` | `innerHTML` (triggers JS map update) |
 | Alert badge refresh | `every 30s` | GET `.../gps/alerts/?active=true` | `#alert-count-badge` | `innerHTML` |
 | Bus sidebar filter | `input delay:300ms` | GET `.../gps/live/?q={val}` | `#bus-sidebar-list` | `innerHTML` |
+| Status filter (online/offline/alerts) | `click` | GET `.../gps/live/?status={val}` | `#bus-sidebar-list` | `innerHTML` |
 | Acknowledge SOS | `click` | POST `.../gps/alerts/{id}/acknowledge/` | `#sos-modal` | `outerHTML` |
+| Resolve alert | `click` | POST `.../gps/alerts/{id}/resolve/` | `#alert-row-{id}` | `outerHTML` |
 
 ---
 

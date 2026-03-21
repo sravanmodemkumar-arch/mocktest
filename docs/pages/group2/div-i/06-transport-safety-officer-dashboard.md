@@ -25,7 +25,9 @@ Scale: 200–500 buses · GPS monitoring for all buses during school hours · Sa
 | Group Transport Safety Officer | G3 | Full — all safety sections | Exclusive dashboard |
 | Group Transport Director | G3 | View — incidents and GPS | Via own dashboard |
 | Group Fleet Manager | G3 | View — maintenance overlap with safety | Read only |
-| All other roles | — | — | No access |
+| Group Route Planning Manager | G3 | ❌ No access — own dashboard at /routes/ | Redirect to Page 03 |
+| Group Transport Fee Manager | G3 | ❌ No access — own dashboard at /fees/ | Redirect to Page 04 |
+| Group Driver/Conductor HR | G0 | ❌ No EduForge login | See Page 05 |
 
 ---
 
@@ -146,6 +148,9 @@ Alert Types: Late Bus (> 15 min) · Geo-fence Breach · SOS Button Pressed · Ov
 | GPS alert escalated | "GPS offline alert escalated to [Branch] transport in-charge." | Warning | 6s |
 | Safety inspection scheduled | "Safety inspection scheduled for [N] vehicles at [Branch]." | Info | 4s |
 | Alert resolved | "Safety alert resolved. Route [Name] back on track." | Success | 4s |
+| Alert resolve failed | "Failed to resolve alert. Please retry." | Error | 5s |
+| Incident report failed | "Failed to submit incident report. Please retry." | Error | 5s |
+| Inspection schedule failed | "Failed to schedule inspection. Check vehicle status." | Error | 5s |
 
 ---
 
@@ -156,6 +161,8 @@ Alert Types: Late Bus (> 15 min) · Geo-fence Breach · SOS Button Pressed · Ov
 | No open incidents | "No Open Incidents" | "All transport safety incidents are resolved." | — |
 | All GPS online | "Full GPS Coverage" | "All buses are transmitting GPS signal." | — |
 | No alerts today | "No Safety Alerts Today" | "No active student safety alerts for today." | — |
+| Incidents table — no filter results | "No Incidents Match Filters" | "Adjust severity, type, or branch filters." | [Clear Filters] |
+| Incidents table — no search results | "No Incidents Found for '[term]'" | "Check the bus number or branch." | [Clear Search] |
 
 ---
 
@@ -205,8 +212,11 @@ Alert Types: Late Bus (> 15 min) · Geo-fence Breach · SOS Button Pressed · Ov
 | KPI + GPS auto-refresh | `every 3m` | GET `.../safety/kpi-cards/` | `#kpi-bar` | `innerHTML` |
 | GPS panel refresh | `every 3m` | GET `.../gps/live/` | `#gps-status-panel` | `innerHTML` |
 | Incidents table search | `input delay:300ms` | GET `.../incidents/?q={val}&status=open` | `#incidents-table-body` | `innerHTML` |
+| Incidents table sort | `click` on header | GET `.../incidents/?sort={col}&dir={asc/desc}&status=open` | `#incidents-table-section` | `innerHTML` |
+| Incidents table pagination | `click` | GET `.../incidents/?page={n}&status=open` | `#incidents-table-section` | `innerHTML` |
 | Report incident submit | `click` | POST `.../incidents/` | `#incidents-section` | `innerHTML` |
 | Resolve alert | `click` | POST `.../safety-alerts/{id}/resolve/` | `#alert-row-{id}` | `outerHTML` |
+| Export safety report | `click` | GET `.../safety/dashboard/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

@@ -22,8 +22,10 @@ The Fleet Manager ensures every vehicle in the group's fleet is roadworthy, lega
 |---|---|---|---|
 | Group Fleet Manager | G3 | Full — all vehicles, all branches | Exclusive dashboard |
 | Group Transport Director | G3 | View — fleet summary via own dashboard | Not this URL |
+| Group Route Planning Manager | G3 | ❌ No access — own dashboard at /routes/ | Redirect to Page 03 |
+| Group Transport Fee Manager | G3 | ❌ No access — own dashboard at /fees/ | Redirect to Page 04 |
+| Group Driver/Conductor HR | G0 | ❌ No EduForge login | See Page 05 |
 | Group Transport Safety Officer | G3 | Read — vehicle details for safety checks | View only |
-| All other transport roles | G3 | — | View own sections only |
 
 ---
 
@@ -150,6 +152,8 @@ Action options: Mark Renewal In Progress · Mark Renewed · Send Reminder to Bra
 - **Compliance:** All fitness/permit/insurance expiry dates
 - **Incidents:** Breakdown and accident history
 
+> **Audit trail:** All write actions (add vehicle, mark renewal, schedule maintenance, flag vehicle) are logged to [Transport Audit Log → Page 33].
+
 ---
 
 ## 7. Toast Messages
@@ -157,9 +161,13 @@ Action options: Mark Renewal In Progress · Mark Renewed · Send Reminder to Bra
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Vehicle added | "[Bus No] added to fleet registry." | Success | 4s |
+| Vehicle add failed | "Failed to add vehicle. Check for duplicate RC number." | Error | 5s |
 | Renewal marked | "Fitness certificate renewed for [Bus No]." | Success | 4s |
+| Renewal update failed | "Renewal update failed. Please try again." | Error | 5s |
 | Maintenance scheduled | "Maintenance scheduled for [Bus No] on [date]." | Info | 4s |
+| Maintenance schedule failed | "Failed to schedule maintenance. Check vehicle status." | Error | 5s |
 | Vehicle flagged | "[Bus No] flagged as non-operational. Branch transport head notified." | Warning | 6s |
+| Flag action failed | "Failed to flag vehicle. Please retry." | Error | 5s |
 
 ---
 
@@ -170,6 +178,8 @@ Action options: Mark Renewal In Progress · Mark Renewed · Send Reminder to Bra
 | No vehicles registered | "No Fleet Registered" | "Add vehicles to start managing the transport fleet." | [+ Add Vehicle] |
 | No compliance issues | "Full Fleet Compliance" | "All vehicles have valid fitness, insurance, and permits." | — |
 | No maintenance due | "No Maintenance Due" | "No scheduled maintenance in the next 7 days." | — |
+| Compliance table — no filter results | "No Branches Match Filters" | "Adjust compliance status or branch filters." | [Clear Filters] |
+| Compliance table — no search results | "No Branches Found for '[term]'" | "Check the branch name." | [Clear Search] |
 
 ---
 
@@ -210,6 +220,7 @@ Action options: Mark Renewal In Progress · Mark Renewed · Send Reminder to Bra
 | POST | `/api/v1/group/{group_id}/transport/fleet/vehicles/` | JWT (G3+) | Add vehicle |
 | GET | `/api/v1/group/{group_id}/transport/fleet/branches/{id}/detail/` | JWT (G3+) | Branch fleet drawer |
 | GET | `/api/v1/group/{group_id}/transport/fleet/age-distribution/` | JWT (G3+) | Age chart data |
+| GET | `/api/v1/group/{group_id}/transport/fleet/compliance-summary/export/` | JWT (G3+) | Async CSV/XLSX export |
 
 ---
 
@@ -218,9 +229,13 @@ Action options: Mark Renewal In Progress · Mark Renewed · Send Reminder to Bra
 | Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
 |---|---|---|---|---|
 | KPI auto-refresh | `every 10m` | GET `.../fleet/kpi-cards/` | `#kpi-bar` | `innerHTML` |
+| Compliance table search | `input delay:300ms` | GET `.../fleet/compliance-summary/?q={val}` | `#compliance-table-body` | `innerHTML` |
+| Compliance table sort | `click` on header | GET `.../fleet/compliance-summary/?sort={col}&dir={asc/desc}` | `#compliance-table-section` | `innerHTML` |
+| Compliance table pagination | `click` | GET `.../fleet/compliance-summary/?page={n}` | `#compliance-table-section` | `innerHTML` |
 | Compliance table filter | `click` | GET `.../fleet/compliance-summary/?{filters}` | `#compliance-table-section` | `innerHTML` |
 | Open branch drawer | `click` | GET `.../fleet/branches/{id}/detail/` | `#drawer-body` | `innerHTML` |
 | Add vehicle submit | `click` | POST `.../fleet/vehicles/` | `#fleet-table-section` | `innerHTML` |
+| Export fleet report | `click` | GET `.../fleet/compliance-summary/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

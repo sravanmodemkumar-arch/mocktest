@@ -103,6 +103,8 @@ Group HQ  ›  Transport Management  ›  Vehicle Assignment Manager
 - **Vehicle selector shows:** Bus No, type, capacity, compliance status (fitness/permit/insurance), current assignment (if any)
 - **Validation:** Cannot assign non-compliant vehicle to active route (warning shown, Director must approve override)
 
+> **Audit trail:** All write actions (assign, swap, release vehicle) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.2 Drawer: `emergency-swap`
 - **Trigger:** Emergency Swap button · Vehicle breakdown scenario
 - **Width:** 540px
@@ -124,8 +126,11 @@ Group HQ  ›  Transport Management  ›  Vehicle Assignment Manager
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Vehicle assigned | "[Bus No] assigned to Route [Name]." | Success | 4s |
+| Assignment failed | "Failed to assign vehicle. Check compliance status or route conflicts." | Error | 5s |
 | Emergency swap done | "Emergency swap: [Bus No] now serving Route [Name]. Driver notified." | Warning | 6s |
+| Emergency swap failed | "Emergency swap failed. No spare vehicles available at this branch." | Error | 5s |
 | Vehicle released | "[Bus No] released from Route [Name]. Added to spare pool." | Info | 4s |
+| Release failed | "Failed to release vehicle. Please retry." | Error | 5s |
 
 ---
 
@@ -135,6 +140,8 @@ Group HQ  ›  Transport Management  ›  Vehicle Assignment Manager
 |---|---|---|---|
 | No unassigned routes | "All Routes Assigned" | "Every active route has a vehicle assigned." | — |
 | No spare vehicles | "No Spare Vehicles" | "All operational vehicles are assigned to routes." | — |
+| No filter results | "No Assignments Match Filters" | "Adjust branch, assignment status, or compliance filters." | [Clear Filters] |
+| No search results | "No Routes Found for '[term]'" | "Check the route name, bus number, or branch." | [Clear Search] |
 
 ---
 
@@ -159,6 +166,7 @@ Group HQ  ›  Transport Management  ›  Vehicle Assignment Manager
 | DELETE | `/api/v1/group/{group_id}/transport/assignments/{id}/` | JWT (G3+) | Release vehicle |
 | GET | `/api/v1/group/{group_id}/transport/vehicles/spare-pool/` | JWT (G3+) | Spare vehicles list |
 | GET | `/api/v1/group/{group_id}/transport/assignments/kpis/` | JWT (G3+) | KPI cards |
+| GET | `/api/v1/group/{group_id}/transport/assignments/export/` | JWT (G3+) | Async CSV/XLSX export |
 
 ---
 
@@ -168,8 +176,11 @@ Group HQ  ›  Transport Management  ›  Vehicle Assignment Manager
 |---|---|---|---|---|
 | Search | `input delay:300ms` | GET `.../assignments/?q={val}` | `#assignment-table-body` | `innerHTML` |
 | Filter apply | `click` | GET `.../assignments/?{filters}` | `#assignment-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../assignments/?sort={col}&dir={asc/desc}` | `#assignment-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../assignments/?page={n}` | `#assignment-table-section` | `innerHTML` |
 | Assign submit | `click` | POST `.../assignments/` | `#assignment-table-section` | `innerHTML` |
 | Emergency swap confirm | `click` | POST `.../assignments/emergency-swap/` | `#assignment-table-section` | `innerHTML` |
+| Export | `click` | GET `.../assignments/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

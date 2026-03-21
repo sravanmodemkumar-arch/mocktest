@@ -115,8 +115,11 @@ Group HQ  ›  Transport Management  ›  Transport Fee Collection
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Payment recorded | "Payment of ₹[N] recorded for [Name]. Receipt [No] generated." | Success | 4s |
+| Payment record failed | "Failed to record payment. Check student details and amount." | Error | 5s |
 | Reminder sent | "Fee reminders sent to [N] defaulters at [Branch]." | Info | 4s |
+| Reminder failed | "Failed to send reminders. Check WhatsApp notification configuration." | Error | 5s |
 | Export ready | "Collection report export ready. Download below." | Info | 4s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
 
 ---
 
@@ -126,6 +129,8 @@ Group HQ  ›  Transport Management  ›  Transport Fee Collection
 |---|---|---|---|
 | No payments this month | "No Payments Recorded" | "Record the first payment for this month." | [Record Payment] |
 | 100% collection | "Full Collection Achieved" | "All transport fees collected for this month." | — |
+| No filter results | "No Branches Match Filters" | "Adjust collection rate or month filters." | [Clear Filters] |
+| No search results (payments) | "No Payments Found for '[term]'" | "Check the student name, receipt number, or branch." | [Clear Search] |
 
 ---
 
@@ -161,6 +166,24 @@ Group HQ  ›  Transport Management  ›  Transport Fee Collection
 | GET | `/api/v1/group/{group_id}/transport/fees/collection/trends/` | JWT (G3+) | 12-month chart data |
 | POST | `/api/v1/group/{group_id}/transport/fees/collection/reminders/bulk/` | JWT (G3+) | Send reminders |
 | GET | `/api/v1/group/{group_id}/transport/fees/collection/export/` | JWT (G3+) | Export |
+| GET | `/api/v1/group/{group_id}/transport/fees/collection/kpis/` | JWT (G3+) | KPI auto-refresh |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Branch table filter | `click` | GET `.../collection/?{filters}` | `#branch-table-section` | `innerHTML` |
+| Branch table sort | `click` on header | GET `.../collection/?sort={col}&dir={asc/desc}` | `#branch-table-section` | `innerHTML` |
+| Branch table pagination | `click` | GET `.../collection/?page={n}` | `#branch-table-section` | `innerHTML` |
+| Payment table search | `input delay:300ms` | GET `.../collection/payments/?q={val}` | `#payment-table-body` | `innerHTML` |
+| Payment table filter | `click` | GET `.../collection/payments/?{filters}` | `#payment-table-section` | `innerHTML` |
+| Payment table sort | `click` on header | GET `.../collection/payments/?sort={col}&dir={asc/desc}` | `#payment-table-section` | `innerHTML` |
+| Payment table pagination | `click` | GET `.../collection/payments/?page={n}` | `#payment-table-section` | `innerHTML` |
+| Record payment submit | `click` | POST `.../collection/payments/` | `#payment-table-section` | `innerHTML` |
+| Send reminder confirm | `click` | POST `.../collection/reminders/bulk/` | `#branch-table-section` | `innerHTML` |
+| Export | `click` | GET `.../collection/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (record payment, send reminders) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

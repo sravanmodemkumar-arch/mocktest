@@ -132,9 +132,12 @@ Group HQ  ›  Transport Management  ›  Route Optimization Tool
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Analysis run | "Route analysis complete. [N] new suggestions generated." | Info | 5s |
+| Analysis failed | "Route analysis failed. Please retry or check data availability." | Error | 5s |
 | Suggestion marked in review | "Suggestion marked as In Review." | Info | 4s |
 | Suggestion implemented | "Optimization suggestion implemented. Route Manager updated." | Success | 4s |
+| Implement failed | "Failed to implement suggestion. Please retry." | Error | 5s |
 | Suggestion dismissed | "Suggestion dismissed and archived." | Info | 4s |
+| Dismiss failed | "Failed to dismiss suggestion. Please retry." | Error | 5s |
 
 ---
 
@@ -143,6 +146,7 @@ Group HQ  ›  Transport Management  ›  Route Optimization Tool
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No suggestions | "Routes Are Optimal" | "No optimization suggestions at this time. Run a new analysis after route/student changes." | [Run New Analysis] |
+| No filter results | "No Suggestions Match Filters" | "Adjust suggestion type, priority, or status filters." | [Clear Filters] |
 | No unserved students | "All Students Served" | "All day scholars have been allocated to a transport route." | — |
 
 ---
@@ -179,6 +183,19 @@ Group HQ  ›  Transport Management  ›  Route Optimization Tool
 | POST | `/api/v1/group/{group_id}/transport/optimization/suggestions/{id}/dismiss/` | JWT (G3+) | Dismiss |
 | GET | `/api/v1/group/{group_id}/transport/optimization/utilisation-matrix/` | JWT (G3+) | Chart data |
 | GET | `/api/v1/group/{group_id}/transport/optimization/unserved-clusters/` | JWT (G3+) | Map cluster data |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Filter apply | `click` | GET `.../suggestions/?{filters}` | `#suggestion-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../suggestions/?sort={col}&dir={asc/desc}` | `#suggestion-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../suggestions/?page={n}` | `#suggestion-table-section` | `innerHTML` |
+| Open suggestion drawer | `click` on Review | GET `.../suggestions/{id}/` | `#drawer-body` | `innerHTML` |
+| Run analysis | `click` | POST `.../optimization/run/` | `#suggestion-table-section` | `innerHTML` |
+| Implement confirm | `click` | POST `.../suggestions/{id}/implement/` | `#suggestion-row-{id}` | `outerHTML` |
+| Dismiss confirm | `click` | POST `.../suggestions/{id}/dismiss/` | `#suggestion-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../suggestions/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

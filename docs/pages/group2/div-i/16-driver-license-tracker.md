@@ -125,8 +125,11 @@ Group HQ  ›  Transport Management  ›  Driver Licence Tracker
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Licence updated | "[Name]'s licence updated. New expiry: [date]." | Success | 4s |
+| Licence update failed | "Failed to update licence. Check expiry date and licence number." | Error | 5s |
 | Scan uploaded | "DL scan uploaded for [Name]." | Info | 4s |
+| Scan upload failed | "Failed to upload scan. Check file format (PDF/image)." | Error | 5s |
 | Reminder sent | "Licence renewal reminder sent to [N] drivers." | Info | 4s |
+| Reminder failed | "Failed to send reminders. Please retry." | Error | 5s |
 | Driver flagged non-compliant | "[Name] flagged non-compliant. Route assignment suspended." | Warning | 6s |
 
 ---
@@ -137,6 +140,8 @@ Group HQ  ›  Transport Management  ›  Driver Licence Tracker
 |---|---|---|---|
 | No compliance issues | "All Drivers Licence-Compliant" | "All drivers have valid licences and PSV endorsements." | — |
 | No drivers | "No Drivers Registered" | "Sync driver data from HRMS." | [→ Driver Registry] |
+| No filter results | "No Drivers Match Filters" | "Adjust branch, licence type, or status filters." | [Clear Filters] |
+| No search results | "No Drivers Found for '[term]'" | "Check the driver name, employee ID, or licence number." | [Clear Search] |
 
 ---
 
@@ -161,6 +166,21 @@ Group HQ  ›  Transport Management  ›  Driver Licence Tracker
 | POST | `/api/v1/group/{group_id}/transport/staff/licences/bulk-reminder/` | JWT (G3+) | Send reminders |
 | GET | `/api/v1/group/{group_id}/transport/staff/licences/kpis/` | JWT (G3+) | KPI cards |
 | GET | `/api/v1/group/{group_id}/transport/staff/licences/export/` | JWT (G3+) | Export |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../licences/?q={val}` | `#licence-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../licences/?{filters}` | `#licence-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../licences/?sort={col}&dir={asc/desc}` | `#licence-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../licences/?page={n}` | `#licence-table-section` | `innerHTML` |
+| Open update drawer | `click` on Update | GET `.../staff/{id}/licence/` | `#drawer-body` | `innerHTML` |
+| Update submit | `click` | PATCH `.../staff/{id}/licence/` | `#licence-row-{id}` | `outerHTML` |
+| Send bulk reminder | `click` | POST `.../licences/bulk-reminder/` | `#reminder-btn` | `outerHTML` |
+| Export | `click` | GET `.../licences/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (licence update, scan upload, bulk reminders) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

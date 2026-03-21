@@ -23,9 +23,13 @@ Scale: 200–500 buses · 300–800 routes · 3,000–15,000 day scholars on tra
 | Role | Level | Access | Notes |
 |---|---|---|---|
 | Group Transport Director | G3 | Full — all sections, all actions | Exclusive dashboard |
+| Group Fleet Manager | G3 | ❌ No access — own dashboard at /fleet/ | Redirect to Page 02 |
+| Group Route Planning Manager | G3 | ❌ No access — own dashboard at /routes/ | Redirect to Page 03 |
+| Group Transport Fee Manager | G3 | ❌ No access — own dashboard at /fees/ | Redirect to Page 04 |
+| Group Driver/Conductor HR | G0 | ❌ No EduForge login | See Page 05 |
+| Group Transport Safety Officer | G3 | ❌ No access — own dashboard at /safety/ | Redirect to Page 06 |
 | Group Chairman / CEO | G5 / G4 | View — via governance reports only | Not this URL |
 | Group COO | G4 | View — via operations portal | Not this URL |
-| All other roles | — | — | Redirected to own dashboard |
 
 > **Access enforcement:** Django view decorator `@require_role('transport_director')`.
 
@@ -156,6 +160,9 @@ Max 5 alerts visible. Alert-type links route to relevant pages. "View all audit 
 | Review Driver Compliance | → Page 16 |
 | Export Fleet Status Report | Download CSV |
 | Transport Policy Manager | → Page 32 |
+| Transport Analytics | → Page 29 |
+| Monthly MIS Report | → Page 30 |
+| Compliance Dashboard | → Page 31 |
 
 ---
 
@@ -170,6 +177,8 @@ Max 5 alerts visible. Alert-type links route to relevant pages. "View all audit 
 - **Incidents:** Open + recent closed incidents
 - **Fee Collection:** Monthly collection vs target
 
+> **Audit trail:** All actions on this page (route approval, GPS acknowledgement, incident escalation) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ---
 
 ## 7. Toast Messages
@@ -177,9 +186,13 @@ Max 5 alerts visible. Alert-type links route to relevant pages. "View all audit 
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Route approved | "Route [Name] approved for [Branch]." | Success | 4s |
+| Route approval failed | "Route approval failed. Check route details and retry." | Error | 5s |
 | GPS alert acknowledged | "GPS alert acknowledged. Operations team notified." | Info | 4s |
+| GPS acknowledgement failed | "Failed to acknowledge GPS alert. Please refresh and retry." | Error | 5s |
 | Incident escalated | "Incident escalated to Group COO." | Warning | 6s |
+| Incident escalation failed | "Escalation failed. Retry or contact IT support." | Error | 5s |
 | Compliance renewal triggered | "Renewal reminder sent for [N] vehicles." | Info | 4s |
+| Reminder failed | "Reminder failed to send. Check notification configuration." | Error | 5s |
 
 ---
 
@@ -189,6 +202,9 @@ Max 5 alerts visible. Alert-type links route to relevant pages. "View all audit 
 |---|---|---|---|
 | No branches configured | "No Branches with Transport" | "No branches have transport configured yet." | [Configure Branch Transport] |
 | No incidents | "No Open Incidents" | "All transport safety incidents are resolved." | — |
+| Fleet table — no filter results | "No Branches Match Filters" | "Adjust compliance or incident filters." | [Clear Filters] |
+| Fleet table — no search results | "No Branches Found for '[term]'" | "Check the branch name or city." | [Clear Search] |
+| No compliance expiry alerts | "No Expiry Alerts" | "All vehicle documents are valid for more than 30 days." | — |
 
 ---
 
@@ -228,6 +244,7 @@ Max 5 alerts visible. Alert-type links route to relevant pages. "View all audit 
 | GET | `/api/v1/group/{group_id}/transport/compliance-alerts/` | JWT (G3+) | Expiry alerts |
 | GET | `/api/v1/group/{group_id}/transport/incidents/recent/` | JWT (G3+) | Last 10 incidents |
 | GET | `/api/v1/group/{group_id}/transport/branches/{id}/detail/` | JWT (G3+) | Branch detail drawer |
+| GET | `/api/v1/group/{group_id}/transport/fleet-status/export/` | JWT (G3+) | Async CSV export of fleet status |
 
 ---
 
@@ -238,8 +255,11 @@ Max 5 alerts visible. Alert-type links route to relevant pages. "View all audit 
 | KPI auto-refresh | `every 5m` | GET `.../transport/kpi-cards/` | `#kpi-bar` | `innerHTML` |
 | GPS mini map refresh | `every 30s` | GET `.../transport/gps/live/` | `#gps-mini-map` | `innerHTML` |
 | Fleet table search | `input delay:300ms` | GET `.../transport/fleet-status/?q={val}` | `#fleet-table-body` | `innerHTML` |
+| Fleet table sort | `click` on header | GET `.../transport/fleet-status/?sort={col}&dir={asc/desc}` | `#fleet-table-section` | `innerHTML` |
+| Fleet table pagination | `click` | GET `.../transport/fleet-status/?page={n}` | `#fleet-table-section` | `innerHTML` |
 | Filter apply | `click` | GET `.../transport/fleet-status/?{filters}` | `#fleet-table-section` | `innerHTML` |
 | Open branch drawer | `click` | GET `.../transport/branches/{id}/detail/` | `#drawer-body` | `innerHTML` |
+| Export report | `click` | GET `.../transport/fleet-status/export/` | `#export-btn` | `outerHTML` (shows spinner then download link) |
 
 ---
 

@@ -128,6 +128,8 @@ Group HQ  ›  Transport Management  ›  Accident & Incident Register
 - **Fields:** Investigation Status (In Progress / Findings Documented) · Root Cause · Contributing Factors · Driver Accountability (Negligent / Not Negligent / Under Review) · Findings Summary · Upload Investigation Report
 - **On save:** Status updates to "Under Investigation" or "Awaiting Corrective Action"
 
+> **Audit trail:** All write actions (report, investigate, escalate, close incident) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.4 Modal: `close-incident`
 - **Width:** 480px
 - **Fields:** Resolution Summary · Corrective Actions Taken (multi-row: action, owner, completion date) · Lessons Learned · Preventive Measures · Upload Final Report
@@ -140,9 +142,13 @@ Group HQ  ›  Transport Management  ›  Accident & Incident Register
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Incident reported | "Incident [ID] reported at [Branch]. [Notifications sent per severity]." | Warning | 6s |
+| Report failed | "Failed to submit incident report. Please retry." | Error | 5s |
 | Severity 1 escalated | "Severity 1 incident escalated to COO. Emergency response activated." | Warning | 8s |
+| Escalation failed | "Escalation failed. Retry or contact IT support." | Error | 5s |
 | Investigation updated | "Investigation updated for Incident [ID]." | Info | 4s |
+| Investigation update failed | "Failed to update investigation. Please retry." | Error | 5s |
 | Incident closed | "Incident [ID] closed. Corrective actions documented." | Success | 4s |
+| Close failed | "Failed to close incident. Ensure corrective actions are documented." | Error | 5s |
 
 ---
 
@@ -152,6 +158,8 @@ Group HQ  ›  Transport Management  ›  Accident & Incident Register
 |---|---|---|---|
 | No open incidents | "No Open Incidents" | "All transport safety incidents are resolved." | — |
 | No incidents on record | "No Incidents Recorded" | "No transport incidents have been reported this AY." | — |
+| No filter results | "No Incidents Match Filters" | "Adjust severity, type, status, or date range filters." | [Clear Filters] |
+| No search results | "No Incidents Found for '[term]'" | "Check the incident ID, bus number, or branch." | [Clear Search] |
 
 ---
 
@@ -191,7 +199,23 @@ Group HQ  ›  Transport Management  ›  Accident & Incident Register
 | POST | `/api/v1/group/{group_id}/transport/incidents/{id}/close/` | JWT (G3+) | Close incident |
 | POST | `/api/v1/group/{group_id}/transport/incidents/{id}/escalate/` | JWT (G3+) | Escalate to COO |
 | GET | `/api/v1/group/{group_id}/transport/incidents/kpis/` | JWT (G3+) | KPI cards |
+| POST | `/api/v1/group/{group_id}/transport/incidents/{id}/photos/` | JWT (G3+) | Upload incident photos |
 | GET | `/api/v1/group/{group_id}/transport/incidents/export/` | JWT (G3+) | Export |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../incidents/?q={val}` | `#incident-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../incidents/?{filters}` | `#incident-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../incidents/?sort={col}&dir={asc/desc}` | `#incident-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../incidents/?page={n}` | `#incident-table-section` | `innerHTML` |
+| Open incident drawer | `click` on Incident ID | GET `.../incidents/{id}/` | `#drawer-body` | `innerHTML` |
+| Report incident submit | `click` | POST `.../incidents/` | `#incident-table-section` | `innerHTML` |
+| Investigation update submit | `click` | PATCH `.../incidents/{id}/` | `#incident-row-{id}` | `outerHTML` |
+| Close incident confirm | `click` | POST `.../incidents/{id}/close/` | `#incident-row-{id}` | `outerHTML` |
+| Escalate to COO | `click` | POST `.../incidents/{id}/escalate/` | `#incident-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../incidents/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

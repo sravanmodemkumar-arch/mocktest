@@ -24,8 +24,11 @@ Scale: 3,000–15,000 students on transport · ₹2,000–₹8,000 per student p
 |---|---|---|---|
 | Group Transport Fee Manager | G3 | Full — all branches, all fee types | Exclusive dashboard |
 | Group Transport Director | G3 | View — fee collection summary | Via own dashboard |
-| Group CFO | G1 | Read-only — revenue view | Via finance portal |
+| Group Fleet Manager | G3 | ❌ No access — own dashboard at /fleet/ | Redirect to Page 02 |
 | Group Route Planning Manager | G3 | Read — fee plan per route | Route creation context |
+| Group Driver/Conductor HR | G0 | ❌ No EduForge login | See Page 05 |
+| Group Transport Safety Officer | G3 | ❌ No access — own dashboard at /safety/ | Redirect to Page 06 |
+| Group CFO | G1 | Read-only — revenue view | Via finance portal |
 
 ---
 
@@ -158,6 +161,8 @@ Actions: Send WhatsApp Reminder · Suspend Bus Pass · Escalate to Branch.
 - **Fields:** Student Name · Outstanding Amount · Reason · Notify Parent (checkbox) · Effective Date
 - **Warning:** "Student will not be permitted to board the bus from [date] until fee is paid."
 
+> **Audit trail:** All write actions (fee plan create, reminders, bus pass suspension) are logged to [Transport Audit Log → Page 33].
+
 ---
 
 ## 7. Toast Messages
@@ -165,9 +170,13 @@ Actions: Send WhatsApp Reminder · Suspend Bus Pass · Escalate to Branch.
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Fee plan created | "Fee plan created for [Branch] — Route [Name]." | Success | 4s |
+| Fee plan create failed | "Failed to create fee plan. Check for duplicate plan for this route." | Error | 5s |
 | Reminder sent | "Payment reminders sent to [N] students at [Branch]." | Info | 4s |
+| Reminder send failed | "Failed to send reminders. Check WhatsApp notification configuration." | Error | 5s |
 | Bus pass suspended | "Bus pass suspended for [Name]. Parent notified." | Warning | 6s |
+| Bus pass suspension failed | "Failed to suspend bus pass. Please retry." | Error | 5s |
 | Collection exported | "Fee collection report exported successfully." | Info | 4s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
 
 ---
 
@@ -177,6 +186,8 @@ Actions: Send WhatsApp Reminder · Suspend Bus Pass · Escalate to Branch.
 |---|---|---|---|
 | No defaulters | "All Transport Fees Current" | "No defaulters this month." | — |
 | No fee plans | "No Transport Fee Plans" | "Configure fee plans for each route before billing students." | [+ New Fee Plan] |
+| Branch table — no filter results | "No Branches Match Filters" | "Adjust collection rate or fee plan filters." | [Clear Filters] |
+| Branch table — no search results | "No Branches Found for '[term]'" | "Check the branch name." | [Clear Search] |
 
 ---
 
@@ -224,9 +235,12 @@ Actions: Send WhatsApp Reminder · Suspend Bus Pass · Escalate to Branch.
 |---|---|---|---|---|
 | KPI auto-refresh | `every 10m` | GET `.../fees/kpi-cards/` | `#kpi-bar` | `innerHTML` |
 | Branch table search | `input delay:300ms` | GET `.../fees/branches/?q={val}` | `#fee-table-body` | `innerHTML` |
+| Branch table sort | `click` on header | GET `.../fees/branches/?sort={col}&dir={asc/desc}` | `#fee-table-section` | `innerHTML` |
+| Branch table pagination | `click` | GET `.../fees/branches/?page={n}` | `#fee-table-section` | `innerHTML` |
 | Filter apply | `click` | GET `.../fees/branches/?{filters}` | `#fee-table-section` | `innerHTML` |
 | Open branch drawer | `click` | GET `.../fees/branches/{id}/detail/` | `#drawer-body` | `innerHTML` |
 | Send reminder confirm | `click` | POST `.../fees/reminders/bulk/` | `#defaulter-section` | `innerHTML` |
+| Export defaulter list | `click` | GET `.../fees/defaulters/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

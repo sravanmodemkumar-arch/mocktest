@@ -129,9 +129,13 @@ Group HQ  ›  Transport Management  ›  Student Safety Alerts
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Alert raised | "Safety alert [ID] raised. Relevant staff notified." | Warning | 6s |
+| Alert raise failed | "Failed to raise safety alert. Please retry." | Error | 5s |
 | Alert resolved | "Alert [ID] resolved in [N] minutes." | Success | 4s |
+| Resolve failed | "Failed to resolve alert. Please retry." | Error | 5s |
 | Parent notified | "WhatsApp notification sent to [N] parents." | Info | 4s |
+| Notification failed | "Failed to send parent notification. Check WhatsApp configuration." | Error | 5s |
 | SOS acknowledged | "SOS alert acknowledged. Emergency response activated." | Warning | 8s |
+| SOS ack failed | "Failed to acknowledge SOS alert. Please retry immediately." | Error | 6s |
 
 ---
 
@@ -141,6 +145,8 @@ Group HQ  ›  Transport Management  ›  Student Safety Alerts
 |---|---|---|---|
 | No active alerts | "No Active Safety Alerts" | "All student safety alerts for today have been resolved." | — |
 | No alerts on record | "No Safety Alerts" | "No transport safety alerts have been recorded." | — |
+| No filter results | "No Alerts Match Filters" | "Adjust branch, alert type, status, or date range filters." | [Clear Filters] |
+| No search results | "No Alerts Found for '[term]'" | "Check the bus number, student name, or route." | [Clear Search] |
 
 ---
 
@@ -178,6 +184,24 @@ Group HQ  ›  Transport Management  ›  Student Safety Alerts
 | POST | `/api/v1/group/{group_id}/transport/safety-alerts/{id}/notify-parents/` | JWT (G3+) | Send parent notification |
 | GET | `/api/v1/group/{group_id}/transport/safety-alerts/kpis/` | JWT (G3+) | KPI cards |
 | GET | `/api/v1/group/{group_id}/transport/gps/alerts/` | JWT (G3+) | GPS-triggered alerts (for SOS/geo-fence) |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Auto-refresh (Active alerts) | `every 60s` | GET `.../safety-alerts/?status=active` | `#alert-table-section` | `innerHTML` |
+| KPI auto-refresh | `every 60s` | GET `.../safety-alerts/kpis/` | `#kpi-bar` | `innerHTML` |
+| Search | `input delay:300ms` | GET `.../safety-alerts/?q={val}` | `#alert-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../safety-alerts/?{filters}` | `#alert-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../safety-alerts/?sort={col}&dir={asc/desc}` | `#alert-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../safety-alerts/?page={n}` | `#alert-table-section` | `innerHTML` |
+| Open alert detail drawer | `click` on Alert ID | GET `.../safety-alerts/{id}/` | `#drawer-body` | `innerHTML` |
+| Raise manual alert submit | `click` | POST `.../safety-alerts/` | `#alert-table-section` | `innerHTML` |
+| Resolve alert confirm | `click` | POST `.../safety-alerts/{id}/resolve/` | `#alert-row-{id}` | `outerHTML` |
+| Notify parents | `click` | POST `.../safety-alerts/{id}/notify-parents/` | `#notify-btn-{id}` | `outerHTML` |
+| Export | `click` | GET `.../safety-alerts/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (raise alert, resolve, notify parents) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

@@ -95,6 +95,8 @@ Group HQ  ›  Transport Management  ›  Bus Pass Manager
 
 ## 6. Drawers
 
+> **Audit trail:** All write actions (issue, renew, suspend, revoke pass; bulk issue) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.1 Drawer: `issue-pass`
 - **Trigger:** + Issue Pass
 - **Width:** 540px
@@ -128,10 +130,16 @@ Group HQ  ›  Transport Management  ›  Bus Pass Manager
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Pass issued | "Bus pass [No] issued for [Name]. QR generated. Parent notified." | Success | 4s |
+| Issue failed | "Failed to issue pass. Ensure [Student] has an active transport allocation." | Error | 5s |
 | Pass renewed | "Bus pass renewed for [Name]. New expiry: [date]." | Success | 4s |
+| Renew failed | "Failed to renew pass. Check fee clearance and expiry date." | Error | 5s |
 | Pass suspended | "Bus pass suspended for [Name]. Driver notified." | Warning | 5s |
+| Suspend failed | "Failed to suspend bus pass. Please retry." | Error | 5s |
 | Pass revoked | "Bus pass revoked for [Name]." | Warning | 5s |
+| Revoke failed | "Failed to revoke bus pass. Please retry." | Error | 5s |
 | Bulk issue complete | "[N] bus passes issued. Download summary." | Info | 4s |
+| Bulk issue failed | "Bulk issue failed. [N] students had errors — check allocation status." | Error | 6s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
 
 ---
 
@@ -141,6 +149,8 @@ Group HQ  ›  Transport Management  ›  Bus Pass Manager
 |---|---|---|---|
 | No passes | "No Bus Passes Issued" | "Issue passes for all students enrolled in transport." | [+ Issue Pass] |
 | No expiring passes | "No Passes Expiring Soon" | "All active passes have validity > 30 days." | — |
+| No filter results | "No Passes Match Filters" | "Adjust branch, status, expiry, or class filters." | [Clear Filters] |
+| No search results | "No Passes Found for '[term]'" | "Check the student name, pass number, or roll number." | [Clear Search] |
 
 ---
 
@@ -178,8 +188,29 @@ Group HQ  ›  Transport Management  ›  Bus Pass Manager
 | POST | `/api/v1/group/{group_id}/transport/bus-passes/{id}/renew/` | JWT (G3+) | Renew pass |
 | POST | `/api/v1/group/{group_id}/transport/bus-passes/{id}/suspend/` | JWT (G3+) | Suspend |
 | POST | `/api/v1/group/{group_id}/transport/bus-passes/{id}/revoke/` | JWT (G3+) | Revoke |
+| POST | `/api/v1/group/{group_id}/transport/bus-passes/bulk-issue/` | JWT (G3+) | Bulk issue passes for new AY |
 | GET | `/api/v1/group/{group_id}/transport/bus-passes/{id}/pdf/` | JWT (G3+) | Download PDF pass |
 | GET | `/api/v1/group/{group_id}/transport/bus-passes/kpis/` | JWT (G3+) | KPI cards |
+| GET | `/api/v1/group/{group_id}/transport/bus-passes/export/` | JWT (G3+) | Export pass register |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../bus-passes/?q={val}` | `#pass-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../bus-passes/?{filters}` | `#pass-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../bus-passes/?sort={col}&dir={asc/desc}` | `#pass-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../bus-passes/?page={n}` | `#pass-table-section` | `innerHTML` |
+| Open pass detail drawer | `click` on Pass No | GET `.../bus-passes/{id}/` | `#drawer-body` | `innerHTML` |
+| Issue pass submit | `click` | POST `.../bus-passes/` | `#pass-table-section` | `innerHTML` |
+| Renew pass confirm | `click` | POST `.../bus-passes/{id}/renew/` | `#pass-row-{id}` | `outerHTML` |
+| Suspend pass confirm | `click` | POST `.../bus-passes/{id}/suspend/` | `#pass-row-{id}` | `outerHTML` |
+| Revoke pass confirm | `click` | POST `.../bus-passes/{id}/revoke/` | `#pass-row-{id}` | `outerHTML` |
+| Bulk issue submit | `click` | POST `.../bus-passes/bulk-issue/` | `#pass-table-section` | `innerHTML` |
+| Download PDF | `click` | GET `.../bus-passes/{id}/pdf/` | `#pdf-btn-{id}` | `outerHTML` |
+| Export | `click` | GET `.../bus-passes/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (issue, renew, suspend, revoke pass; bulk issue) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

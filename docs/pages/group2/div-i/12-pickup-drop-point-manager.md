@@ -120,6 +120,8 @@ Group HQ  ›  Transport Management  ›  Pickup / Drop Point Manager
 - **Students:** List of students boarding/alighting at this stop with class and route
 - **Safety:** Safety flags history, status, resolution notes
 
+> **Audit trail:** All write actions (add stop, edit stop, remove stop, flag safety) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 7.3 Drawer: `flag-safety`
 - **Width:** 480px
 - **Fields:** Stop · Concern Type (Poor Lighting / Blind Spot / Traffic Hazard / No Waiting Area / Flooding Risk / Other) · Description · Severity (Low / Medium / High) · Photos (upload)
@@ -132,10 +134,14 @@ Group HQ  ›  Transport Management  ›  Pickup / Drop Point Manager
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Stop added | "Stop [Name] added to Route [Route Name]." | Success | 4s |
+| Stop add failed | "Failed to add stop. Check for duplicate stop name or sequence number on this route." | Error | 5s |
 | Stop updated | "Stop [Name] updated." | Info | 4s |
+| Stop update failed | "Failed to update stop. Please retry." | Error | 5s |
 | Safety flag raised | "Safety flag raised for Stop [Name]. Transport Safety Officer notified." | Warning | 5s |
+| Safety flag failed | "Failed to raise safety flag. Please retry." | Error | 5s |
 | Safety flag resolved | "Safety flag for Stop [Name] resolved." | Success | 4s |
 | Stop removed | "Stop [Name] removed from Route [Route Name]. [N] students need reassignment." | Warning | 6s |
+| Stop remove failed | "Failed to remove stop. Ensure no students are currently assigned to this stop." | Error | 5s |
 
 ---
 
@@ -144,6 +150,8 @@ Group HQ  ›  Transport Management  ›  Pickup / Drop Point Manager
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No stops | "No Stops Configured" | "Add pickup and drop points for each route." | [+ Add Stop] |
+| No filter results | "No Stops Match Filters" | "Adjust route, branch, stop type, or safety status filters." | [Clear Filters] |
+| No search results | "No Stops Found for '[term]'" | "Check the stop name, area, or route name." | [Clear Search] |
 | No safety flags | "No Safety Flags" | "All stops have cleared safety review." | — |
 | No stops missing geo-data | "All Stops Mapped" | "All stops have geo-coordinates for GPS tracking." | — |
 
@@ -183,6 +191,21 @@ Group HQ  ›  Transport Management  ›  Pickup / Drop Point Manager
 | DELETE | `/api/v1/group/{group_id}/transport/stops/{id}/` | JWT (G3+) | Remove stop |
 | POST | `/api/v1/group/{group_id}/transport/stops/{id}/flag-safety/` | JWT (G3+) | Raise safety flag |
 | GET | `/api/v1/group/{group_id}/transport/stops/map-data/` | JWT (G3+) | Geo-data for map |
+
+## 13. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../stops/?q={val}` | `#stop-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../stops/?{filters}` | `#stop-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../stops/?sort={col}&dir={asc/desc}` | `#stop-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../stops/?page={n}` | `#stop-table-section` | `innerHTML` |
+| Toggle map view | `click` | GET `.../stops/map-data/` | `#stop-map-container` | `innerHTML` |
+| Open stop detail drawer | `click` on Stop Name | GET `.../stops/{id}/` | `#drawer-body` | `innerHTML` |
+| Create stop submit | `click` | POST `.../stops/` | `#stop-table-section` | `innerHTML` |
+| Remove stop confirm | `click` | DELETE `.../stops/{id}/` | `#stop-row-{id}` | `outerHTML` |
+| Flag safety confirm | `click` | POST `.../stops/{id}/flag-safety/` | `#stop-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../stops/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

@@ -128,7 +128,9 @@ Colour: Green ≥ 95% · Yellow 85–95% · Red < 85%.
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Compliance report exported | "Transport compliance report exported." | Info | 4s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
 | Alert sent to branch | "Compliance alert sent to [Branch] transport in-charge." | Info | 4s |
+| Alert send failed | "Failed to send compliance alert to [Branch]. Please retry." | Error | 5s |
 
 ---
 
@@ -137,6 +139,7 @@ Colour: Green ≥ 95% · Yellow 85–95% · Red < 85%.
 | Condition | Heading | Description |
 |---|---|---|
 | 100% compliance | "Full Transport Compliance" | "All vehicles, drivers, and devices are compliant." |
+| No filter results (branch) | "No Branches Match Filters" | "Adjust the branch selection filter." | [Clear Filters] |
 
 ---
 
@@ -171,6 +174,18 @@ Colour: Green ≥ 95% · Yellow 85–95% · Red < 85%.
 | GET | `/api/v1/group/{group_id}/transport/compliance/trend/` | JWT (G3+) | 12-month trend chart data |
 | GET | `/api/v1/group/{group_id}/transport/compliance/branches/{id}/detail/` | JWT (G3+) | Branch detail drawer |
 | POST | `/api/v1/group/{group_id}/transport/compliance/branches/{id}/alert/` | JWT (G3+) | Send compliance alert |
+| GET | `/api/v1/group/{group_id}/transport/compliance/export/` | JWT (G3+) | Export compliance report |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Score card auto-refresh | `every 300s` | GET `.../compliance/score/` | `#compliance-score-card` | `innerHTML` |
+| Branch filter | `change` | GET `.../compliance/branches/?{filters}` | `#branch-scorecard-section` | `innerHTML` |
+| Branch scorecard sort | `click` on header | GET `.../compliance/branches/?sort={col}&dir={asc/desc}` | `#branch-scorecard-section` | `innerHTML` |
+| Open branch detail drawer | `click` on Branch | GET `.../compliance/branches/{id}/detail/` | `#drawer-body` | `innerHTML` |
+| Send compliance alert | `click` | POST `.../compliance/branches/{id}/alert/` | `#alert-btn-{id}` | `outerHTML` |
+| Export report | `click` | GET `.../compliance/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

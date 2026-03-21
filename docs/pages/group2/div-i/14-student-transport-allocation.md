@@ -122,6 +122,8 @@ Group HQ  ›  Transport Management  ›  Student Transport Allocation
 - **Width:** 540px (same as allocate, pre-populated)
 - Changing route triggers fee plan update prompt
 
+> **Audit trail:** All write actions (allocate, update allocation, remove from transport) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.4 Modal: `remove-from-transport`
 - **Width:** 480px
 - **Fields:** Effective Date · Reason (Opted Out / Branch Transfer / Academic Exit / Other) · Cancel Bus Pass (checkbox) · Refund Remaining Term Fee (checkbox)
@@ -134,8 +136,11 @@ Group HQ  ›  Transport Management  ›  Student Transport Allocation
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Student allocated | "[Name] allocated to Route [Name] — Stop [Stop Name]." | Success | 4s |
+| Allocation failed | "Failed to allocate student. Check route capacity and student eligibility (day scholar only)." | Error | 5s |
 | Allocation updated | "[Name]'s transport allocation updated." | Info | 4s |
+| Update failed | "Failed to update allocation. Please retry." | Error | 5s |
 | Removed from transport | "[Name] removed from transport. Bus pass cancelled." | Info | 5s |
+| Removal failed | "Failed to remove student from transport. Please retry." | Error | 5s |
 | Overload warning | "Warning: Route [Name] is at [N]% capacity after this allocation." | Warning | 6s |
 
 ---
@@ -145,6 +150,8 @@ Group HQ  ›  Transport Management  ›  Student Transport Allocation
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No students on transport | "No Students on Transport" | "Allocate students to routes to start tracking." | [+ Allocate Student] |
+| No filter results | "No Students Match Filters" | "Adjust branch, class, route, or pass status filters." | [Clear Filters] |
+| No search results | "No Students Found for '[term]'" | "Check the student name, roll number, or route." | [Clear Search] |
 | No unallocated students | "All Students Allocated" | "All transport-enrolled students have a route assigned." | — |
 
 ---
@@ -193,8 +200,11 @@ Group HQ  ›  Transport Management  ›  Student Transport Allocation
 | Search | `input delay:300ms` | GET `.../students/?q={val}` | `#student-table-body` | `innerHTML` |
 | Filter apply | `click` | GET `.../students/?{filters}` | `#student-table-section` | `innerHTML` |
 | Open detail drawer | `click` on Name | GET `.../students/{id}/` | `#drawer-body` | `innerHTML` |
+| Sort | `click` on header | GET `.../students/?sort={col}&dir={asc/desc}` | `#student-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../students/?page={n}` | `#student-table-section` | `innerHTML` |
 | Allocate submit | `click` | POST `.../students/` | `#student-table-section` | `innerHTML` |
 | Remove confirm | `click` | POST `.../students/{id}/remove/` | `#student-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../students/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

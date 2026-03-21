@@ -126,10 +126,15 @@ Group HQ  ›  Transport Management  ›  Transport Fee Defaulters
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Reminder sent | "Reminder sent to [Name]'s parent." | Info | 4s |
+| Reminder failed | "Failed to send reminder. Check WhatsApp/SMS configuration." | Error | 5s |
 | Bulk reminder sent | "Reminders sent to [N] defaulters." | Info | 4s |
+| Bulk reminder failed | "Failed to send bulk reminders. Please retry." | Error | 5s |
 | Bus pass suspended | "Bus pass suspended for [Name]. Effective [date]." | Warning | 6s |
+| Suspension failed | "Failed to suspend bus pass. Please retry." | Error | 5s |
 | Escalated | "Case escalated to [Branch]. Accountant notified." | Info | 4s |
+| Escalation failed | "Failed to escalate case. Please retry." | Error | 5s |
 | Payment recorded | "Payment recorded. [Name] removed from defaulter list." | Success | 4s |
+| Payment record failed | "Failed to record payment. Please retry." | Error | 5s |
 
 ---
 
@@ -138,6 +143,8 @@ Group HQ  ›  Transport Management  ›  Transport Fee Defaulters
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No defaulters | "No Transport Fee Defaulters" | "All transport fees are current." | — |
+| No filter results | "No Defaulters Match Filters" | "Adjust branch, outstanding days, or bus pass status filters." | [Clear Filters] |
+| No search results | "No Defaulters Found for '[term]'" | "Check the student name, roll number, or branch." | [Clear Search] |
 
 ---
 
@@ -173,6 +180,21 @@ Group HQ  ›  Transport Management  ›  Transport Fee Defaulters
 | POST | `/api/v1/group/{group_id}/transport/fees/defaulters/{id}/escalate/` | JWT (G3+) | Escalate to branch |
 | GET | `/api/v1/group/{group_id}/transport/fees/defaulters/kpis/` | JWT (G3+) | KPI cards |
 | GET | `/api/v1/group/{group_id}/transport/fees/defaulters/export/` | JWT (G3+) | Export |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../defaulters/?q={val}` | `#defaulter-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../defaulters/?{filters}` | `#defaulter-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../defaulters/?sort={col}&dir={asc/desc}` | `#defaulter-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../defaulters/?page={n}` | `#defaulter-table-section` | `innerHTML` |
+| Send reminder confirm | `click` | POST `.../defaulters/bulk-reminder/` | `#defaulter-table-section` | `innerHTML` |
+| Suspend pass confirm | `click` | POST `.../students/{id}/suspend-pass/` | `#defaulter-row-{id}` | `outerHTML` |
+| Escalate confirm | `click` | POST `.../defaulters/{id}/escalate/` | `#defaulter-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../defaulters/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (send reminder, suspend pass, escalate, record payment) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

@@ -104,8 +104,11 @@ Contacts include: Nearest hospital (per branch) · Police station · Fire statio
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Protocol published | "Protocol [Name] published to [N] branches." | Success | 4s |
+| Publish failed | "Failed to publish protocol. Please retry." | Error | 5s |
 | Acknowledgement reminder | "Acknowledgement reminder sent to [N] branches." | Info | 4s |
+| Reminder failed | "Failed to send acknowledgement reminder. Please retry." | Error | 5s |
 | Emergency contacts verified | "Emergency contacts verified. Next review in 90 days." | Info | 4s |
+| Verification failed | "Failed to mark contacts as verified. Please retry." | Error | 5s |
 
 ---
 
@@ -115,6 +118,7 @@ Contacts include: Nearest hospital (per branch) · Police station · Fire statio
 |---|---|---|---|
 | No protocols | "No Emergency Protocols" | "Create emergency response protocols for all transport scenarios." | [+ New Protocol] |
 | All acknowledged | "All Branches Acknowledged" | "All branches have acknowledged current protocols." | — |
+| No filter results | "No Protocols Match Filters" | "Adjust protocol type, status, or acknowledgement filters." | [Clear Filters] |
 
 ---
 
@@ -150,6 +154,25 @@ Contacts include: Nearest hospital (per branch) · Police station · Fire statio
 | POST | `/api/v1/group/{group_id}/transport/safety/protocols/{id}/publish/` | JWT (G3+) | Publish to branches |
 | POST | `/api/v1/group/{group_id}/transport/safety/protocols/{id}/acknowledge/` | JWT (Branch) | Branch acknowledge |
 | GET | `/api/v1/group/{group_id}/transport/safety/emergency-contacts/` | JWT (G3+) | Contact directory |
+| PATCH | `/api/v1/group/{group_id}/transport/safety/emergency-contacts/{id}/verify/` | JWT (G3+) | Verify emergency contact |
+| GET | `/api/v1/group/{group_id}/transport/safety/protocols/kpis/` | JWT (G3+) | KPI cards |
+| GET | `/api/v1/group/{group_id}/transport/safety/protocols/export/` | JWT (G3+) | Export all protocols |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Protocol table filter | `click` | GET `.../protocols/?{filters}` | `#protocol-table-section` | `innerHTML` |
+| Protocol table sort | `click` on header | GET `.../protocols/?sort={col}&dir={asc/desc}` | `#protocol-table-section` | `innerHTML` |
+| Protocol table pagination | `click` | GET `.../protocols/?page={n}` | `#protocol-table-section` | `innerHTML` |
+| Open protocol detail drawer | `click` on Protocol Name | GET `.../protocols/{id}/` | `#drawer-body` | `innerHTML` |
+| Create protocol submit | `click` | POST `.../protocols/` | `#protocol-table-section` | `innerHTML` |
+| Publish confirm | `click` | POST `.../protocols/{id}/publish/` | `#protocol-row-{id}` | `outerHTML` |
+| Send acknowledgement reminder | `click` | POST `.../protocols/{id}/reminder/` | `#reminder-btn-{id}` | `outerHTML` |
+| Verify emergency contact | `click` | PATCH `.../emergency-contacts/{id}/verify/` | `#contact-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../protocols/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (create, publish, acknowledge protocol; verify contacts) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

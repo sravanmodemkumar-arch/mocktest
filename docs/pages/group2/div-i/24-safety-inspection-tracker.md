@@ -121,9 +121,12 @@ Group HQ  ›  Transport Management  ›  Safety Inspection Tracker
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Inspection scheduled | "Safety inspection scheduled for [Bus No] on [date]." | Info | 4s |
+| Schedule failed | "Failed to schedule inspection. Check vehicle status." | Error | 5s |
 | Inspection result recorded — pass | "[Bus No] inspection PASSED. Next due in 3 months." | Success | 4s |
 | Inspection result recorded — fail | "[Bus No] inspection FAILED. [N] items need rectification. Fleet Manager notified." | Warning | 6s |
+| Result recording failed | "Failed to record inspection result. Please retry." | Error | 5s |
 | Rectification completed | "[Bus No] rectification completed. Re-inspection scheduled." | Info | 4s |
+| Rectification failed | "Failed to record rectification. Please retry." | Error | 5s |
 
 ---
 
@@ -133,6 +136,8 @@ Group HQ  ›  Transport Management  ›  Safety Inspection Tracker
 |---|---|---|---|
 | No inspections | "No Safety Inspections Scheduled" | "Schedule quarterly safety inspections for all vehicles." | [+ Schedule Inspection] |
 | No failed vehicles | "No Failed Inspections" | "All completed inspections have passed." | — |
+| No filter results | "No Inspections Match Filters" | "Adjust branch, inspection type, status, or result filters." | [Clear Filters] |
+| No search results | "No Inspections Found for '[term]'" | "Check the bus number, branch, or inspector name." | [Clear Search] |
 
 ---
 
@@ -167,6 +172,23 @@ Group HQ  ›  Transport Management  ›  Safety Inspection Tracker
 | PATCH | `/api/v1/group/{group_id}/transport/safety/inspections/{id}/` | JWT (G3+) | Record result |
 | POST | `/api/v1/group/{group_id}/transport/safety/inspections/{id}/rectify/` | JWT (G3+) | Record rectification |
 | GET | `/api/v1/group/{group_id}/transport/safety/inspections/kpis/` | JWT (G3+) | KPI cards |
+| GET | `/api/v1/group/{group_id}/transport/safety/inspections/export/` | JWT (G3+) | Async CSV/XLSX export |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../inspections/?q={val}` | `#inspection-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../inspections/?{filters}` | `#inspection-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../inspections/?sort={col}&dir={asc/desc}` | `#inspection-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../inspections/?page={n}` | `#inspection-table-section` | `innerHTML` |
+| Open detail drawer | `click` on Bus No | GET `.../inspections/{id}/` | `#drawer-body` | `innerHTML` |
+| Schedule submit | `click` | POST `.../inspections/` | `#inspection-table-section` | `innerHTML` |
+| Record result submit | `click` | PATCH `.../inspections/{id}/` | `#inspection-row-{id}` | `outerHTML` |
+| Rectification submit | `click` | POST `.../inspections/{id}/rectify/` | `#inspection-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../inspections/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (schedule, record result, rectify) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

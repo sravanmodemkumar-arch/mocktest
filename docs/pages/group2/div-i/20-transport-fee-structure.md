@@ -100,6 +100,17 @@ Group HQ  ›  Transport Management  ›  Transport Fee Structure
 - **Fields:** Branch · Plan Name · Academic Year · Fee Type (Zone-based / Route-specific / Flat) · Route(s) applicable (multi-select) · Fee Per Month (₹) · Billing Frequency (Monthly / Per Term / Annual) · Late Payment Penalty (₹/day after due date) · Grace Period (days) · Effective From (date) · Notes
 - **Validation:** Fee must be > 0 · At least one route must be selected unless Flat type
 
+### 6.3 Drawer: `copy-plans-from-last-ay`
+- **Trigger:** Copy Plans from Last AY button
+- **Width:** 540px
+- **Content:** "Copying fee plans from AY [prev] → AY [current]. The following plans will be duplicated (as Draft status)."
+- **Fields:** Source AY (auto-filled) · Target AY (auto-filled) · Branches (All / Select — multi-select) · Include fee amounts as-is (checkbox — if unchecked, amounts are set to 0 for manual update) · Review before activating (checkbox, default checked)
+- **Preview table:** Shows plan name, branch, current fee, status after copy
+- **On confirm:** All plans cloned as Draft for target AY; redirects to fee plan list filtered by Draft status
+- **Validation:** Cannot copy if target AY plans already exist (warns, allows overwrite with confirmation)
+
+> **Audit trail:** All write actions (create, edit, clone, retire fee plan) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.2 Drawer: `fee-plan-detail`
 - **Width:** 600px
 - **Tabs:** Plan Details · Routes Linked · Students · History
@@ -115,9 +126,15 @@ Group HQ  ›  Transport Management  ›  Transport Fee Structure
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Fee plan created | "Fee plan [Name] created for [Branch]." | Success | 4s |
+| Fee plan create failed | "Failed to create fee plan. Check for duplicate plan for this route." | Error | 5s |
 | Fee plan updated | "Fee plan updated. Changes effective from [date]." | Info | 4s |
+| Fee plan update failed | "Failed to update fee plan. Please retry." | Error | 5s |
+| Plans copied from last AY | "[N] fee plans copied to AY [current] as Draft. Review and activate." | Info | 5s |
+| Copy plans failed | "Failed to copy fee plans. Please retry." | Error | 5s |
 | Plan cloned | "Fee plan cloned for AY [next year]. Review and activate." | Info | 4s |
+| Clone failed | "Failed to clone fee plan. Please retry." | Error | 5s |
 | Plan retired | "Fee plan [Name] retired. Affected students: [N]." | Warning | 5s |
+| Retire failed | "Failed to retire fee plan. Please retry." | Error | 5s |
 
 ---
 
@@ -127,6 +144,8 @@ Group HQ  ›  Transport Management  ›  Transport Fee Structure
 |---|---|---|---|
 | No fee plans | "No Transport Fee Plans" | "Create fee plans for each branch before billing students." | [+ New Fee Plan] |
 | No routes without plans | "All Routes Have Fee Plans" | "Every active route has a fee plan configured." | — |
+| No filter results | "No Fee Plans Match Filters" | "Adjust branch, fee type, status, or academic year filters." | [Clear Filters] |
+| No search results | "No Fee Plans Found for '[term]'" | "Check the branch, plan name, or route." | [Clear Search] |
 
 ---
 
@@ -163,7 +182,24 @@ Group HQ  ›  Transport Management  ›  Transport Fee Structure
 | PATCH | `/api/v1/group/{group_id}/transport/fees/plans/{id}/` | JWT (G3+) | Update plan |
 | POST | `/api/v1/group/{group_id}/transport/fees/plans/{id}/clone/` | JWT (G3+) | Clone for next AY |
 | POST | `/api/v1/group/{group_id}/transport/fees/plans/{id}/retire/` | JWT (G3+) | Retire plan |
+| POST | `/api/v1/group/{group_id}/transport/fees/plans/copy-from-ay/` | JWT (G3+) | Bulk copy plans from previous AY |
 | GET | `/api/v1/group/{group_id}/transport/fees/plans/kpis/` | JWT (G3+) | KPI cards |
+| GET | `/api/v1/group/{group_id}/transport/fees/plans/export/` | JWT (G3+) | Async CSV/XLSX export |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../plans/?q={val}` | `#fee-plan-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../plans/?{filters}` | `#fee-plan-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../plans/?sort={col}&dir={asc/desc}` | `#fee-plan-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../plans/?page={n}` | `#fee-plan-table-section` | `innerHTML` |
+| Open plan detail drawer | `click` on Plan Name | GET `.../plans/{id}/` | `#drawer-body` | `innerHTML` |
+| Create plan submit | `click` | POST `.../plans/` | `#fee-plan-table-section` | `innerHTML` |
+| Clone plan confirm | `click` | POST `.../plans/{id}/clone/` | `#fee-plan-table-section` | `innerHTML` |
+| Retire plan confirm | `click` | POST `.../plans/{id}/retire/` | `#plan-row-{id}` | `outerHTML` |
+| Copy from last AY confirm | `click` | POST `.../plans/copy-from-ay/` | `#fee-plan-table-section` | `innerHTML` |
+| Export | `click` | GET `.../plans/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

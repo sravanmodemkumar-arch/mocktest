@@ -113,8 +113,11 @@ Group HQ  ›  Transport Management  ›  GPS Device Manager
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Device registered | "GPS device [ID] registered and assigned to [Bus No]." | Success | 4s |
+| Registration failed | "Failed to register GPS device. Check for duplicate IMEI." | Error | 5s |
 | Device replaced | "GPS device replaced on [Bus No]. New device: [ID]." | Info | 4s |
+| Replace failed | "Failed to replace GPS device. Please retry." | Error | 5s |
 | SIM renewal reminder | "SIM renewal reminders sent for [N] devices." | Info | 4s |
+| Reminder failed | "Failed to send SIM renewal reminders. Please retry." | Error | 5s |
 
 ---
 
@@ -124,6 +127,8 @@ Group HQ  ›  Transport Management  ›  GPS Device Manager
 |---|---|---|---|
 | No devices registered | "No GPS Devices Registered" | "Register GPS devices for fleet tracking." | [+ Register Device] |
 | All devices online | "All GPS Devices Online" | "Full GPS coverage across the fleet." | — |
+| No filter results | "No Devices Match Filters" | "Adjust branch, status, or signal quality filters." | [Clear Filters] |
+| No search results | "No Devices Found for '[term]'" | "Check the device ID, IMEI, or bus number." | [Clear Search] |
 
 ---
 
@@ -160,6 +165,22 @@ Group HQ  ›  Transport Management  ›  GPS Device Manager
 | POST | `/api/v1/group/{group_id}/transport/gps/devices/{id}/replace/` | JWT (G3+) | Replace device |
 | GET | `/api/v1/group/{group_id}/transport/gps/devices/{id}/signal-history/` | JWT (G3+) | 30-day signal history |
 | GET | `/api/v1/group/{group_id}/transport/gps/devices/kpis/` | JWT (G3+) | KPI cards |
+| GET | `/api/v1/group/{group_id}/transport/gps/devices/export/` | JWT (G3+) | Async CSV/XLSX export |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../devices/?q={val}` | `#device-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../devices/?{filters}` | `#device-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../devices/?sort={col}&dir={asc/desc}` | `#device-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../devices/?page={n}` | `#device-table-section` | `innerHTML` |
+| Open device detail drawer | `click` on Device ID | GET `.../devices/{id}/` | `#drawer-body` | `innerHTML` |
+| Register device submit | `click` | POST `.../devices/` | `#device-table-section` | `innerHTML` |
+| Replace device confirm | `click` | POST `.../devices/{id}/replace/` | `#device-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../devices/export/` | `#export-btn` | `outerHTML` |
+
+> **Audit trail:** All write actions (register, replace, update device) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ---
 

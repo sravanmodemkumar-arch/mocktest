@@ -109,6 +109,8 @@ Group HQ  ›  Transport Management  ›  Fitness / Permit / Insurance Manager
 - **Fields:** Bus No (searchable) · Document Type · Issue Date · Expiry Date · Issuing Authority · Document Number · Upload File (PDF/JPG, max 5MB)
 - **Validation:** Expiry date must be future · File type PDF or image only
 
+> **Audit trail:** All write actions (upload document, mark renewed, send reminders) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.2 Drawer: `vehicle-document-view`
 - **Trigger:** Actions → View Docs
 - **Width:** 680px
@@ -135,8 +137,11 @@ Group HQ  ›  Transport Management  ›  Fitness / Permit / Insurance Manager
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Document uploaded | "Fitness certificate uploaded for [Bus No]. Expiry: [date]." | Success | 4s |
+| Upload failed | "Failed to upload document. Check file format (PDF/image) and size (max 5MB)." | Error | 5s |
 | Document renewed | "Route permit renewed for [Bus No]. New expiry: [date]." | Success | 4s |
+| Renewal failed | "Failed to update renewal record. Please retry." | Error | 5s |
 | Bulk reminder sent | "Renewal reminders sent for [N] vehicles." | Info | 4s |
+| Reminder failed | "Failed to send reminders. Check notification configuration." | Error | 5s |
 | Document expired | "[Bus No] insurance expired. Vehicle marked non-compliant." | Warning | 6s |
 
 ---
@@ -147,6 +152,8 @@ Group HQ  ›  Transport Management  ›  Fitness / Permit / Insurance Manager
 |---|---|---|---|
 | No compliance issues | "Full Document Compliance" | "All vehicles have valid fitness, permit, and insurance documents." | — |
 | No vehicles | "No Vehicles Registered" | "Register vehicles in the Vehicle Register first." | [→ Vehicle Register] |
+| No filter results | "No Vehicles Match Filters" | "Adjust branch, document type, or status filters." | [Clear Filters] |
+| No search results | "No Vehicles Found for '[term]'" | "Check the bus number, RC number, or branch." | [Clear Search] |
 
 ---
 
@@ -192,8 +199,11 @@ Group HQ  ›  Transport Management  ›  Fitness / Permit / Insurance Manager
 | Tab switch | `click` | GET `.../documents/?type={tab}` | `#doc-table-section` | `innerHTML` |
 | Search | `input delay:300ms` | GET `.../documents/?q={val}` | `#doc-table-body` | `innerHTML` |
 | Filter apply | `click` | GET `.../documents/?{filters}` | `#doc-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../documents/?sort={col}&dir={asc/desc}` | `#doc-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../documents/?page={n}` | `#doc-table-section` | `innerHTML` |
 | Upload submit | `click` | POST `.../documents/upload/` | `#doc-table-section` | `innerHTML` |
 | Open doc view drawer | `click` | GET `.../vehicles/{id}/documents/` | `#drawer-body` | `innerHTML` |
+| Export | `click` | GET `.../documents/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

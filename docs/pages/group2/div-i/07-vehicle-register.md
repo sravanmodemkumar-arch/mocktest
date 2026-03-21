@@ -129,6 +129,8 @@ Group HQ  ›  Transport Management  ›  Vehicle Register
 - **Width:** 640px (same tabs as create, pre-populated)
 - **Read-only after save:** RC Number, Chassis Number, Engine Number — change requires Director approval
 
+> **Audit trail:** All write actions (add vehicle, edit vehicle, renew compliance, decommission) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.4 Modal: `vehicle-decommission`
 - **Trigger:** Actions → Flag → Decommission
 - **Width:** 480px
@@ -143,10 +145,15 @@ Group HQ  ›  Transport Management  ›  Vehicle Register
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Vehicle added | "[Bus No] added to vehicle register." | Success | 4s |
+| Vehicle add failed | "Failed to add vehicle. Check for duplicate RC number or bus number." | Error | 5s |
 | Vehicle updated | "[Bus No] details updated." | Success | 4s |
+| Vehicle update failed | "Failed to update vehicle. Please retry." | Error | 5s |
 | Compliance renewed | "Fitness certificate renewed for [Bus No]. Expiry: [date]." | Success | 4s |
+| Compliance renewal failed | "Failed to update compliance record. Please retry." | Error | 5s |
 | Vehicle decommissioned | "[Bus No] decommissioned on [date]. Record archived." | Info | 5s |
+| Decommission failed | "Decommission failed. Director approval may be required." | Error | 5s |
 | Bulk export | "Vehicle register export prepared. You'll be notified when ready." | Info | 4s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
 
 ---
 
@@ -155,7 +162,8 @@ Group HQ  ›  Transport Management  ›  Vehicle Register
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No vehicles | "No Vehicles Registered" | "Add vehicles to build the fleet register." | [+ Add Vehicle] |
-| No results for filter | "No Vehicles Match Filters" | "Adjust branch, status, or compliance filters." | [Clear Filters] |
+| No filter results | "No Vehicles Match Filters" | "Adjust branch, status, or compliance filters." | [Clear Filters] |
+| No search results | "No Vehicles Found for '[term]'" | "Check the bus number, RC number, or branch name." | [Clear Search] |
 | No compliance issues | "All Vehicles Compliant" | "All vehicles have valid fitness, insurance, and permits." | — |
 
 ---
@@ -208,8 +216,11 @@ Group HQ  ›  Transport Management  ›  Vehicle Register
 | Pagination | `click` | GET `.../vehicles/?page={n}` | `#vehicle-table-section` | `innerHTML` |
 | Sort | `click` on header | GET `.../vehicles/?sort={col}&dir={asc/desc}` | `#vehicle-table-section` | `innerHTML` |
 | Open view drawer | `click` on Bus No | GET `.../vehicles/{id}/` | `#drawer-body` | `innerHTML` |
+| Sort | `click` on header | GET `.../vehicles/?sort={col}&dir={asc/desc}` | `#vehicle-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../vehicles/?page={n}` | `#vehicle-table-section` | `innerHTML` |
 | Submit create | `click` | POST `.../vehicles/` | `#vehicle-table-section` | `innerHTML` |
 | Decommission confirm | `click` | POST `.../vehicles/{id}/decommission/` | `#vehicle-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../vehicles/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

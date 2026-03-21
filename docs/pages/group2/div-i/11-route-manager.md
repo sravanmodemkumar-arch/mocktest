@@ -123,6 +123,8 @@ Group HQ  ›  Transport Management  ›  Route Manager
 - **Width:** 680px (same as create, pre-populated)
 - **If route is Active:** Editing requires Director re-approval for structural changes (stop additions/removals, direction change)
 
+> **Audit trail:** All write actions (create, edit, approve, suspend, retire route) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
+
 ### 6.4 Modal: `route-approve`
 - **Trigger:** Actions → Approve (Transport Director only)
 - **Width:** 480px
@@ -143,9 +145,13 @@ Group HQ  ›  Transport Management  ›  Route Manager
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Route created | "Route [Name] created. Awaiting Director approval." | Success | 4s |
+| Route create failed | "Failed to create route. Check for duplicate route code." | Error | 5s |
 | Route approved | "Route [Name] approved and activated." | Success | 4s |
+| Route approval failed | "Route approval failed. Please retry." | Error | 5s |
 | Route updated | "Route [Name] updated. Re-approval required for structural changes." | Info | 4s |
+| Route update failed | "Failed to update route. Please retry." | Error | 5s |
 | Route suspended | "Route [Name] suspended. [N] students notified." | Warning | 6s |
+| Suspension failed | "Failed to suspend route. Please retry." | Error | 5s |
 | Route rejected | "Route [Name] rejected by Director. Reason: [note]." | Warning | 5s |
 
 ---
@@ -155,6 +161,8 @@ Group HQ  ›  Transport Management  ›  Route Manager
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No routes | "No Routes Configured" | "Create the first transport route for this group." | [+ New Route] |
+| No filter results | "No Routes Match Filters" | "Adjust status, direction, assignment, or capacity filters." | [Clear Filters] |
+| No search results | "No Routes Found for '[term]'" | "Check the route name, code, or branch." | [Clear Search] |
 | No pending approvals | "No Routes Pending Approval" | "All submitted routes have been reviewed." | — |
 | No overloaded routes | "No Overloaded Routes" | "All route capacities are within limits." | — |
 
@@ -207,8 +215,11 @@ Group HQ  ›  Transport Management  ›  Route Manager
 | Filter apply | `click` | GET `.../routes/?{filters}` | `#route-table-section` | `innerHTML` |
 | Open route drawer | `click` on Route Name | GET `.../routes/{id}/` | `#drawer-body` | `innerHTML` |
 | Create submit | `click` | POST `.../routes/` | `#route-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../routes/?sort={col}&dir={asc/desc}` | `#route-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../routes/?page={n}` | `#route-table-section` | `innerHTML` |
 | Approve confirm | `click` | POST `.../routes/{id}/approve/` | `#route-row-{id}` | `outerHTML` |
 | Suspend confirm | `click` | POST `.../routes/{id}/suspend/` | `#route-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../routes/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

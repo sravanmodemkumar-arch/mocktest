@@ -24,9 +24,10 @@ Scale: 300–800 active routes · 2,000–5,000 pickup/drop stops · 3,000–15,
 |---|---|---|---|
 | Group Route Planning Manager | G3 | Full — all routes, all branches | Exclusive dashboard |
 | Group Transport Director | G3 | Approve routes | Via own dashboard route approval queue |
-| Group Transport Safety Officer | G3 | Read — route details for safety review | View only |
+| Group Fleet Manager | G3 | ❌ No access — own dashboard at /fleet/ | Redirect to Page 02 |
 | Group Transport Fee Manager | G3 | Read — route list for fee assignment | View only |
-| All other roles | — | — | No access |
+| Group Driver/Conductor HR | G0 | ❌ No EduForge login | See Page 05 |
+| Group Transport Safety Officer | G3 | Read — route details for safety review | View only |
 
 ---
 
@@ -153,6 +154,8 @@ Types: Merge (two underutilised routes) · Split (overloaded route) · Add Stop 
 - Students allocated to this branch's routes
 - Bus/driver assignments per route
 
+> **Audit trail:** All write actions (create route, update route, allocate students) are logged to [Transport Audit Log → Page 33].
+
 ---
 
 ## 7. Toast Messages
@@ -160,9 +163,13 @@ Types: Merge (two underutilised routes) · Split (overloaded route) · Add Stop 
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Route created | "Route [Name] created at [Branch]. Awaiting Director approval." | Success | 4s |
+| Route create failed | "Failed to create route. Check for duplicate route code." | Error | 5s |
 | Route approved | "Route [Name] approved and activated." | Success | 4s |
+| Route approval failed | "Route approval failed. Please try again." | Error | 5s |
 | Route updated | "Route [Name] updated." | Info | 4s |
+| Route update failed | "Route update failed. Please retry." | Error | 5s |
 | Student allocated | "[N] students allocated to Route [Name]." | Success | 4s |
+| Allocation failed | "Student allocation failed. Check route capacity." | Error | 5s |
 | Overload detected | "Warning: Route [Name] is over capacity by [N] students." | Warning | 6s |
 
 ---
@@ -174,6 +181,8 @@ Types: Merge (two underutilised routes) · Split (overloaded route) · Add Stop 
 | No routes | "No Routes Configured" | "Create routes for each branch before allocating students." | [+ New Route] |
 | No unallocated students | "All Students Allocated" | "All day scholars have been assigned to transport routes." | — |
 | No optimization suggestions | "Routes Are Optimal" | "No route optimization suggestions at this time." | — |
+| Route table — no filter results | "No Branches Match Filters" | "Adjust status, assignment, or capacity filters." | [Clear Filters] |
+| Route table — no search results | "No Branches Found for '[term]'" | "Check the branch name." | [Clear Search] |
 
 ---
 
@@ -221,10 +230,14 @@ Types: Merge (two underutilised routes) · Split (overloaded route) · Add Stop 
 | Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
 |---|---|---|---|---|
 | KPI auto-refresh | `every 10m` | GET `.../routes/kpi-cards/` | `#kpi-bar` | `innerHTML` |
+| Route table search | `input delay:300ms` | GET `.../routes/branch-summary/?q={val}` | `#route-table-body` | `innerHTML` |
+| Route table sort | `click` on header | GET `.../routes/branch-summary/?sort={col}&dir={asc/desc}` | `#route-table-section` | `innerHTML` |
+| Route table pagination | `click` | GET `.../routes/branch-summary/?page={n}` | `#route-table-section` | `innerHTML` |
 | Route table filter | `click` | GET `.../routes/branch-summary/?{filters}` | `#route-table-section` | `innerHTML` |
 | Map branch select | `change` | GET `.../routes/map-data/?branch={id}` | `#route-map-container` | `innerHTML` |
 | Open branch drawer | `click` | GET `.../routes/branches/{id}/detail/` | `#drawer-body` | `innerHTML` |
 | Submit new route | `click` | POST `.../routes/` | `#route-table-section` | `innerHTML` |
+| Export route list | `click` | GET `.../routes/branch-summary/export/` | `#export-btn` | `outerHTML` |
 
 ---
 

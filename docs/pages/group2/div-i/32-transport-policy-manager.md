@@ -60,6 +60,8 @@ Group HQ  ›  Transport Management  ›  Transport Policy Manager
 
 ## 5. Policy Library Table
 
+**Search:** Policy name, type, version. 300ms debounce.
+
 **Filters:** Policy Type · Status (Active / Draft / Retired) · Acknowledgement (All / Pending / Complete)
 
 **Policy Types:**
@@ -74,9 +76,13 @@ Group HQ  ›  Transport Management  ›  Transport Policy Manager
 
 **Columns:** Policy Name · Type · Version · Last Updated · Applicable Roles · Status · Acknowledgement % · Actions (View · Edit · Publish · Retire)
 
+**Pagination:** Server-side · 25/page.
+
 ---
 
 ## 6. Drawers
+
+> **Audit trail:** All write actions (create, publish, retire policy; send acknowledgement reminder) are logged to [Transport Audit Log → Page 33] with user, timestamp, and IP.
 
 ### 6.1 Drawer: `policy-create`
 - **Width:** 700px
@@ -96,8 +102,14 @@ Group HQ  ›  Transport Management  ›  Transport Policy Manager
 | Action | Toast | Type | Duration |
 |---|---|---|---|
 | Policy published | "Policy [Name] v[N] published to [N] branches." | Success | 4s |
+| Publish failed | "Failed to publish policy. Please retry." | Error | 5s |
+| Policy created | "Policy [Name] created as Draft." | Success | 4s |
+| Create failed | "Failed to create policy. Check all required fields." | Error | 5s |
 | Acknowledgement reminder | "Reminder sent to [N] branches." | Info | 4s |
+| Reminder failed | "Failed to send acknowledgement reminder. Please retry." | Error | 5s |
 | Policy retired | "Policy [Name] retired." | Info | 4s |
+| Retire failed | "Failed to retire policy. Please retry." | Error | 5s |
+| Export failed | "Export failed. Please try again." | Error | 5s |
 
 ---
 
@@ -106,6 +118,8 @@ Group HQ  ›  Transport Management  ›  Transport Policy Manager
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
 | No policies | "No Transport Policies" | "Create transport policies to govern operations." | [+ New Policy] |
+| No filter results | "No Policies Match Filters" | "Adjust policy type, status, or acknowledgement filters." | [Clear Filters] |
+| No search results | "No Policies Found for '[term]'" | "Check the policy name or type." | [Clear Search] |
 
 ---
 
@@ -141,6 +155,23 @@ Group HQ  ›  Transport Management  ›  Transport Policy Manager
 | POST | `/api/v1/group/{group_id}/transport/policies/{id}/publish/` | JWT (G3+) | Publish |
 | POST | `/api/v1/group/{group_id}/transport/policies/{id}/acknowledge/` | JWT (Branch) | Acknowledge |
 | POST | `/api/v1/group/{group_id}/transport/policies/{id}/reminder/` | JWT (G3+) | Send acknowledgement reminder |
+| POST | `/api/v1/group/{group_id}/transport/policies/{id}/retire/` | JWT (G3+) | Retire policy |
+| GET | `/api/v1/group/{group_id}/transport/policies/export/` | JWT (G3+) | Export all policies |
+
+## 12. HTMX Patterns
+
+| Interaction | hx-trigger | hx-get/post | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search | `input delay:300ms` | GET `.../policies/?q={val}` | `#policy-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../policies/?{filters}` | `#policy-table-section` | `innerHTML` |
+| Sort | `click` on header | GET `.../policies/?sort={col}&dir={asc/desc}` | `#policy-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../policies/?page={n}` | `#policy-table-section` | `innerHTML` |
+| Open policy detail drawer | `click` on Policy Name | GET `.../policies/{id}/` | `#drawer-body` | `innerHTML` |
+| Create policy submit | `click` | POST `.../policies/` | `#policy-table-section` | `innerHTML` |
+| Publish confirm | `click` | POST `.../policies/{id}/publish/` | `#policy-row-{id}` | `outerHTML` |
+| Send acknowledgement reminder | `click` | POST `.../policies/{id}/reminder/` | `#reminder-btn-{id}` | `outerHTML` |
+| Retire confirm | `click` | POST `.../policies/{id}/retire/` | `#policy-row-{id}` | `outerHTML` |
+| Export | `click` | GET `.../policies/export/` | `#export-btn` | `outerHTML` |
 
 ---
 
