@@ -27,6 +27,8 @@ The webhook delivery rate KPI is a leading indicator of integration health. A dr
 | Group IT Admin | G4 | Full read + edit non-SSO integrations | Cannot create or delete SSO configs |
 | Group IT Director | G4 | Full read (review only) | Cannot modify integrations directly |
 | Group IT Support Executive | G3 | Read-only (health status only) | Cannot access config or keys |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -52,6 +54,12 @@ Group Portal → IT & Technology → Integration Manager Dashboard
 | Webhook delivery rate drops below 90% | "Webhook delivery rate has dropped to [N]%. Check delivery error log." | Amber |
 | SSL certificate on custom domain expiring < 14 days | "SSL certificate for [Domain] expires in [N] days. Renew before expiry." | Amber |
 | SSO configuration broken at any branch | "SSO is broken for [Branch Name]. Users cannot log in via SSO. Immediate fix required." | Red (non-dismissible) |
+
+**Critical Notification Rules:**
+- Integration status = Failed: Integration Manager (in-app red non-dismissible + email + WhatsApp) + IT Director (email)
+- API key expiring < 7 days: Integration Manager (in-app amber + email) at 7 days, 1 day, and expiry
+- Webhook delivery rate < 90%: Integration Manager (in-app amber) + IT Admin (email)
+- SSO broken: Integration Manager (in-app red non-dismissible + email + WhatsApp) + IT Director (in-app + email) + affected Branch Principal (email)
 
 ---
 
@@ -114,6 +122,8 @@ Group Portal → IT & Technology → Integration Manager Dashboard
 - **Width:** 560px
 - **Content:** Same fields as Config tab in detail drawer, but all fields are editable. Save Changes button (HTMX PATCH). Validation errors shown inline. Warning banner at top: "Changes to active integrations will take effect immediately and may impact logged-in users."
 
+**Audit:** Integration configuration edits logged to IT Audit Log with Integration Manager user ID and timestamp.
+
 ### 6.3 Drawer: `integration-create` — Add Integration
 - **Trigger:** `+ Add Integration` button in header
 - **Width:** 560px
@@ -122,11 +132,29 @@ Group Portal → IT & Technology → Integration Manager Dashboard
 - **Step 3:** Select Branch (multi-select for group-wide or specific branches)
 - **Submit:** POST creates integration in draft state; triggers automated health check; Status updates to Active if health check passes
 
+**Audit:** New integration creation logged to IT Audit Log.
+
 ### 6.4 Modal: `rotate-key` — Rotate API Key
 - **Trigger:** Actions → Rotate Key
 - **Width:** 400px
 - **Content:** Integration name, current key age, warning "Rotating the key will invalidate the current key immediately. You must update the external system with the new key before rotating.", Confirm Rotate button
 - **On confirm:** New key generated and displayed once (copy button). User must acknowledge they have copied the key before the modal closes.
+
+**Audit:** API key rotations logged to IT Audit Log (key values not stored in log).
+
+### 6.5 Modal: `integration-delete-confirm` — Delete Integration
+
+Triggered by `Delete` button in Actions column (Integration Manager + IT Director only). Width: 400px.
+
+**Content:**
+- Integration name and type (read-only)
+- Warning: `Deleting this integration will immediately stop all active connections. Branches using this integration may lose functionality. This action cannot be undone.`
+- Affected branches count (if applicable)
+- Confirm Delete checkbox: `I confirm I want to delete this integration`
+
+**Footer:** `Confirm Delete` (red button) / `Cancel`
+
+**On submit:** `hx-delete="/api/v1/it/integrations/{id}/"` — integration removed; affected branches notified. Logged to IT Audit Log.
 
 ---
 
@@ -160,6 +188,8 @@ Group Portal → IT & Technology → Integration Manager Dashboard
 | Health check result: pass | "Health check passed. Integration is operational." | Success | 4s |
 | Health check result: fail | "Health check failed. Error: [Error Type]. View error log for details." | Error | 7s |
 | Integration deleted | "Integration [Name] has been removed." | Info | 4s |
+| Integration delete error | Error: `Failed to delete integration. Please try again.` | Error | 6s |
+| API key rotation error | Error: `Failed to rotate API key. Please try again.` | Error | 5s |
 
 ---
 

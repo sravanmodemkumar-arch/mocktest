@@ -27,6 +27,8 @@ The IT Admin has exclusive authority to create new portals and permanently delet
 | Group IT Director | G4 | Full read + approve portal deactivation | Cannot create portals; approves suspend/deactivate |
 | Group EduForge Integration Manager | G4 | Read-only + domain-related actions | Can verify domains but cannot manage portal lifecycle |
 | Group IT Support Executive | G3 | Read-only (status column and active user count) | No config access |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -137,6 +139,12 @@ Group Portal → IT & Technology → Branch Portal Manager
 - **Width:** Full-screen modal overlay (420px centred)
 - **Content:** "You are about to deactivate the portal for [Branch Name]. [N] active users will lose access. This action is reversible — the portal can be reactivated at any time." · Confirm · Cancel
 
+**Audit Trail:** All portal status changes (create, activate, deactivate, suspend, config copy) are logged to IT Audit Log with IT Admin user ID, timestamp, and change description.
+
+**Notifications:**
+- Portal deactivation: IT Director notified via email + in-app alert immediately; Branch contact notified via email if "Notify Branch Contact" checkbox selected
+- Portal suspension: IT Director notified via email + in-app alert; Branch contact notified via email
+
 ---
 
 ## 7. Charts
@@ -154,6 +162,7 @@ No dedicated charts on this page. Portal status distribution is represented thro
 | Portal deactivated | "[Branch Name] portal deactivated. Users notified." | Info | 4s |
 | Portal suspended | "[Branch Name] portal suspended. IT Director notified." | Warning | 5s |
 | Portal copy complete | "Configuration from [Source Branch] applied to [Target Branch]." | Success | 4s |
+| Portal copy failed | Error: `Failed to copy configuration. Verify target portal is in Onboarding status.` | Error | 5s |
 | Portal slug taken | "The portal slug '[slug]' is already in use. Choose a different slug." | Error | 5s |
 | Create error | "Failed to create portal. Please check your input and try again." | Error | 6s |
 
@@ -197,6 +206,8 @@ No dedicated charts on this page. Portal status distribution is represented thro
 | Alert Banners | All banners | All banners | Domain/SSL banners only | Status banners only |
 | Export CSV | Visible | Visible | Hidden | Hidden |
 
+**Note:** Role 55 (DPO) and Role 56 (Cybersecurity Officer) have no access to this page (returns 403). All UI elements hidden.
+
 ---
 
 ## 12. API Endpoints
@@ -214,6 +225,7 @@ No dedicated charts on this page. Portal status distribution is represented thro
 | POST | `/api/v1/it/portals/{id}/copy-config/` | JWT (G4) | Copy config from source portal to this portal |
 | GET | `/api/v1/it/portals/slug-check/?slug={slug}` | JWT (G4) | Check slug availability (for inline validation) |
 | GET | `/api/v1/it/portals/kpis/` | JWT (G4) | Returns 4 KPI card values |
+| GET | `/api/v1/it/portals/pending-approvals/` | JWT (G4) | List portal lifecycle changes awaiting IT Director approval |
 
 ---
 

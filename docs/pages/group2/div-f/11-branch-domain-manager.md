@@ -27,6 +27,8 @@ Both the Group IT Admin and the Group EduForge Integration Manager have edit aut
 | Group EduForge Integration Manager | G4 | Full access — add/edit/verify/remove domains | Joint primary role |
 | Group IT Director | G4 | Full read | No edit access; approves domain changes for suspended portals |
 | Group IT Support Executive | G3 | Read-only | Domain name and DNS Verification Status columns only |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -162,6 +164,8 @@ No charts on this page. Domain status is best communicated via the table and KPI
 | Domain removed | "Custom domain removed. [Branch Name] now uses [slug].eduforge.in." | Info | 5s |
 | Domain uniqueness error | "The domain [domain] is already associated with another portal." | Error | 5s |
 | General error | "Failed to save changes. Please try again." | Error | 6s |
+| SSL renewal failed | Error: `SSL certificate renewal failed. Verify DNS configuration and try again.` | Error | 7s |
+| Domain update failed | Error: `Failed to update domain. Ensure the domain is not already in use.` | Error | 6s |
 
 ---
 
@@ -182,6 +186,7 @@ No charts on this page. Domain status is best communicated via the table and KPI
 |---|---|
 | Initial page load | Full-page skeleton: KPI bar shimmer (4 cards) + table skeleton (8 rows) |
 | Add Domain drawer open | Drawer-scoped spinner while branch dropdown options load |
+| Edit Domain drawer open | Drawer-scoped spinner while current domain data and SSL status load |
 | Domain uniqueness check on blur | Inline spinner on domain input; green tick or red error on completion |
 | Verification Status drawer open | Drawer-scoped spinner then step-by-step status loads |
 | DNS polling (every 30s) | Subtle "Checking…" indicator in the verification status area; non-intrusive |
@@ -204,6 +209,8 @@ No charts on this page. Domain status is best communicated via the table and KPI
 | DNS Instructions (copy-able) | Visible in drawer | Visible in drawer | Visible (read-only) | Hidden |
 | Alert Banners | All | All | All | SSL Expired banner only |
 | Export CSV | Visible | Visible | Visible | Hidden |
+
+**Note:** Role 55 (DPO) and Role 56 (Cybersecurity Officer) have no access to this page (returns 403).
 
 ---
 

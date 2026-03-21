@@ -27,6 +27,8 @@ The dashboard also monitors WhatsApp configuration status across all branches, s
 | Group IT Director | G4 | Full read | Cannot perform provisioning or config actions directly |
 | Group IT Support Executive | G3 | Read-only (portal status only) | Cannot access config or user provisioning |
 | Group EduForge Integration Manager | G4 | Read-only (integration status columns only) | Cannot modify portal config |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -51,6 +53,13 @@ Group Portal → IT & Technology → IT Admin Dashboard
 | WhatsApp API key expired at any branch | "WhatsApp API key expired at [Branch Name]. Parent notifications disabled." | Red |
 | User provisioning request > 48 hours unactioned | "[N] provisioning request(s) have been waiting more than 48 hours." | Amber |
 | Feature toggle rollout pending Director approval | "[N] feature toggle change(s) are awaiting IT Director approval before they can apply." | Amber |
+
+**Alert Notification Rules:**
+- Portal config issues: IT Admin (in-app + email); escalated to IT Director if unresolved > 3 hours
+- WhatsApp API key expired: IT Admin + affected Branch Principal (in-app red + email)
+- Provisioning request > 48h: IT Admin (in-app amber + email)
+- Feature toggle pending Director approval: IT Director (in-app + email)
+- Provisioning approved: Requestor notified via in-app notification + email
 
 ---
 
@@ -107,11 +116,15 @@ Group Portal → IT & Technology → IT Admin Dashboard
 - **Fields:** Portal name (editable), Portal status toggle (Active/Inactive), Primary contact email, Timezone dropdown, Academic year start month, Feature toggle quick switches (top 5 most-used), Save Changes button
 - **Note:** Full config is available at the per-portal config editor page (`/group/it/portals/{id}/config/`); this drawer covers the most-frequently-changed settings only
 
+**Audit:** Portal configuration changes are logged to IT Audit Log with IT Admin user ID and timestamp.
+
 ### 6.2 Drawer: `it-admin-feature-toggle` — Feature Toggle Panel
 - **Trigger:** Actions → Toggle Features on any branch row
 - **Width:** 560px
 - **Layout:** Grid of all platform features with on/off toggle per feature for the selected branch. Features are grouped by category (Academic, Communication, Finance, Admin, AI). Each toggle shows: feature name, current state, last changed by, last changed date.
 - **Save button:** HTMX POST to save all changed toggles in one batch request. Changes requiring Director approval show a yellow badge and are submitted as a pending approval rather than applying immediately.
+
+**Audit:** Feature toggle changes are logged to IT Audit Log with IT Admin user ID and timestamp.
 
 ### 6.3 Drawer: `it-admin-provisioning-review` — User Provisioning Request Review
 - **Trigger:** Click Provisioning Requests count in header or KPI card
@@ -119,6 +132,30 @@ Group Portal → IT & Technology → IT Admin Dashboard
 - **Fields shown:** Requestor (branch principal/IT contact), request date, user's name and current role, requested role change, affected branch, justification text, Approve / Reject / Modify and Approve buttons
 - **On approval:** Role is updated in PostgreSQL and a confirmation notification is sent to the requesting branch contact
 - **On reject:** Rejection reason textarea (required) → notification sent to requestor
+
+**Audit:** Provisioning decisions (approve/reject/modify) are logged to IT Audit Log with IT Admin user ID and timestamp.
+
+### 6.4 Drawer: `it-admin-create-portal` — Create New Branch Portal
+
+Triggered by `+ Create Portal` button in header. Width: 560px.
+
+**Fields:**
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| Portal Name | Text | Yes | Max 100 chars, alphanumeric + spaces |
+| Branch Name | Dropdown | Yes | Select from registered branches or enter new |
+| Portal URL Slug | Text | Yes | Auto-generated from name; editable; alphanumeric + hyphens; unique |
+| Primary Contact Email | Email | Yes | Valid email format |
+| Timezone | Dropdown | Yes | IANA timezone list |
+| Academic Year Start Month | Dropdown | Yes | January–December |
+| SSO Enabled | Toggle | No | Default: off |
+| Custom Domain | Text | No | Valid FQDN if provided |
+
+**Footer:** `Create Portal` (primary) / `Cancel`
+
+**On submit:** `hx-post="/api/v1/it/admin/portals/"` — portal created in Onboarding status; welcome email sent to primary contact; IT Audit Log entry written.
+
+**Toast:** `Portal '[Name]' created successfully. Status: Onboarding.` (Success, 4s)
 
 ---
 
@@ -150,6 +187,10 @@ Group Portal → IT & Technology → IT Admin Dashboard
 | Provisioning request rejected | "Provisioning request rejected. Requestor has been notified." | Info | 4s |
 | Portal created | "New portal created for [Branch Name]. Onboarding in progress." | Success | 5s |
 | Config save error | "Failed to save configuration. Please check your input and try again." | Error | 6s |
+| Feature toggle save error | Error: `Failed to save feature settings. Please try again.` | Error | 5s |
+| Provisioning request rejection error | Error: `Failed to reject provisioning request. Please try again.` | Error | 5s |
+| Provisioning modification error | Error: `Failed to modify and approve provisioning request. Please try again.` | Error | 5s |
+| Portal creation error | Error: `Failed to create portal. Check that the slug is not already in use.` | Error | 6s |
 
 ---
 

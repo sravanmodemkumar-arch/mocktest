@@ -27,6 +27,8 @@ Regulatory context: Under DPDP Act 2023, a data breach that is not reported to t
 | Group IT Director | G4 | Full read | Receives escalations from DPO |
 | Group IT Admin | G4 | Full read | Actions DPO-raised flags |
 | Group Cybersecurity Officer | G1 | Read-only (breach incidents only) | Collaborates on breach response |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -52,6 +54,12 @@ Group Portal → IT & Technology → Data Privacy Officer Dashboard
 | Consent collection rate drops below 80% at any branch | "Consent collection rate at [Branch Name] has dropped to [N]%. This may indicate a consent flow misconfiguration." | Red |
 | DSR pending > 30 days (DPDP statutory response window) | "[N] Data Subject Request(s) at [Branch Name] have exceeded the 30-day statutory response window." | Red |
 | PIA overdue for a new data-processing activity | "[N] Privacy Impact Assessment(s) are overdue. New data processing activities cannot proceed without PIA completion." | Amber |
+
+**Critical DPDP Notification Rules:**
+- Breach incident open > 72h: Data Privacy Officer (in-app non-dismissible + email + WhatsApp) + IT Director (in-app + email) + Cybersecurity Officer (email)
+- Consent collection < 80%: Data Privacy Officer (in-app) + IT Admin (email)
+- DSR pending > 30 days: Data Privacy Officer (in-app + email) + IT Admin (email)
+- PIA overdue: Data Privacy Officer (in-app amber) + IT Admin (email)
 
 ---
 
@@ -108,10 +116,12 @@ Group Portal → IT & Technology → Data Privacy Officer Dashboard
 - **Content:** Branch name, compliance score breakdown (how the score is calculated), consent collection timeline, DSR list (type, date received, status, age), breach history log (date, type, severity, reported to authorities Y/N, resolution date), PIA list (activity, status, completion date), residency compliance status, privacy policy version acknowledged by staff, DPO notes field (append-only — DPO can add notes but cannot edit portal config)
 - **No edit controls** — all fields are display-only
 
+**Audit:** DPO note appends are logged to DPO Audit Log with timestamp and DPO user ID. Notes cannot be edited or deleted once appended.
+
 ### 6.2 Drawer: `dpo-flag-action` — Flag for Action
 - **Trigger:** Actions → Flag for Action button on any row
 - **Width:** 480px
-- **Fields:** Branch Name (pre-filled), Issue Category (dropdown: Consent / DSR / Breach / PIA / Residency / Policy), Issue Description (textarea, required), Urgency (High / Medium / Low), Notify (multi-select: IT Director, IT Admin), Submit Flag button
+- **Fields:** Branch Name (pre-filled), Issue Category (dropdown: Consent / DSR / Breach / PIA / Residency / Policy), Issue Description (required, textarea, max 2000 characters, plain text), Urgency (High / Medium / Low), Notify (multi-select: IT Director, IT Admin), Submit Flag button
 - **On submit:** Creates an internal action item in the IT Admin's queue and sends an email notification to selected recipients. Logged to DPO Audit Log.
 - **Note:** This is the only "write" action available to the G1 DPO role
 
@@ -143,6 +153,8 @@ Group Portal → IT & Technology → Data Privacy Officer Dashboard
 | Flag submission error | "Failed to submit flag. Please try again or contact IT Admin directly." | Error | 6s |
 | Export triggered | "Compliance report is being generated. You will be notified when ready." | Info | 5s |
 | DPO note saved | "Note appended to branch compliance record." | Success | 3s |
+| Export error | Error: `Failed to generate compliance report. Please try again.` | Error | 6s |
+| DPO note save error | Error: `Failed to save note. Please try again.` | Error | 4s |
 
 ---
 

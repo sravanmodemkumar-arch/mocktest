@@ -27,6 +27,8 @@ The platform follows the principle that all students and staff are potential tar
 | Group IT Director | G4 | Full read | Receives security escalations |
 | Group IT Admin | G4 | Full read | Actions security-related config changes |
 | Group Data Privacy Officer | G1 | Read-only (breach incidents only) | Collaborates on data breach response |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -53,6 +55,12 @@ Group Portal → IT & Technology → Cybersecurity Officer Dashboard
 | Phishing click rate > 20% at any branch | "Phishing simulation at [Branch Name] yielded a [N]% click rate. Mandatory re-training required." | Red |
 | Security training completion below 70% | "Security training compliance at [Branch Name] is [N]%. Below acceptable threshold." | Amber |
 | Overdue access reviews > 5 | "[N] access reviews are overdue across the group. Privilege creep risk increasing." | Amber |
+
+**Security Alert Notification Rules:**
+- Severity 1 incident open: Cybersecurity Officer (in-app non-dismissible + email + WhatsApp) + IT Director (in-app non-dismissible + email) + IT Admin (email)
+- Device compliance < 80%: Cybersecurity Officer (in-app) + IT Admin (email)
+- Phishing click rate > 20%: Cybersecurity Officer (in-app) + IT Director (email) + IT Admin (email)
+- Training completion < 70%: Cybersecurity Officer (in-app amber) + IT Admin (email)
 
 ---
 
@@ -120,7 +128,7 @@ Group Portal → IT & Technology → Cybersecurity Officer Dashboard
 ### 6.2 Drawer: `security-escalate` — Flag / Escalate
 - **Trigger:** Actions → Flag/Escalate button
 - **Width:** 480px
-- **Fields:** Branch Name (pre-filled), Incident / Issue Type (dropdown: Device Non-Compliance / Phishing Risk / Training Gap / Open Incident / Access Review Overdue / Vulnerability / Other), Description (textarea, required), Severity Assessment (High / Medium / Low as assessed by Cybersecurity Officer), Notify (multi-select: IT Director, IT Admin, Data Privacy Officer — if breach-related), Submit Escalation button
+- **Fields:** Branch Name (pre-filled), Incident / Issue Type (dropdown: Device Non-Compliance / Phishing Risk / Training Gap / Open Incident / Access Review Overdue / Vulnerability / Other), Description (textarea, required), Severity Assessment (Required) (High / Medium / Low as assessed by Cybersecurity Officer), Notify (multi-select: IT Director, IT Admin, Data Privacy Officer — if breach-related), Submit Escalation button
 - **On submit:** Creates an internal action item in IT Admin's queue with "Security" tag. Sends email notification to selected recipients. Logged to Security Audit Log.
 
 ---
@@ -157,6 +165,7 @@ Group Portal → IT & Technology → Cybersecurity Officer Dashboard
 | Escalation submitted | "Escalation submitted. IT Director and IT Admin have been notified." | Success | 4s |
 | Escalation submission error | "Failed to submit escalation. Please try again." | Error | 6s |
 | Export triggered | "Security report is being generated. You will be notified when ready." | Info | 5s |
+| Export error | Error: `Failed to generate security report. Please try again.` | Error | 5s |
 
 ---
 

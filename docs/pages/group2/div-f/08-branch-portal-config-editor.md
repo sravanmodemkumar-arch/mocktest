@@ -27,6 +27,8 @@ The "Danger Zone" tab is intentionally separated from functional configuration t
 | Group IT Director | G4 | Full read across all tabs | Cannot save changes — view-only |
 | Group EduForge Integration Manager | G4 | Read + edit Integrations tab only | Cannot edit other tabs |
 | Group IT Support Executive | G3 | Read-only (General Settings tab only) | Cannot view Danger Zone or edit any tab |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -67,6 +69,8 @@ No main table on this settings page. The page is organised as a tabbed settings 
 ---
 
 ## 6. Configuration Tabs (Settings Sections)
+
+**Audit Trail:** Every field change across all 7 tabs is logged to IT Audit Log including user ID, timestamp, field name, before/after values, and a plain-English change summary (e.g., "Feature Mock Test Engine enabled for [Branch] portal").
 
 ### Tab 1 — General Settings
 - **Purpose:** Core portal identity and operational settings
@@ -132,6 +136,7 @@ No main table on this settings page. The page is organised as a tabbed settings 
   - Primary Brand Colour: hex colour picker with real-time preview swatch
   - Secondary Brand Colour: hex colour picker
   - Custom CSS: textarea (max 10,000 characters; G4 only; full-page CSS injected into the branch portal's `<head>`) with a warning: "Custom CSS is applied after default styles. Incorrect CSS may break the portal layout."
+  **Clear Custom CSS:** A "Clear CSS" button lets IT Admin remove injected CSS without affecting logo or colours. Clearing and saving logs the change to IT Audit Log.
   - Brand Preview Panel: live preview of the branch portal's header/nav bar rendered with the selected colours and logo — updates as colours change
 - **Save:** HTMX PATCH to `/api/v1/it/portals/{id}/branding/` (logo upload is a separate HTMX POST with `hx-encoding="multipart/form-data"`)
 
@@ -143,6 +148,9 @@ No main table on this settings page. The page is organised as a tabbed settings 
   - **Reset to Defaults:** Warning button. Resets all feature toggles to the current group defaults. Does not affect user data. Confirmation modal required.
   - **Archive Portal:** Removes portal from active list. Portal data is retained in PostgreSQL but portal is inaccessible. Requires IT Director approval (submits an approval request rather than acting immediately). Cannot be undone without IT Director approval.
 - **G4 only:** All Danger Zone actions are hidden for G3 and below. IT Director can view but not initiate (they approve, IT Admin initiates).
+
+**Notifications:**
+- Portal deactivation/reset/archive requests: IT Director notified via email immediately; portal deactivation also sends email to branch contact if available.
 
 ---
 
@@ -169,6 +177,7 @@ No charts on this settings page. Configuration changes are tracked in the IT Aud
 | Portal deactivated | "[Branch Name] portal deactivated." | Warning | 5s |
 | Reset to defaults | "All feature toggles reset to group defaults." | Info | 5s |
 | Save error | "Failed to save changes. Please check your input." | Error | 6s |
+| Notification config save error | Error: `Failed to save notification settings. Verify API credentials and try again.` | Error | 6s |
 | Unsaved changes warning on tab switch | Modal: "You have unsaved changes on this tab. Save them before switching?" — Save + Stay / Discard + Switch | — | Modal (no auto-dismiss) |
 | Slug change request submitted | "Slug change request submitted for IT Director approval." | Info | 5s |
 | Slug change approved (IT Director) | "Portal slug changed to [new-slug]. All portal URLs have been updated." | Success | 6s |
@@ -212,6 +221,8 @@ No charts on this settings page. Configuration changes are tracked in the IT Aud
 | Danger Zone tab | Visible + actionable | Visible (read-only — can approve, not initiate) | Hidden | Hidden |
 | View Audit Log button | Visible | Visible | Visible (integrations only) | Hidden |
 
+**Note:** Role 55 (DPO) and Role 56 (Cybersecurity Officer) have no access to this page (returns 403). All UI elements hidden.
+
 ---
 
 ## 12. API Endpoints
@@ -237,6 +248,7 @@ No charts on this settings page. Configuration changes are tracked in the IT Aud
 | POST | `/api/v1/it/portals/{id}/reset-defaults/` | JWT (G4) | Reset feature toggles to group defaults |
 | POST | `/api/v1/it/portals/{id}/archive/` | JWT (G4) | Submit archive request (pending IT Director approval) |
 | POST | `/api/v1/it/portals/{id}/request-slug-change/` | JWT (G4) | Submit slug change request for IT Director approval |
+| GET | `/api/v1/it/users/search/?q={query}&role_min_level={level}` | JWT (G4) | Search available users for role assignment in Tab 3 |
 
 ---
 

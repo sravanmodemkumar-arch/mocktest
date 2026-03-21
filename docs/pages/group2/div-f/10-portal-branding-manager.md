@@ -27,6 +27,8 @@ This page also exposes a `brand.json` concept — a structured JSON representati
 | Group IT Director | G4 | Read-only | Can view branding status; cannot upload or edit |
 | Group IT Support Executive | G3 | Read-only | Branch name, logo status, last updated columns only |
 | Group EduForge Integration Manager | G4 | Read-only | No branding-related authority |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -101,6 +103,7 @@ Group Portal → IT & Technology → Branch Portal Manager → Branding Manager
 - **Fields:**
   - **Current Logo:** Thumbnail of current logo (or default placeholder). File path shown below.
   - **Upload New Logo:** File input (`accept=".png,.svg"`). Validation: max 2MB, PNG or SVG only. On file select, preview updates immediately via JS FileReader (client-side preview before upload). Upload triggered on form save, not on file select, to avoid unnecessary R2 writes.
+  **Remove Logo:** Logo field includes a "Remove Logo" button to clear the logo without affecting colours. Favicon field has a separate "Remove Favicon" button.
   - **Upload Favicon:** File input (`accept=".ico,.png"`). Max 100KB. PNG 32×32 or ICO format.
   - **Primary Brand Colour:** Hex colour picker with manual hex input field. Defaults to current value or EduForge blue `#1E40AF`.
   - **Secondary Brand Colour:** Hex colour picker with manual hex input field. Defaults to current value or EduForge grey `#6B7280`.
@@ -114,6 +117,8 @@ Group Portal → IT & Technology → Branch Portal Manager → Branding Manager
 - **Width:** 400px
 - **Content:** "You are about to reset [Branch Name]'s branding to the EduForge default. The custom logo and brand colours will be removed. The R2 files will be retained for 30 days before deletion. This action is reversible within 30 days." · Confirm Reset · Cancel
 - **On confirm:** PATCH sets logo_url and colours to null (portal reverts to EduForge default). R2 files are soft-deleted (flagged for deletion after 30 days).
+
+**Audit Trail:** All branding changes are logged to IT Audit Log: user ID, timestamp, field changed (logo/primary colour/secondary colour/favicon), old and new values, branch identifier.
 
 ---
 
@@ -135,6 +140,7 @@ No charts on this page. The 3-card KPI bar provides the aggregate branding adopt
 | Invalid file type | "Invalid file type. [PNG or SVG / ICO or PNG] files only." | Error | 5s |
 | R2 upload failure | "Logo upload failed. Storage service may be temporarily unavailable. Try again in a moment." | Error | 7s |
 | Save error | "Failed to save branding changes. Please try again." | Error | 6s |
+| Reset to default failed | Error: `Failed to reset branding. Please try again.` | Error | 5s |
 
 ---
 
@@ -176,6 +182,8 @@ No charts on this page. The 3-card KPI bar provides the aggregate branding adopt
 | brand.json Collapsible | Visible | Visible | Hidden | Hidden |
 | Export CSV | Visible | Visible | Hidden | Hidden |
 | Alert Banners | All | All | Hidden | Hidden |
+
+**Note:** Role 55 (DPO) and Role 56 (Cybersecurity Officer) have no access to this page (returns 403).
 
 ---
 

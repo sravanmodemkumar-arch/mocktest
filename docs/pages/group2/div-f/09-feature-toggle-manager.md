@@ -29,6 +29,8 @@ All feature toggle changes are recorded in the IT Audit Log. Changes that requir
 | Group IT Director | G4 | Full read + approve high-impact toggle changes | Reviews and approves pending approvals |
 | Group IT Support Executive | G3 | Read-only (feature name, group default, branch count only) | Cannot edit |
 | Group EduForge Integration Manager | G4 | Read-only | Cannot edit feature toggles |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -102,6 +104,8 @@ No KPI Summary Bar on this management page. Summary metrics are embedded in the 
 24. AI Performance Prediction (AI) — Student performance forecast (requires Director approval)
 25. AI Chatbot (AI) — AI helpdesk for students and parents (requires Director approval)
 
+**Feature Lifecycle:** Features cannot be deleted. To retire a feature, set group default to Off and migrate branch overrides to Inherit. Deprecated features display a "Deprecated" badge.
+
 ### 5.2 Right Pane — Branch Override Table (shown when a feature is selected in left pane)
 
 - **Header:** "[Feature Name] — Branch Overrides"
@@ -138,6 +142,8 @@ No KPI Summary Bar on this management page. Summary metrics are embedded in the 
 
 ## 6. Drawers
 
+**Audit Trail:** All feature toggle changes are logged to IT Audit Log including: user ID, timestamp, feature name, old value, new value, change type (group default vs. branch override), approval status if applicable.
+
 ### 6.1 Drawer: `feature-pending-approval` — Pending Director Approval Review
 - **Trigger:** Click "Pending Approvals ([count])" in page header
 - **Width:** 560px
@@ -164,6 +170,8 @@ No dedicated charts on this page. The "Enabled In X/Y Branches" column in the fe
 | Approval approved (Director action) | "Feature change approved. [Feature Name] is now [On/Off] group-wide." | Success | 5s |
 | Approval rejected (Director action) | "Feature change rejected. IT Admin has been notified." | Info | 4s |
 | Error saving toggle | "Failed to save toggle state. Please try again." | Error | 5s |
+| Approval request submission error | Error: `Failed to submit feature change for approval. Provide a reason and try again.` | Error | 6s |
+| Feature change approval error | Error: `Failed to approve feature change. Verify branch licensing and try again.` | Error | 6s |
 
 ---
 
@@ -202,6 +210,8 @@ No dedicated charts on this page. The "Enabled In X/Y Branches" column in the fe
 | Audit Log Button | Visible | Visible | Hidden | Hidden |
 | Alert Banners | All | All | Hidden | Hidden |
 
+**Note:** Role 55 (DPO) and Role 56 (Cybersecurity Officer) have no access to this page (returns 403).
+
 ---
 
 ## 12. API Endpoints
@@ -216,6 +226,7 @@ No dedicated charts on this page. The "Enabled In X/Y Branches" column in the fe
 | GET | `/api/v1/it/features/pending-approvals/` | JWT (G4) | List of feature toggle changes pending IT Director approval |
 | POST | `/api/v1/it/features/pending-approvals/{id}/approve/` | JWT (G4) | IT Director approves a feature change |
 | POST | `/api/v1/it/features/pending-approvals/{id}/reject/` | JWT (G4) | IT Director rejects a feature change |
+| GET | `/api/v1/it/features/audit-log/?feature_id={id}&date_range={range}` | JWT (G4) | Retrieve audit trail for feature toggle changes |
 
 ---
 

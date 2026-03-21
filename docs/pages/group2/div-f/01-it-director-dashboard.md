@@ -27,6 +27,8 @@ From a technology-strategy perspective, the feature adoption rate KPI allows the
 | Group IT Admin | G4 | Full read | Cannot action Director-level policy approvals |
 | Group Cybersecurity Officer | G1 | Read-only (security KPIs only) | Cannot view portal config or integration details |
 | Group Data Privacy Officer | G1 | Read-only (DPDP KPI only) | Cannot view portal config or integration details |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 — dashboard for IT Director only |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 — dashboard for IT Director only |
 
 ---
 
@@ -52,6 +54,14 @@ Group Portal → IT & Technology → IT Director Dashboard
 | DPDP breach unresolved > 4 hours | "DPDP breach incident at [Branch Name] has been open for [N] hours without resolution." | Red (non-dismissible) |
 | Cybersecurity incident Severity 1 | "Severity 1 security incident reported at [Branch Name]. IT Director escalation required." | Red (non-dismissible) |
 | Pending IT approvals > 72 hours old | "[N] IT policy approval(s) have been pending for more than 72 hours. Review now." | Amber |
+
+**Alert Notification Rules:**
+- Portal offline > 1 hour: IT Director (in-app non-dismissible + email)
+- Integration failure > 5 branches: Integration Manager + IT Director (in-app + email)
+- DPDP breach countdown active: Data Privacy Officer + IT Director (in-app non-dismissible + email)
+- Severity 1 security incident: Cybersecurity Officer + IT Director (in-app non-dismissible + email)
+- Pending approvals > 72h: IT Director (in-app amber + email)
+- Policy approved: IT Admin notified via in-app notification
 
 ---
 
@@ -116,14 +126,18 @@ Group Portal → IT & Technology → IT Director Dashboard
 ### 6.2 Drawer: `it-director-policy-approval` — Approve IT Policy
 - **Trigger:** Click Pending IT Approvals count or Actions → Approve from notification
 - **Width:** 560px
-- **Fields shown:** Policy change title, change description, proposed by (Group IT Admin), date submitted, branches affected (list), risk level (Low/Medium/High auto-assessed), IT Director notes (textarea)
+- **Fields shown:** Policy change title, change description, proposed by (Group IT Admin), date submitted, branches affected (list), risk level (Low/Medium/High auto-assessed), IT Director notes (textarea, required) (max 1000 characters, plain text)
 - **Action buttons:** Approve Policy · Reject · Request Clarification
 - **Note:** Approval is logged to IT Audit Log with Director user ID and timestamp
+
+**Audit:** All policy approvals, rejections, and clarification requests are logged to IT Audit Log with IT Director user ID and timestamp.
 
 ### 6.3 Drawer: `it-director-incident-detail` — Incident Detail
 - **Trigger:** Click on security alert or DPDP breach count
 - **Width:** 560px
 - **Shows:** Incident type, affected branch, severity, opened at, description, escalation trail, current status, assigned to, resolution notes field (read-only for Director at G4 — delegates resolution to IT Admin/Cybersecurity Officer)
+
+**Audit:** Alert acknowledgments are logged to IT Audit Log with IT Director user ID and timestamp.
 
 ---
 
@@ -162,6 +176,9 @@ Group Portal → IT & Technology → IT Director Dashboard
 | Export triggered | "Report is being generated. You will be notified when ready." | Info | 5s |
 | Approval submission error | "Failed to process approval. Please try again." | Error | 6s |
 | Alert acknowledged | "Incident acknowledged. Action logged against your profile." | Warning | 5s |
+| IT Policy rejected (error) | Error: `Failed to reject policy. Please try again.` | Error | 5s |
+| Clarification request (error) | Error: `Failed to send clarification request. Please try again.` | Error | 5s |
+| Alert acknowledgment failed | Error: `Failed to acknowledge alert. Please try again.` | Error | 5s |
 
 ---
 
@@ -173,6 +190,7 @@ Group Portal → IT & Technology → IT Director Dashboard
 | All portals healthy, no alerts | "All Systems Operational" | "Every branch portal is active and all integrations are healthy. No action required." | View Full Portal List |
 | No pending approvals | "No Pending Approvals" | "You are up to date. All IT policy change requests have been actioned." | — |
 | No support tickets open | "No Open Tickets" | "All support tickets across branches have been resolved or are unassigned." | — |
+| Filter/search returns no results | No Branches Match | No branch portals match your filter or search criteria. | Clear Filters |
 
 ---
 

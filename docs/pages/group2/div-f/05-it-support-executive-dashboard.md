@@ -26,6 +26,9 @@ The ticket system does not use any external ticketing platform. All tickets are 
 | Group IT Support Executive | G3 | Full access to own assigned tickets; view/resolve/escalate | Primary role |
 | Group IT Admin | G4 | Full read + reassign tickets | Can reassign tickets between support executives |
 | Group IT Director | G4 | Read-only overview | Sees all tickets but does not action them directly |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -50,6 +53,11 @@ Group Portal → IT & Technology → IT Support → My Queue
 | Any ticket SLA breached | "[N] ticket(s) have breached their SLA. Immediate attention required." | Red |
 | Remote session requested and not scheduled within 4 hours | "Remote session requested by [Branch] has not been scheduled. Please confirm." | Amber |
 | Ticket queue > 20 assigned tickets | "Your queue has [N] open tickets. Consider requesting re-assignment assistance from IT Admin." | Amber |
+
+**Alert Notification Rules:**
+- P1 ticket without first response > 1h: Assigned Support Executive (in-app red non-dismissible + email)
+- SLA breached tickets: Support Executive (in-app red) + IT Admin (email cc IT Director)
+- Queue > 20 tickets: Support Executive (in-app amber) + IT Admin (email)
 
 ---
 
@@ -113,6 +121,10 @@ Group Portal → IT & Technology → IT Support → My Queue
   - **Remote Session:** "Schedule Remote Session" button — opens a sub-panel with date/time picker and a link-share field for the session tool (Google Meet / Zoom link — manual entry)
   - **Escalate:** Opens a confirmation section — Escalate To (IT Admin / IT Director), reason for escalation (textarea), Submit Escalation button
 
+**Validation:** Reply (required if type = Reply; max 2000 chars). Internal note (max 1000 chars). Remote session date must be future date, business hours (08:00–18:00 branch timezone). Remote session link must be valid HTTPS URL if provided.
+
+**Audit:** All ticket actions (replies, status updates, resolutions, escalations) are logged to IT Audit Log with Support Executive user ID and timestamp. Internal notes are logged separately.
+
 ### 6.2 Drawer: `support-resolve-confirm` — Resolve Ticket (Confirm Modal)
 - **Trigger:** Actions → Resolve
 - **Width:** 400px (narrower confirmation modal)
@@ -137,6 +149,8 @@ No charts on this page. This is an operational task-queue page where every pixel
 | Remote session scheduled | "Remote session confirmed. Link shared with reporter." | Success | 4s |
 | Status updated | "Ticket status updated to [Status]." | Success | 3s |
 | Action error | "Failed to update ticket. Please try again." | Error | 6s |
+| Escalation failed | Error: `Failed to escalate ticket. Please try again.` | Error | 5s |
+| Status update failed | Error: `Failed to update ticket status. Please try again.` | Error | 5s |
 
 ---
 
