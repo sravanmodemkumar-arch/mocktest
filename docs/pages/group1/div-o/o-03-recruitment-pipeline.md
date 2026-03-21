@@ -399,3 +399,109 @@ Auto-refreshes every 5 minutes.
 | [Edit Position] | HR Manager (#79) only for budget/grade fields; Recruiter (#80) can edit JD, skills, hiring manager |
 | Analytics tab | Both HR Manager (#79) and Recruiter (#80) |
 | Export CSV | HR Manager (#79) only |
+
+---
+
+## Offer Acceptance → Employee Creation Flow
+
+**Critical cross-page workflow** (O-03 → O-02 → O-04):
+
+1. **Offer sent** (`hr_offer.offer_status='SENT'`): candidate receives email with offer letter PDF
+2. **Offer accepted** (HR Manager clicks [Mark Accepted] in O-03): `hr_offer.offer_status='ACCEPTED'`
+3. **Employee record NOT yet created** at acceptance. The employee record (`hr_employee`) is created only on the actual join date (or manually by HR Manager in O-02 before join for pre-join setup). This is intentional — an accepted candidate may not join (counter-offer, personal reasons). `hr_candidate.current_stage` transitions to `OFFER_ACCEPTED` (not JOINED).
+4. **Pre-join setup** (optional, 7 days before join): HR Manager can use [+ Add Employee] in O-02 with `status='PRE_JOIN'` to set up payroll, IT access requests, and asset assignment before Day 1. This triggers onboarding checklist generation in O-04.
+5. **On join date**: HR Manager changes `status='ACTIVE'` in O-02. `hr_candidate.current_stage` → `JOINED`. `hr_offer.offer_status` → `CONVERTED`. O-04 checklist moves to "Day 0" phase.
+6. **Offer lapsed** (Task O-20 daily): if candidate doesn't respond before expiry, `offer_status='LAPSED'`. Position reopened to next candidate.
+
+**Offer status states:** DRAFT → SENT → ACCEPTED → CONVERTED (joined) | DECLINED | LAPSED (expired without response) | REVOKED (HR revoked after sending)
+
+---
+
+## Interview Feedback Form: `/hr/interview/{token}/`
+
+Hiring managers and interviewers outside Division O submit feedback via this tokenised route.
+
+**Token generation:** On interview schedule (POST to schedule interview modal), a `token` (`secrets.token_urlsafe(32)`) is created and stored in `hr_interview.feedback_token`. Email to interviewer includes link: `https://hrportal.eduforge.com/hr/interview/{token}/`. Token expires 72 hours after scheduled interview time.
+
+**Form spec:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Interview Feedback — Backend Engineer (Division C)              │
+│  Candidate: Priya Sharma · Stage: Interview 1                    │
+│  Interviewer: Arjun Kumar (CTO)                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  Technical Ability*    ○ 1  ○ 2  ● 3  ○ 4  ○ 5                  │
+│  Problem Solving*      ○ 1  ○ 2  ○ 3  ● 4  ○ 5                  │
+│  Communication*        ○ 1  ○ 2  ○ 3  ○ 4  ● 5                  │
+│  Culture Fit*          ○ 1  ○ 2  ○ 3  ● 4  ○ 5                  │
+│                                                                  │
+│  Strengths (required, min 20 chars):                             │
+│  [Strong debugging instinct; clean code style; good communicator]│
+│                                                                  │
+│  Concerns (optional):                                            │
+│  [Limited AWS experience — may need ramp-up time               ]│
+│                                                                  │
+│  Recommendation*:                                                │
+│  ○ Strong Yes  ● Yes  ○ Neutral  ○ No  ○ Strong No              │
+│                                                                  │
+│  [Submit Feedback]                                               │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**On submit:** Creates/updates `hr_interview` row: `feedback_text` (JSONB with criteria scores + strengths + concerns), `recommendation`, `feedback_submitted_at`. Recruiter and HR Manager notified via email. Candidate drawer in O-03 refreshes star rating automatically.
+
+**Anonymity:** Candidate name and email are shown to the interviewer in the form. However, feedback in O-03 candidate drawer shows "Feedback from Interviewer 1" (not by name) if `hr_interview.anonymous_feedback=true` (configurable per position by HR Manager). Default: non-anonymous.
+
+**Duplicate submission guard:** If token already has `feedback_submitted_at` set, form shows "Feedback already submitted. Thank you." No re-submission allowed.
+
+**Interview conflict detection:** Before saving interview schedule, system checks `hr_interview` for the same `interviewer_id` on overlapping `scheduled_at` times (±1 hour). If conflict found: amber warning in schedule modal: "⚠ This interviewer has another interview scheduled at [time]. Proceed with caution."
+
+---
+
+## Role-Based UI Visibility Summary
+
+| Element | 79 HR Manager | 80 Recruiter |
+|---|---|---|
+| KPI strip | Yes | Yes |
+| Kanban board (all positions) | Yes | Yes |
+| Candidate cards — all info including salary expectation | Yes | Yes |
+| [+ Add Candidate] | Yes | Yes |
+| [Move Stage] (drag or button) | Yes | Yes |
+| [Reject Candidate] | Yes | Yes |
+| [Create Offer] | Yes | No (button disabled with tooltip) |
+| [+ Create Position] | Yes | Yes (pending HR Mgr approval if budget > ₹20L) |
+| [Edit Position] — budget/grade/headcount | Yes | No (those fields disabled) |
+| [Close Position] / [Put on Hold] | Yes | Yes |
+| Analytics tab | Yes | Yes |
+| Upcoming interviews panel | Yes | Yes |
+| Offers tab — full | Yes | Yes (can update status; cannot create) |
+| Export candidate CSV | Yes | No |
+| Interview feedback form (`/hr/interview/{token}/`) | Any authenticated EduForge employee if designated as interviewer |
+
+---
+
+## Performance Requirements
+
+| Metric | Target | Notes |
+|---|---|---|
+| Kanban board load (all positions, 50+ candidates) | < 1.5s P95 (cache: 2 min) | Aggregate query across all stages |
+| Single-position kanban filter | < 800ms P95 | Filtered to one position |
+| Candidate drawer | < 400ms P95 (no cache) | Single candidate row + interviews |
+| Analytics tab | < 2s P95 (cache: 30 min) | Multiple aggregation queries |
+| Interview feedback form (tokenised) | < 500ms P95 | Simple form page, no heavy queries |
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `g` `r` | Go to Recruitment Pipeline (O-03) |
+| `n` | [+ Add Candidate] (when Pipeline tab active) |
+| `p` | Switch to Positions tab |
+| `o` | Switch to Offers tab |
+| `a` | Switch to Analytics tab |
+| `/` | Focus candidate/position search |
+| `Esc` | Close open drawer or modal |
+| `?` | Show keyboard shortcut help overlay |
