@@ -42,7 +42,7 @@ Group HQ  ›  Health & Medical  ›  Doctor & Medical Staff Registry
 ### 3.2 Page Header
 - **Title:** `Doctor & Medical Staff Registry`
 - **Subtitle:** `[N] Total Staff · [N] Visiting Doctors · [N] On-Campus Nurses · [N] Branches Without Nurse`
-- **Right controls:** `+ Add Staff Member` · `Advanced Filters` · `Export`
+- **Right controls:** `+ Add Staff Member` · `↑ Import Staff` · `Advanced Filters` · `Export`
 
 ### 3.3 Alert Banner
 
@@ -216,10 +216,69 @@ Multiple qualifications can be added (repeat form).
 ---
 
 ### 6.4 Modal: `assign-branch` — Assign to Additional Branch
+
 - **Trigger:** Actions → Schedule · or within staff-detail Profile tab "Assign Branch +"
 - **Width:** 480px
 - **Fields:** Staff member (pre-selected from context) · Additional Branch (select from unassigned branches) · Schedule: days + times for that branch · Notes
 - **Validation:** Cannot assign same branch twice. Cannot schedule overlapping times at different branches on the same day.
+
+---
+
+### 6.5 Modal: `staff-bulk-import` — Bulk Import Medical Staff (4-Step Wizard)
+- **Trigger:** `↑ Import Staff` button in page header (Medical Coordinator only)
+- **Width:** 500px
+- **Use case:** Initial group setup or migration — 40–500 staff records imported at once from CSV/XLSX.
+
+**Step 1 — Download Template:**
+- "Download CSV Template" button — pre-formatted with all required column headers
+- Column guide: `full_name`, `type` (doctor/nurse/paramedic/pharmacist), `gender`, `dob`, `qualification`, `specialization`, `reg_no`, `reg_body`, `reg_expiry`, `mobile`, `email`, `primary_branch_code`, `additional_branch_codes` (pipe-separated), `status`, `joined_date`
+- "I have a file ready →" advances to Step 2
+
+**Step 2 — Upload File:**
+- Drag-and-drop zone or [Browse] button
+- Accepted formats: `.csv`, `.xlsx` — max 5 MB
+- Row count preview shown after file selection: "[N] rows detected"
+
+**Step 3 — Validation Preview:**
+- System validates all rows client-side (branch codes, reg_no uniqueness, date formats)
+- Summary: "[N] valid · [N] warnings · [N] errors"
+- Errors table: Row # · Column · Issue — e.g., "Row 12: reg_expiry — invalid date format", "Row 34: primary_branch_code — branch 'BRN099' not found"
+- Download Errors CSV button shown if any errors exist
+- Warnings (non-blocking): duplicate names, missing optional fields
+- Submit blocked if any errors exist; warnings allow proceed with confirmation
+
+**Step 4 — Confirm & Import:**
+- Summary card: "Importing [N] staff records to [Group Name]"
+- Checkbox: "I confirm these records have been verified against original documents"
+- [Import [N] Records] button — triggers async import job
+- Progress bar shown while import runs; on completion → success toast + table refresh
+
+**Validation:** Branch codes must match existing branches. `reg_no` must be unique across all current staff records. Duplicate rows in the file are flagged as errors.
+
+---
+
+### 6.6 Modal: `log-absence` — Log Staff Absence
+- **Trigger:** Alert banner "Log Absence" link (from "Nurse absence with no backup" alert); Actions → Log Absence in Visit History tab of `staff-detail` drawer; "Log Absence Today" button in Visit History tab
+- **Width:** 440px
+- **Use case:** Record that a doctor or nurse is absent today — used by School Medical Officer or on-campus branch admin. Triggers coordinator notification and coverage gap escalation.
+
+**Fields:**
+| Field | Type | Validation |
+|---|---|---|
+| Staff Member | Lookup | Pre-selected from alert/drawer context; type-ahead if opened standalone |
+| Branch | Select | Pre-selected from context; required |
+| Absence Date | Date | Default: today |
+| Absence Type | Radio | Sick / Personal Emergency / Planned Leave / Unplanned / Not Reachable |
+| Duration | Radio | Today Only / Multiple Days |
+| End Date | Date | Visible if Duration = Multiple Days; must be ≥ Absence Date |
+| Backup Arranged | Toggle | Default: Off |
+| Backup Staff Name | Lookup | Visible if Backup Arranged = Yes; from medical staff registry |
+| Backup Confirmed | Checkbox | Confirmation that backup has been contacted and confirmed |
+| Notes | Textarea | Optional — context for coordinator |
+| Notify Medical Coordinator | Checkbox | Default ✅ |
+| Notify Branch Principal | Checkbox | Default ✅ if nurse absent — branch may need to close sick bay |
+
+**On submit:** Visit History log entry created with `status = Absent`. Alert banner updated. If no backup arranged, Red banner remains with escalation prompt. Coordinator and branch principal notified per checkboxes.
 
 ---
 
@@ -234,7 +293,11 @@ Multiple qualifications can be added (repeat form).
 | BGV verified | "BGV verified for [Name]." | Success | 4s |
 | Staff deactivated | "[Name] marked inactive. All schedules removed." | Warning | 5s |
 | Registration expiry alert | "Renewal reminder: [Name]'s [MCI/NNC] registration expires on [date]." | Warning | 6s |
-| Export prepared | "Staff registry export ready. Download now." | Info | 4s |
+| Absence logged | "[Name] marked absent at [Branch] for [date]. Medical Coordinator notified." | Warning | 5s |
+| Absence logged — no backup | "[Name] absent at [Branch] with no backup. Branch sick bay may be unstaffed." | Error | 7s |
+| Bulk import complete | "[N] staff records imported successfully. [N] skipped (duplicates)." | Success | 6s |
+| Bulk import errors | "Import failed: [N] records have errors. Download error report to fix." | Error | 6s |
+| Export initiated | "Staff registry export is being prepared. You'll be notified when ready." | Info | 4s |
 
 ---
 
@@ -298,7 +361,11 @@ Multiple qualifications can be added (repeat form).
 | POST | `/api/v1/group/{group_id}/health/medical-staff/{id}/assign-branch/` | JWT (Role 85) | Assign to additional branch |
 | GET | `/api/v1/group/{group_id}/health/medical-staff/{id}/visit-history/` | JWT (G3+) | Visit history for staff |
 | POST | `/api/v1/group/{group_id}/health/medical-staff/{id}/deactivate/` | JWT (Role 85) | Deactivate staff record |
-| GET | `/api/v1/group/{group_id}/health/medical-staff/export/` | JWT (Role 85, 86) | Async CSV/XLSX export |
+| POST | `/api/v1/group/{group_id}/health/medical-staff/{id}/log-absence/` | JWT (Role 85, 86) | Log absence for a staff member on a given date |
+| POST | `/api/v1/group/{group_id}/health/medical-staff/bulk-import/` | JWT (Role 85) | Submit bulk import job (multipart/form-data); returns `{job_id}` |
+| GET | `/api/v1/group/{group_id}/health/medical-staff/bulk-import/status/{job_id}/` | JWT (Role 85) | Poll import job status and error report |
+| POST | `/api/v1/group/{group_id}/health/medical-staff/export/` | JWT (Role 85, 86) | Initiate async CSV/XLSX export; returns `{job_id}` |
+| GET | `/api/v1/group/{group_id}/health/medical-staff/export/status/{job_id}/` | JWT (Role 85, 86) | Poll export job status (`pending` / `ready` / `failed`) |
 
 ---
 
@@ -316,6 +383,12 @@ Multiple qualifications can be added (repeat form).
 | Submit edit | `click` | PATCH `.../medical-staff/{id}/` | `#staff-row-{id}` | `outerHTML` |
 | Inline schedule edit | `click` Edit on schedule row | GET `.../medical-staff/{id}/schedule/?edit={row}` | `#schedule-row-{row}` | `outerHTML` |
 | Save schedule row | `click` Save | PATCH `.../medical-staff/{id}/schedule/` | `#schedule-row-{row}` | `outerHTML` |
+| Submit log absence | `click` | POST `.../medical-staff/{id}/log-absence/` | `#visit-history-list` | `innerHTML` |
+| OOB KPI refresh on absence | (triggered by log-absence POST response) | — | `#kpi-bar` | `hx-swap-oob="true"` |
+| Submit bulk import file | `click` Upload | POST `.../medical-staff/bulk-import/` | `#import-validation-panel` | `innerHTML` |
+| Poll import job status | `every 3s [!#import-done]` | GET `.../medical-staff/bulk-import/status/{job_id}/` | `#import-progress` | `innerHTML` |
+| Initiate export | `click` Export | POST `.../medical-staff/export/` | `#export-status` | `innerHTML` |
+| Poll export status | `every 5s [!#export-done]` | GET `.../medical-staff/export/status/{job_id}/` | `#export-status` | `innerHTML` |
 
 ---
 

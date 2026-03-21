@@ -52,6 +52,7 @@ AY [current academic year]  ·  [N] Branches  ·  [N] Consultations Today  ·  [
 | Referral pending hospital response > 2 days | "Referral for [Student] to [Hospital] has had no response for [N] days. Follow up required." | Amber |
 | Prescription refill needed | "[N] students require prescription refills within 3 days." | Amber |
 | Medical record completeness < 80% | "[Branch] medical records completeness is [N]%. Documentation drive needed." | Amber |
+| Consultation backdated > 3 days | "Backdated consultation entry at [Branch]: record for [date] entered today. Audit flag auto-raised." | Amber |
 
 Max 5 alerts visible. Alert links route to relevant sections. "View all health events → Health Audit Log" always shown below alerts.
 
@@ -242,6 +243,30 @@ Max 5 alerts visible. Alert links route to relevant sections. "View all health e
 
 ---
 
+### 6.3 Drawer: `quick-assign-doctor` — Assign Doctor to Branch
+- **Trigger:** Actions → Assign Doctor in Section 5.3 Branch Doctor Coverage table; empty-state [Assign Doctor] CTA
+- **Width:** 480px
+
+**Fields:**
+| Field | Type | Validation |
+|---|---|---|
+| Branch | Select | Pre-selected from row context; read-only |
+| Doctor | Lookup | Type-ahead from medical staff registry — filters to doctors available today |
+| Specialty | Read-only | Auto-populated from selected doctor's profile |
+| On-Site Date | Date | Default: today |
+| On-Site From | Time | Required |
+| On-Site To | Time | Required; must be after From |
+| Coverage Type | Radio | Scheduled Replacement / Emergency Cover / Temporary |
+| Contact Number | Text | Pre-populated from doctor profile; editable |
+| Notes | Textarea | Optional — reason for assignment |
+| Notify Medical Coordinator | Checkbox | Default ✅ — sends alert to Role 85 |
+
+**Validation:** Doctor must have an active registration (non-expired MCI). Cannot assign same doctor to two branches with overlapping hours on the same day. Minimum 1-hour slot required.
+
+**On success:** Drawer closes; coverage grid row updates via `hx-swap-oob="true"` to show new doctor; KPI card "Branches with Doctor Today" refreshes.
+
+---
+
 ## 7. Toast Messages
 
 | Action | Toast | Type | Duration |
@@ -252,6 +277,7 @@ Max 5 alerts visible. Alert links route to relevant sections. "View all health e
 | Follow-up flagged | "Follow-up flagged for [Patient]. Due: [date]." | Info | 4s |
 | Follow-up completed | "Follow-up marked complete for [Patient]." | Success | 4s |
 | Doctor absence alert sent | "Doctor absence alert sent to Medical Coordinator for [Branch]." | Warning | 5s |
+| Doctor assigned to branch | "Dr [Name] assigned to [Branch] for [date] [from]–[to]." | Success | 4s |
 | Consultation report exported | "Report export prepared. Download ready." | Info | 4s |
 
 ---
@@ -312,7 +338,9 @@ Max 5 alerts visible. Alert links route to relevant sections. "View all health e
 | GET | `/api/v1/group/{group_id}/health/referrals/` | JWT (G3+) | Active referrals list |
 | PATCH | `/api/v1/group/{group_id}/health/referrals/{id}/` | JWT (G3+) | Update referral status |
 | GET | `/api/v1/group/{group_id}/health/doctor-coverage/today/` | JWT (G3+) | Today's branch doctor coverage |
-| GET | `/api/v1/group/{group_id}/health/medical-officer/export/` | JWT (G3+) | Async consultation report export |
+| POST | `/api/v1/group/{group_id}/health/doctor-coverage/assign/` | JWT (G3+) | Assign doctor to branch for a date/slot |
+| POST | `/api/v1/group/{group_id}/health/medical-officer/export/` | JWT (G3+) | Initiate async consultation report export; returns `{job_id}` |
+| GET | `/api/v1/group/{group_id}/health/medical-officer/export/status/{job_id}/` | JWT (G3+) | Poll export job status (`pending` / `ready` / `failed`) |
 
 ---
 
@@ -330,6 +358,11 @@ Max 5 alerts visible. Alert links route to relevant sections. "View all health e
 | Open consultation drawer | `click` | GET `.../consultations/{id}/` | `#drawer-body` | `innerHTML` |
 | Submit consultation log | `click` | POST `.../consultations/` | `#consultations-table-section` | `innerHTML` |
 | Mark follow-up complete | `click` | POST `.../follow-ups/{id}/complete/` | `#followup-row-{id}` | `outerHTML` |
+| Open quick-assign-doctor drawer | `click` Assign Doctor | GET `.../health/medical-staff/?available=today&type=doctor` | `#drawer-body` | `innerHTML` |
+| Submit doctor assignment | `click` Save | POST `.../health/doctor-coverage/assign/` | `#coverage-row-{branch_id}` | `outerHTML` |
+| OOB KPI refresh on doctor assign | (triggered by assign POST response) | — | `#kpi-bar` | `hx-swap-oob="true"` |
+| Initiate export | `click` | POST `.../medical-officer/export/` | `#export-status` | `innerHTML` |
+| Poll export status | `every 5s [!#export-done]` | GET `.../medical-officer/export/status/{job_id}/` | `#export-status` | `innerHTML` |
 
 ---
 

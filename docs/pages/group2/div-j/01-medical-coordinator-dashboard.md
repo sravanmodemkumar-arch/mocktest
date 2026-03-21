@@ -70,9 +70,9 @@ Max 5 alerts visible. Alert-type links route to relevant sections or pages. "Vie
 | Active Medical Rooms | Count of operational rooms across all branches | Green = all branches covered · Yellow = 1–3 non-op · Red > 3 non-op | → Page 05 |
 | Doctor Visit Compliance % | Scheduled vs actual visits this month, all branches | Green ≥ 90% · Yellow 70–90% · Red < 70% | → Page 07 |
 | Medicine Stock Alerts | Branches with any item below minimum threshold | Green = 0 · Yellow 1–5 · Red > 5 | → Page 08 |
-| Consultations This Month | Total patient consultations across all branches | Blue always (informational) | → Page 02 |
-| Health Screening Coverage % | Students screened vs enrolled (current AY) | Green ≥ 80% · Yellow 60–80% · Red < 60% | → Section 5.2 |
-| Insurance Policy Status | Policies active vs total group insurance policies | Green = all active · Yellow 1 expiring ≤ 30d · Red = expired | → Section 5.5 |
+| Consultations This Month | Total patient consultations across all branches | Blue always (informational) | → Page 09 |
+| Health Screening Coverage % | Students screened vs enrolled (current AY) | Green ≥ 80% · Yellow 60–80% · Red < 60% | → Page 11 |
+| Insurance Policy Status | Policies active vs total group insurance policies | Green = all active · Yellow 1 expiring ≤ 30d · Red = expired | → Page 16 |
 | Open Medical Incidents | Unresolved incidents across all branches | Green = 0 · Yellow 1–3 · Red > 3 | → Section 5.4 |
 | Branches Missing Doctor Coverage | Branches with no scheduled doctor visit this week | Green = 0 · Yellow 1–2 · Red > 2 | → Page 07 |
 
@@ -153,7 +153,7 @@ Max 5 alerts visible. Alert-type links route to relevant sections or pages. "Vie
 
 **Colour rule:** Severity — Critical = Red badge · High = Orange · Medium = Yellow · Low = Grey.
 
-"View all incidents →" → Page 04 (Emergency Response, incident log).
+"View all incidents →" → Page 20 (Emergency Incident Register).
 
 ---
 
@@ -165,7 +165,7 @@ Max 5 alerts visible. Alert-type links route to relevant sections or pages. "Vie
 | Add Medical Room | → Page 05 (medical-room-create drawer) |
 | View Insurance Status | → Insurance detail modal |
 | Update Medicine Stock | → Page 08 (stock-update drawer) |
-| Export Health Report | Download CSV/XLSX — all branches, current month |
+| Export Health Report | Initiates async export (CSV/XLSX) — all branches, current month. Toast shown when ready. Export logged to audit trail. |
 
 ---
 
@@ -261,7 +261,8 @@ Max 5 alerts visible. Alert-type links route to relevant sections or pages. "Vie
 | GET | `/api/v1/group/{group_id}/health/coordinator/incidents/recent/` | JWT (G3+) | Last 10 incidents |
 | GET | `/api/v1/group/{group_id}/health/branches/{branch_id}/medical-detail/` | JWT (G3+) | Branch detail drawer payload |
 | POST | `/api/v1/group/{group_id}/health/incidents/{incident_id}/escalate/` | JWT (G3+) | Escalate incident to COO |
-| GET | `/api/v1/group/{group_id}/health/coordinator/export/` | JWT (G3+) | Async health report export |
+| POST | `/api/v1/group/{group_id}/health/coordinator/export/` | JWT (G3+) | Initiate async health report export; returns `{job_id}` |
+| GET | `/api/v1/group/{group_id}/health/coordinator/export/status/{job_id}/` | JWT (G3+) | Poll export job status (`pending` / `ready` / `failed`) |
 
 ---
 
@@ -277,6 +278,8 @@ Max 5 alerts visible. Alert-type links route to relevant sections or pages. "Vie
 | Stock alert refresh | `every 5m` | GET `.../coordinator/stock-alerts/` | `#stock-alert-list` | `innerHTML` |
 | Escalate incident | `click` | POST `.../health/incidents/{id}/escalate/` | `#incident-row-{id}` | `outerHTML` |
 | Compliance panel load | `load` | GET `.../coordinator/compliance-panel/` | `#compliance-panel` | `innerHTML` |
+| Initiate health report export | `click` | POST `.../coordinator/export/` | `#export-status` | `innerHTML` |
+| Poll export status | `every 5s [!#export-done]` | GET `.../coordinator/export/status/{job_id}/` | `#export-status` | `innerHTML` |
 
 ---
 

@@ -89,11 +89,11 @@ Group HQ  ›  Health & Medical  ›  Medical Room Register
 | Room Name / Location | ✅ | Link → `medical-room-detail` drawer |
 | Type | ✅ | Sick Bay / Medical Room / First Aid Post |
 | Nurse Assigned | ✅ | Name or ❌ None |
-| Status | ✅ | Colour badge: Operational (Green) / Under Renovation (Yellow) / Non-Functional (Red) |
+| Status | ✅ | Colour badge: Operational (Green) / Under Renovation (Yellow) / Non-Functional (Red) / Decommissioned (Grey) |
 | Equipment Compliance | ✅ | ✅ Compliant / ⚠ Issues / ❌ Critical Missing |
 | Last Inspection | ✅ | Date; Red if > 90 days ago |
 | Next Inspection Due | ✅ | Date; Red if past due, Yellow if within 14 days |
-| Actions | ❌ | View · Edit · Inspect |
+| Actions | ❌ | View · Edit · Inspect · Decommission (Medical Coordinator only) |
 
 **Default sort:** Status (Non-Functional first), then Equipment Compliance (Critical Missing first).
 **Pagination:** Server-side · 25/page.
@@ -218,6 +218,29 @@ Overall equipment compliance score shown at top: [N]/15 items compliant.
 
 ---
 
+### 6.5 Modal: `medical-room-decommission` — Decommission Medical Room
+- **Trigger:** Actions → Decommission on table row; "Decommission Room" button in `medical-room-detail` Profile tab footer
+- **Width:** 460px
+- **Available to:** Medical Coordinator (G3) only
+- **Guard:** Cannot decommission a room if it is the only registered room for its branch — system blocks with inline error: "This is the only medical room at [Branch]. Add a replacement room before decommissioning."
+
+**Fields:**
+| Field | Type | Validation |
+|---|---|---|
+| Room Name | Read-only | Pre-populated |
+| Branch | Read-only | Pre-populated |
+| Confirm Room Name | Text | Must type exact room name to enable Submit button |
+| Reason for Decommission | Select | Renovated / Merged with Another Room / Branch Closure / Permanent Damage / Regulatory Non-Compliance / Other |
+| Additional Notes | Textarea | Required if Reason = Other |
+| Effective Date | Date | Required; cannot be past date |
+| Transfer Equipment To | Select | Another medical room at same branch (if available); or — None / Off-site Storage |
+| Final Inspection Conducted | Checkbox | Confirms a closing inspection was done |
+| Notify Group COO | Checkbox | Default ✅ — sends decommission notification to senior leadership |
+
+**On confirm:** Room status set to `Decommissioned`; all future inspections cancelled; equipment transferred if destination selected; audit event logged; alert cleared or re-raised for branch coverage gap.
+
+---
+
 ## 7. Toast Messages
 
 | Action | Toast | Type | Duration |
@@ -227,7 +250,9 @@ Overall equipment compliance score shown at top: [N]/15 items compliant.
 | Inspection recorded | "Inspection recorded for '[Room]' at [Branch]. Score: [N]/100." | Success | 4s |
 | Inspection score low | "Inspection recorded — score [N]/100. Action required for [N] items." | Warning | 6s |
 | Status changed to Non-Functional | "Medical room '[Name]' marked Non-Functional. Medical Coordinator notified." | Warning | 5s |
-| Room export prepared | "Medical room register export ready. Download now." | Info | 4s |
+| Room decommissioned | "Medical room '[Name]' at [Branch] has been decommissioned. Group COO notified." | Warning | 6s |
+| Decommission blocked | "Cannot decommission: '[Name]' is the only medical room at [Branch]. Add a replacement first." | Error | 6s |
+| Room export initiated | "Medical room register export is being prepared. You'll be notified when ready." | Info | 4s |
 
 ---
 
@@ -287,7 +312,9 @@ Overall equipment compliance score shown at top: [N]/15 items compliant.
 | POST | `/api/v1/group/{group_id}/health/medical-rooms/{id}/inspect/` | JWT (Role 85, 86) | Record new inspection |
 | GET | `/api/v1/group/{group_id}/health/medical-rooms/{id}/inspections/` | JWT (G3+) | Inspection history |
 | GET | `/api/v1/group/{group_id}/health/medical-rooms/{id}/incidents/` | JWT (G3+) | Incidents at this room |
-| GET | `/api/v1/group/{group_id}/health/medical-rooms/export/` | JWT (Role 85, 86) | Async CSV/XLSX export |
+| POST | `/api/v1/group/{group_id}/health/medical-rooms/{id}/decommission/` | JWT (Role 85) | Decommission a medical room |
+| POST | `/api/v1/group/{group_id}/health/medical-rooms/export/` | JWT (Role 85, 86) | Initiate async CSV/XLSX export; returns `{job_id}` |
+| GET | `/api/v1/group/{group_id}/health/medical-rooms/export/status/{job_id}/` | JWT (Role 85, 86) | Poll export job status (`pending` / `ready` / `failed`) |
 
 ---
 
@@ -304,6 +331,10 @@ Overall equipment compliance score shown at top: [N]/15 items compliant.
 | Submit create room | `click` | POST `.../medical-rooms/` | `#rooms-table-section` | `innerHTML` |
 | Submit edit room | `click` | PATCH `.../medical-rooms/{id}/` | `#room-row-{id}` | `outerHTML` |
 | Submit inspection | `click` | POST `.../medical-rooms/{id}/inspect/` | `#inspection-history-list` | `innerHTML` |
+| Submit decommission | `click` Confirm | POST `.../medical-rooms/{id}/decommission/` | `#room-row-{id}` | `outerHTML` |
+| OOB KPI refresh on decommission | (triggered by decommission POST response) | — | `#kpi-bar` | `hx-swap-oob="true"` |
+| Initiate register export | `click` Export | POST `.../medical-rooms/export/` | `#export-status` | `innerHTML` |
+| Poll export status | `every 5s [!#export-done]` | GET `.../medical-rooms/export/status/{job_id}/` | `#export-status` | `innerHTML` |
 
 ---
 
