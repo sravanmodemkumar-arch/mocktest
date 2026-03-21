@@ -62,7 +62,9 @@
 | `institution_tos_acceptance` | Per-institution ToS acceptance state + re-acceptance flags |
 | `legal_contract_reminder` | Audit log of unsigned-contract reminder emails (Task N-2) |
 | `legal_document_notification_log` | Audit log of ToS/policy publication notification emails (Task N-8) |
-| `pocso_backup_officer` | Designated backup POCSO reporting officer + activation conditions |
+| `pocso_backup_officer` | Designated backup POCSO reporting officer + activation conditions. Fields: id, user_id (FK), designated_by_id (FK Legal Officer), designated_at, deactivated_at (nullable), is_active (bool), notes |
+| `pocso_incident_accused` | Multiple accused per POCSO incident. Fields: id, incident_id (FK), accused_type, bgv_id (FK nullable), accused_order, external_name (nullable), external_contact (nullable) |
+| `dpdp_dsr_audit_log` | Append-only audit log for all DSR state changes (separate from policy document review log). Fields: id, dsr_id (FK), action_type (CREATED/ASSIGNED/STATUS_CHANGE/NOTE_ADDED/RESOLVED/REJECTED/ESCALATED), actor_id (FK), timestamp, details (JSON) |
 | `meity_grievance_officer` | Current and historical MeitY Grievance Officer designations |
 | `meity_grievance_complaint` | Complaints received at grievance officer email (IT Rules 2021 §4(1)(c)) |
 | `pocso_annual_report` | Generated annual NCPCR compliance reports (linked to N-06 document repository) |

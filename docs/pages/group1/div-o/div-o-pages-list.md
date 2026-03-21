@@ -1,6 +1,6 @@
 # Division O — HR & Administration: Pages List
 
-> 8 pages · 6 roles (3 original + 3 new: #105, #106, #107)
+> 9 pages · 6 roles (3 original + 3 new: #105, #106, #107)
 > All pages live under the internal HR portal (`/hr/`) — no EduForge platform system access.
 > Covers: employee lifecycle, talent acquisition, payroll & statutory compliance, leave & attendance, performance management, and learning & development.
 
@@ -37,6 +37,24 @@
 | O-06 | `GET /hr/leave/` | Leave & Attendance | HR Manager (#79), all Division O roles (own records) |
 | O-07 | `GET /hr/performance/` | Performance Management | HR Business Partner (#106), HR Manager (#79) |
 | O-08 | `GET /hr/learning/` | Learning & Development | L&D Coordinator (#107), HR Manager (#79) |
+| O-09 | `GET /hr/assets/` | Asset Registry & Facilities Management | Office Administrator (#81), HR Manager (#79) |
+
+---
+
+## Employee Self-Service Companion Routes
+
+Accessible by all EduForge employees via `@login_required` — no Division O membership required. Each route is scoped to the authenticated user's own data only (except `/hr/performance/team/`).
+
+| Route | Title | Employee can |
+|---|---|---|
+| `GET /hr/my-leave/` | My Leave | Apply leave, view balances, view history, cancel pending requests, request comp-off, mark WFH daily |
+| `GET /hr/my-performance/` | My Performance | View OKRs, perform check-ins on KRs, submit self-assessment during active review window, view past review ratings (own only) |
+| `GET /hr/my-learning/` | My Learning | Browse course catalog, request enrollment, view enrolled courses, mark self-paced LMS completion, view own skills + certifications, download completion certificates |
+| `GET /hr/my-payslips/` | My Payslips | Download own payslips (last 36 months), download Form 16 when generated for the financial year |
+| `GET /hr/holidays/` | Holiday Calendar | View company holiday calendar for current FY — read-only, public within company intranet |
+| `GET /hr/interview/{token}/` | Interview Feedback Form | Submit structured interview feedback for a specific candidate — one-time tokenised access (valid 72 hours after schedule time); accessible by any EduForge employee designated as interviewer |
+| `GET /hr/tasks/{task_token}/complete/` | Complete HR Task | One-time task acknowledgement for onboarding/offboarding tasks assigned to non-Division-O roles (DevOps, BGV team, Payroll Exec); clicking marks the task complete and shows confirmation |
+| `GET /hr/performance/team/` | My Team's Performance | Division managers and hiring managers see direct reports' OKR status and review stage — read-only, scoped to direct reports in `hr_employee.manager_id` hierarchy |
 
 ---
 
@@ -71,7 +89,16 @@
 | `hr_skills` | Skills inventory — employee_id, skill_name, category, proficiency (BEGINNER/INTERMEDIATE/ADVANCED/EXPERT), last_assessed_at, assessed_by |
 | `hr_survey` | Culture/eNPS surveys — type (ENPS/CULTURE_PULSE/EXIT/MANAGER_EFFECTIVENESS), period, status, anonymous (bool) |
 | `hr_survey_response` | Individual survey responses — survey_id, respondent_id (nullable if anonymous), response JSONB, submitted_at |
-| `hr_asset` | IT/office assets — asset_type (LAPTOP/MONITOR/ACCESS_CARD/HEADSET/DESK_PHONE), serial_number, assigned_to, assigned_at, condition, status (AVAILABLE/ASSIGNED/IN_REPAIR/RETIRED) |
+| `hr_asset` | IT/office assets — asset_type (LAPTOP/MONITOR/ACCESS_CARD/HEADSET/DESK_PHONE/KEYBOARD/MOUSE/WEBCAM/PROJECTOR/FURNITURE), serial_number, assigned_to, assigned_at, condition (NEW/GOOD/FAIR/POOR), status (AVAILABLE/ASSIGNED/IN_REPAIR/RETIRED), purchase_date, purchase_cost_paise, vendor_name, warranty_expiry |
+| `hr_asset_maintenance_log` | Maintenance events per asset — asset_id, issue_description, sent_for_repair_at, returned_at, repair_cost_paise, repaired_by_vendor |
+| `hr_holiday` | Holiday master calendar — date, holiday_name, type (NATIONAL/DECLARED/RESTRICTED/OPTIONAL), applicable_locations (array of city codes), is_compensatory (bool — if employees work this day they earn a comp-off) |
+| `hr_required_skill` | Skills required per division/role — division_code, role_id (nullable for division-wide requirement), skill_name, category, minimum_proficiency (BEGINNER/INTERMEDIATE/ADVANCED/EXPERT), priority (MANDATORY/PREFERRED); drives skills gap analysis in O-08 |
+| `hr_salary_revision_history` | Immutable salary revision audit trail — employee_id, old_ctc_paise, new_ctc_paise, old_grade, new_grade, revision_type (ANNUAL_INCREMENT/PROMOTION/CORRECTION/JOINING_OFFER), effective_date, approved_by, reason, source_cycle_id (FK to hr_performance_cycle nullable) |
+| `hr_knowledge_transfer_task` | KT task templates per division — division_code, task_description, assigned_to (SELF/MANAGER/TEAM), sequence_order; auto-populates offboarding KT checklist in O-04 |
+| `hr_vendor` | Office vendors — name, category (HOUSEKEEPING/PANTRY/AMC/COURIER/TRAVEL_AGENT/FACILITY_MAINTENANCE/SECURITY), contact_person, email, phone, gstin, payment_terms_days, contract_start, contract_expiry, status (ACTIVE/INACTIVE) |
+| `hr_vendor_invoice` | Vendor invoices — vendor_id, invoice_number, invoice_date, amount_paise, gst_paise, due_date, status (PENDING_APPROVAL/APPROVED/PAID/OVERDUE/DISPUTED), approved_by, paid_at, payment_ref, invoice_pdf_r2_key |
+| `hr_petty_cash` | Petty cash transaction log — transaction_date, description, category (OFFICE_SUPPLIES/PANTRY/COURIER/MAINTENANCE/MISC), amount_paise (positive=expense, negative=replenishment), receipt_r2_key, recorded_by, approved_by, running_balance_paise |
+| `hr_travel_request` | Employee travel requests — employee_id, travel_from, travel_to, purpose, departure_date, return_date, mode (AIR/TRAIN/ROAD), hotel_required (bool), estimated_cost_paise, advance_requested_paise, status (DRAFT/APPROVED/BOOKED/COMPLETED/CANCELLED/REJECTED), approved_by, rejection_reason, booking_ref, actual_cost_paise |
 
 ---
 
@@ -94,6 +121,14 @@
 | O-13 — Document Expiry Scanner | Daily 09:00 IST — flag employee documents (work authorisation, medical fitness certs) expiring within 30 days | O-02 |
 | O-14 — Work Anniversary Alert | Daily 07:00 IST — alert HR Manager to employees with work anniversaries in next 7 days | O-01 |
 | O-15 — Statutory Filing Status Sync | Daily 08:00 IST — check filing due dates, flip UPCOMING → OVERDUE as appropriate | O-05 |
+| O-16 — Salary Revision Notification | Daily 08:00 IST during active calibration cycle lock-period — notify Payroll Exec of all approved increments/promotions with effective_date falling in the next payroll run | O-05, O-07 |
+| O-17 — eNPS Survey Dispatch | 1st of Jan, Apr, Jul, Oct at 09:00 IST — auto-create `hr_survey` record (type=ENPS, anonymous=true) and dispatch to all ACTIVE employees | O-07 |
+| O-18 — eNPS Response Reminder | Day 4 after dispatch, 10:00 IST — send reminder to employees who haven't submitted if overall response rate < 50% | O-07 |
+| O-19 — POSH Annual Report Reminder | 15 January 09:00 IST — alert HR Manager and Legal Officer (#75) to prepare POSH annual report (statutory due: 31 Jan to District Officer) | O-01, O-08 |
+| O-20 — Offer Lapse Scanner | Daily 08:00 IST — set `hr_offer.offer_status='LAPSED'` for all offers where status='SENT' AND validity_expires_at < now() | O-03 |
+| O-21 — Incomplete Onboarding Alert | Daily 09:00 IST — alert HR Manager and Office Admin when join_date is ≤ 5 calendar days away and onboarding checklist < 50% tasks complete | O-04 |
+| O-22 — Vendor Contract Expiry Alert | Daily 09:00 IST — alert Office Admin 30 days before any `hr_vendor.contract_expiry` | O-09 |
+| O-23 — Vendor Invoice Overdue Alert | Daily 09:00 IST — flag `hr_vendor_invoice` records where status='PENDING_APPROVAL' AND due_date < today | O-09 |
 
 ---
 

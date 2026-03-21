@@ -205,23 +205,36 @@ Tabs:
 
 ---
 
-### DSR Request Type Reference (DPDP Act §11–14)
+### DSR Request Type Reference (DPDP Act 2023)
+
+> **Statutory basis note:** The Digital Personal Data Protection Act 2023 defines four rights for data principals: §11 (Right to Information), §12 (Right to Correction & Erasure), §13 (Right to Grievance Redressal), §14 (Right to Nominate). There is NO "Right to Restrict Processing" in DPDP Act 2023 — that is GDPR Article 18 and does not apply to Indian law. The RESTRICT type below is a platform goodwill extension only, not a statutory obligation.
+>
+> **Breach notification timing:** DPDP Act requires notifying the DPDP authority "in such form and manner as may be prescribed" (§8(6)(f)) — i.e., notification form and timeline are defined by Rules, not the Act itself. Industry standard following anticipated rules and international best practice is 72 hours. The 72h figure used in this spec is the operational target, not a statutory number. The CERT-In 6-hour window is a separate obligation under CERT-In Directions 2022, not DPDP Act.
 
 | Type | DPDP Section | Must Fulfill | Rejection Grounds | Special Workflow |
 |---|---|---|---|---|
-| ACCESS | §11 | Yes | Data not held; requester unverifiable | Provide data in machine-readable format (JSON/CSV). Provide within 30 days. |
-| ERASE | §12(a) | Yes (with exemptions) | Legal obligation to retain; ongoing litigation; statistical purpose with anonymisation | Requires Legal Officer review if institution contests. Data erased from all schemas including tenant + analytics. |
-| CORRECT | §12(b) | Yes | Correction would distort factual historical record | Applied to all linked schemas. Correction logged in audit trail. |
-| RESTRICT | §14 | Yes | Request is frivolous or vexatious | Processing restricted; data retained but no further processing until restriction lifted. |
-| PORTABILITY | (anticipated under rules) | Yes when notified | Technically infeasible | Machine-readable structured format (JSON). Includes exam data, performance history. |
-| GRIEVANCE | §18 grievance | Process only | Grievance not substantiated after review | Route to Data Protection Board if unresolved at 30-day mark. |
-| NOMINATION | §18(7) | Yes if valid | Invalid nomination; no proof of incapacity/death | Requires death certificate (PDF upload) + nominee identity proof. Post-mortem data management. Legal Officer must co-approve. |
+| ACCESS | §11 — Right to Information | Yes | Data not held; requester unverifiable | Provide data in machine-readable format (JSON/CSV) within 30 days. Covers: data categories collected, how processed, list of processors, whether shared with third parties. |
+| ERASE | §12 — Right to Erasure | Yes (with exemptions) | Legal obligation to retain; ongoing litigation; statistical/research purpose with anonymisation | Requires Legal Officer review if institution contests. Data erased from all linked schemas including tenant + analytics. Exemptions must be documented in audit log. |
+| CORRECT | §12 — Right to Correction | Yes | Correction would distort factual historical record | Same §12 as erasure. Applied to all linked schemas. Correction versioned in audit trail. |
+| RESTRICT | *(Not in DPDP Act — platform goodwill extension)* | No statutory obligation | May reject: platform determines appropriate processing limitation | Platform voluntarily restricts processing while dispute is open. Status: PLATFORM_EXTENSION. No 30-day clock applies — handle per internal SLA (target: 14 days). |
+| PORTABILITY | *(Anticipated under future DPDP Rules — not yet in force)* | Yes when notified by MEITY | Technically infeasible | Machine-readable structured format (JSON). Includes exam data, performance history. Currently accepted as goodwill; will become mandatory on Rules notification. |
+| GRIEVANCE | §13 — Right to Grievance Redressal | Yes — respond within 30 days | Grievance not substantiated after review | If unresolved after 30 days → DPO must log formal Data Protection Board complaint in `regulatory_filing` (N-04) as `filing_type='DPB_COMPLAINT'`. |
+| NOMINATION | §14 — Right to Nominate | Yes if valid documentation | Invalid nomination form; no proof of incapacity or death | Requires: death certificate OR court incapacity order (PDF upload in DSR drawer). Nominee identity proof mandatory. Legal Officer must co-approve resolution. Nominee exercises ALL §11–§13 rights on behalf of deceased/incapacitated principal. |
 
 **Validation rules by type:**
 - **ERASE + children's data:** Mandatory DPO review — cannot auto-close. Children's data erasure creates `legal_compliance_deadline` entry ("Child erasure review — DSR-[id]") in N-07.
 - **NOMINATION:** `dpdp_dsr.supporting_documents` field required (file upload in drawer). Cannot be resolved without Legal Officer co-approval.
-- **GRIEVANCE:** If unresolved after 30 days → DPO must log a formal Data Protection Board complaint in `regulatory_filing` (N-04) as filing_type='DPB_COMPLAINT'.
+- **GRIEVANCE:** If unresolved after 30 days → DPO must log a formal Data Protection Board complaint in `regulatory_filing` (N-04) as `filing_type='DPB_COMPLAINT'`.
+- **RESTRICT:** Not a statutory right. DPO discretion. Create note in audit log explaining basis for accepting/rejecting restriction.
 - **Duplicate guard:** Two open DSRs of same type for same email → DPO notified; second DSR linked to first via `dpdp_dsr.related_dsr_id`.
+
+**Minor/child DSR special handling:**
+When `requester_role = 'STUDENT'` and `request_type IN ('ERASE', 'CORRECT')`:
+- New DSR modal shows additional field: "Is requester under 18 years of age? ● Yes ○ No ○ Unknown"
+- If Yes: `dpdp_dsr.is_requester_minor = true`; automatically triggers `is_children_data = true`; creates N-07 deadline "Child DSR review — DSR-[id]"; mandatory DPO manual review (cannot be delegated to Analyst)
+- If institution type = SCHOOL: default warning banner "Requester is likely a minor based on institution type — please verify age"
+- **Parent/guardian consent:** For ERASE requests where `is_requester_minor=true`, resolution cannot proceed until parent/guardian email verified. [Verify Parent Email] button in DSR Detail Drawer sends a verification code. Guardian must reply with code + explicit consent statement. Audit log records: "Resolution approved by parent/guardian on [date] from IP [ip]."
+- Toast on minor erasure resolution: "DSR-[id] resolved with verified parental consent."
 
 ---
 
@@ -301,6 +314,9 @@ DSR records are NOT auto-created when a breach is logged — the DPDP Act impose
 - Duplicate check: warns (does not block) if open DSR exists for same email + type
 
 POST to `/legal/privacy/dsr/create/`. Sets `status='OPEN'`, `due_at = raised_at + 30 days`. Auto-assigns to DPO (#76).
+
+**Real-time vs submit-time validation:** Email format (on blur), raised_at date format (on change). Required fields + duplicate check at submit-time only.
+**Unsaved changes warning:** On modal close with any field filled: "You have unsaved changes. Discard them?" [Cancel] [Discard].
 
 ---
 

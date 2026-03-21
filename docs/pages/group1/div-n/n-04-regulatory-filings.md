@@ -276,7 +276,12 @@ Sortable, selectable, server-side paginated (25 per page).
 - Due date: required; cannot be more than 30 days in the past
 - Description: required; min 20 chars
 
-POST to `/legal/filings/create/`. Creates `regulatory_filing` record with `status='UPCOMING'`. If recurrence ≠ NONE, sets `next_due_date` computation rule (stored as `recurrence_days_offset`). Creates `legal_compliance_deadline` entry visible in N-07.
+POST to `/legal/filings/create/`. Creates `regulatory_filing` record with `status='UPCOMING'`.
+
+**MeitY monthly content moderation report — data source:** Content moderation actions from the platform's content review system: count of items reported, removed, withheld per month. Data sourced from `platform_content_report` table (owned by Platform Admin #10 / Engineering). Regulatory Affairs Exec (#77) exports the monthly aggregates and attaches as PDF/XLSX to the MeitY filing record. No real-time pull — monthly Celery task aggregates data by 1st of each month.
+
+**Real-time vs submit-time validation (New Filing modal):** Due date format (on change). Required fields + past-date check at submit-time.
+**Unsaved changes warning:** On modal close with fields modified: "You have unsaved changes. Discard them?" [Cancel] [Discard]. If recurrence ≠ NONE, sets `next_due_date` computation rule (stored as `recurrence_days_offset`). Creates `legal_compliance_deadline` entry visible in N-07.
 
 ---
 

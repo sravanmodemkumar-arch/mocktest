@@ -465,6 +465,42 @@ When a new ToS version is published for a given institution type, all institutio
 
 ---
 
+## Public Policy Publication URLs
+
+All PUBLISHED policy documents are served at public-facing CDN-cached endpoints accessible without authentication:
+
+| Document | Public URL | Applicable To | Updated When |
+|---|---|---|---|
+| Terms of Service — Schools | `/legal/tos/school/` | School institutions | On each PUBLISHED status update |
+| Terms of Service — Colleges | `/legal/tos/college/` | College institutions | On each PUBLISHED status update |
+| Terms of Service — Coaching | `/legal/tos/coaching/` | Coaching centres | On each PUBLISHED status update |
+| Privacy Policy | `/legal/privacy-policy/` | All institutions + public | On each PUBLISHED status update |
+| Cookie Policy | `/legal/cookies/` | All users | On each PUBLISHED status update |
+| Sub-processor Register | `/legal/sub-processors/` | Public | Auto-updated from N-06 sub-processor table; refreshed daily |
+| Grievance Officer | `/legal/grievance-officer/` | All users | Auto-updated from N-04 MeitY officer record |
+
+**Serving mechanism:** Each public URL renders the latest PUBLISHED document for that type. Content served as static HTML (generated on publish by Task N-8) and cached at CDN level with `Cache-Control: max-age=3600`. On new publish, Task N-8 triggers CDN cache invalidation for that URL.
+
+**Version permalink:** Historical versions accessible at `/legal/tos/school/v3.1/` etc. for legal audit trail. These are immutable once generated.
+
+**Emergency update process:** If a court order or regulatory direction requires immediate ToS amendment outside the normal review cycle:
+1. Legal Officer creates a NEW DRAFT with `emergency_update=true` flag
+2. Normal review cycle is compressed to 24 hours (both Legal Officer and DPO review same-day)
+3. [Publish Emergency] button (Legal Officer only) bypasses the "Type PUBLISH to confirm" step but still requires DPO email confirmation
+4. Post-publish: `legal_compliance_deadline` created: "Emergency ToS update — explain regulatory basis within 7 days" in STATUTORY category (N-07)
+
+---
+
+## Unsaved Changes Warning
+
+Applies to all modals and drawers in N-06 (New Document, Review, Publish, Sub-Processor, Template):
+- On attempt to close modal/drawer or navigate away with any form field modified from its initial state:
+  - Dialog: "You have unsaved changes. Discard them and close?" [Cancel] [Discard changes]
+- Implemented via browser `beforeunload` event + HTMX `hx-confirm` on close buttons
+- **Exception:** Read-only drawers (version history, audit log) have no unsaved changes warning
+
+---
+
 ## Keyboard Shortcuts (N-06)
 
 | Key | Action |

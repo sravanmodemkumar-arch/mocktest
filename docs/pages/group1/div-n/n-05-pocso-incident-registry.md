@@ -265,6 +265,7 @@ Cannot be deleted or exported by any in-app user.
 │  Nature*  [Sexual Harassment                              ▼]     │
 │  Accused type*  ● Staff  ● External person  ● Unknown           │
 │  If Staff — BGV ID  [Search staff BGV record...           ]      │
+│  [+ Add another accused]  (supports multiple accused)            │
 │  Victim count*  [                ]  ·  All minors? ● Yes ● No   │
 │  Victim age range  [___] to [___] years                         │
 │  Victim reference (code/initials only)*  [                ]     │
@@ -282,12 +283,12 @@ Cannot be deleted or exported by any in-app user.
 ```
 
 **Validation:**
-- Institution: required; restricted to schools and coaching institutions only (colleges/groups rarely have minor students as primary users)
+- Institution: required; includes **schools, coaching centres, AND intermediate colleges** (colleges have students aged 16–18 who are legal minors under POCSO Act). Groups are excluded (not direct institutions).
 - Date of incident: required; cannot be in the future
 - Date reported: required; cannot be before date of incident; defaults to today
 - Nature: required
 - Accused type: required
-- BGV ID: required if accused_type = STAFF; must match an existing BGV record for that institution
+- BGV ID: required if accused_type = STAFF for the **primary** accused; each additional accused added via [+ Add another accused] also requires a BGV ID if staff. Stored in `pocso_incident_accused` child table (incident_id, accused_type, bgv_id, accused_order)
 - Victim count: required; integer ≥ 1
 - Victim reference: required; min 2 chars, max 20 chars; no email addresses or full names allowed (server-side regex validation)
 - Initial description: required; min 50 chars
@@ -398,7 +399,7 @@ At the end of each financial year, the POCSO Reporting Officer (#78) can generat
 
 **Operational need:** If the primary POCSO Reporting Officer (#78) is unavailable (leave, illness, resignation) during an active NCPCR deadline window, the 24-hour clock continues. A designated backup must be able to act immediately.
 
-**Configuration:** Legal Officer (#75) manages the backup officer designation via the Settings panel within N-05:
+**Configuration:** Legal Officer (#75) manages the backup officer designation via the Settings panel within N-05. Accessible via **[Settings ⚙]** button in the page header. Route: `GET /legal/pocso/?tab=settings`. Opens a dedicated settings drawer (not a full page). POST to `/legal/pocso/backup-officer/designate/` to save changes.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐

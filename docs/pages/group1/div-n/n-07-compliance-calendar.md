@@ -476,6 +476,31 @@ Snooze scope:  ● This instance only (default)
 
 ---
 
+## Deadline Escalation — Responsible Person Unavailable
+
+Critical deadlines (CERT-In 6h, POCSO NCPCR 24h, DSR 30-day) cannot wait for a person to return from leave. The following escalation rules apply:
+
+**Escalation trigger conditions (checked by Task N-5 extension every 30 minutes when active deadline exists):**
+
+| Responsible Role | Unavailability Signal | Escalation Target | Alert Type |
+|---|---|---|---|
+| DPO (#76) | `last_login_at < now() - 4h` AND active breach/DSR deadline | Legal Officer (#75) + CEO (#1) | Email + Django Channels real-time alert |
+| Legal Officer (#75) | `last_login_at < now() - 4h` AND active POCSO/CERT-In deadline | CEO (#1) + COO (#3) | Email + SMS (Notification Manager #37 integration) |
+| Regulatory Affairs Exec (#77) | `last_login_at < now() - 4h` AND filing due < 24h | Legal Officer (#75) | Email only |
+| POCSO Reporting Officer (#78) | `last_login_at < now() - 4h` AND NCPCR deadline active | Backup Officer (N-05 designation) + Legal Officer (#75) + CEO (#1) | Email + SMS |
+| Contract Coordinator (#103) | Unavailable during contract expiry | Legal Officer (#75) | Email only (lower urgency) |
+
+**Alert message format:**
+"⚠ URGENT: [Responsible role] [name] has been inactive for > 4 hours. [Deadline type] for [subject] is due in [time]. Immediate action required by [escalation target]."
+
+**No auto-action:** System NEVER auto-submits, auto-signs, or auto-resolves any compliance deadline without human action. The escalation provides access and awareness only.
+
+**Escalation access grant:** When Legal Officer is escalation target for a normally-DPO-only action (e.g., DSR resolution), a temporary "escalated access" flag (`dpdp_dsr.escalated_to_legal=true`) is set — Legal Officer gains resolve/reject access for that specific DSR for 48 hours.
+
+**Audit trail:** Every escalation event logged in `legal_compliance_deadline.escalation_log` (JSON): `{escalated_at, escalated_to_role, escalated_to_user, reason, alert_sent_via}`.
+
+---
+
 ## Keyboard Shortcuts (N-07)
 
 | Key | Action |
