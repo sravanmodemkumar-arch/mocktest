@@ -1265,6 +1265,120 @@
 
 ---
 
+## Section 14 — Third Audit Gap-Fill (Pages 75–79)
+
+> Added during third deep audit (2026-03-21). Five functional gaps identified as forcing spreadsheet/email workarounds for group academic leadership.
+
+| # | Page | URL | File | Priority | Status |
+|---|---|---|---|---|---|
+| 75 | Chapter / Unit Progress Tracker | `/group/acad/chapter-progress/` | `75-chapter-progress-tracker.md` | P1 | ⬜ |
+| 76 | Teacher-Subject-Class Assignment Matrix | `/group/acad/teacher-assignments/` | `76-teacher-subject-class-matrix.md` | P1 | ⬜ |
+| 77 | Supplementary / Make-Up Exam Manager | `/group/acad/supplementary-exams/` | `77-supplementary-exam-manager.md` | P1 | ⬜ |
+| 78 | Academic Awards & Recognition Manager | `/group/acad/awards/` | `78-academic-awards-manager.md` | P2 | ⬜ |
+| 79 | Study Material Dispatch Tracker | `/group/acad/material-dispatch/` | `79-study-material-dispatch.md` | P2 | ⬜ |
+
+---
+
+**75 — Chapter / Unit Progress Tracker** `/group/acad/chapter-progress/`
+> Gap: Syllabus Manager (page 15) holds the plan; no live tracking of actual chapter completion per branch per class.
+> Allows branches to log chapter completion dates; group leadership sees pacing vs. planned timeline.
+
+| Element | Spec |
+|---|---|
+| **Access** | CAO G4 (view + override) · Academic Director G3 (full) · Curriculum Coordinator G2 (view) · Stream Coordinators G3 (own stream) · MIS Officer G1 (read) |
+| **Summary stats bar** | Branches On Track · Branches Behind (>1 chapter) · Branches Critical (>2 chapters behind) · % Group-wide completion |
+| **Main table columns** | Branch · Stream · Class · Subject · Expected Chapter (today) · Actual Chapter · Gap · Last Updated · Status |
+| **Status logic** | On Track (actual ≥ expected) · Behind (1 chapter behind) · Critical (2+ chapters behind, red) |
+| **Filters** | Branch · Stream · Class · Subject · Status (On Track / Behind / Critical) |
+| **Pacing source** | Linked to Syllabus Manager (page 15) — chapter sequence + planned completion dates are pulled from syllabus |
+| **Branch input** | Branch portal: Subject teacher logs "Completed Chapter N on [date]" — feeds this tracker |
+| **Drawer: branch-subject-detail** | 560px · All chapters with planned vs actual dates · Chapter-level completion log |
+| **Alerts** | Auto-alert to Stream Coordinator when branch falls behind · Escalation to Academic Director if critical for >7 days |
+| **Charts** | Pacing trend (line: planned vs actual completion % over time) · Behind-by-subject bar chart |
+| **Export** | Branch × Subject pacing report (CSV) |
+| **Role visibility** | Stream Coordinators see own-stream data only · MIS Officer read-only |
+
+---
+
+**76 — Teacher-Subject-Class Assignment Matrix** `/group/acad/teacher-assignments/`
+> Gap: Teaching Load (page 53) shows periods/week; no page shows which teacher is assigned to which class-section per subject.
+> Master assignment grid: Branch × Class × Section × Subject → Assigned Teacher, with completeness validation.
+
+| Element | Spec |
+|---|---|
+| **Access** | Academic Director G3 (full) · Stream Coordinators G3 (own stream) · CAO G4 (view + escalate) |
+| **Matrix view** | Row: Branch + Class + Section · Column: Subject · Cell: Assigned Teacher name or ⚠ Unassigned |
+| **Filters** | Branch · Stream · Class · Subject · Status (Assigned / Unassigned / Guest Faculty) |
+| **Summary stats** | Total class-subject slots · Filled · Unassigned · Covered by guest faculty |
+| **Alert logic** | Any unassigned slot in a core subject → alert to Academic Director and Stream Coordinator |
+| **Assignment types** | Regular teacher · Guest faculty (temporary) · Shared from another branch |
+| **Drawer: slot-assign** | 480px · Branch · Class · Section · Subject · Search teacher · Type (Regular / Guest / Shared) · Effective date |
+| **Bulk assign** | Select multiple class-sections → assign same teacher (e.g. for common subjects) |
+| **Validation** | System warns if teacher already has >max periods/week (linked to Teaching Load Monitor, page 53) |
+| **Export** | Branch-wise assignment sheet (CSV / PDF for branch notice board) |
+| **Role visibility** | Stream Coordinators: own-stream classes only · CAO: aggregate unassigned count by branch |
+
+---
+
+**77 — Supplementary / Make-Up Exam Manager** `/group/acad/supplementary-exams/`
+> Gap: Page 22 (Exam Calendar) manages main exams only. Students who fail or were absent need a structured re-exam workflow.
+> End-to-end: identify eligible students → schedule exam → assign paper → upload marks → integrate into ranks.
+
+| Element | Spec |
+|---|---|
+| **Access** | Exam Controller G3 (full) · Results Coordinator G3 (view + publish) · CAO G4 (view + override) |
+| **Eligibility source** | Auto-populated from main result uploads: students below pass % → eligible for supplementary |
+| **Table columns** | Student · Branch · Stream · Class · Subject(s) · Main Exam · Fail Reason · Supplementary Exam Date · Paper Assigned · Marks Uploaded · Status |
+| **Status flow** | Eligible → Scheduled → Paper Assigned → Conducted → Marks Uploaded → Result Published |
+| **Filters** | Branch · Stream · Class · Subject · Status · Date range |
+| **Drawer: supplementary-schedule** | 640px · Select eligible students (multi-select) · Exam date · Centre (branch or group exam centre) · Assign paper (from Question Bank page 23) · Notify branches |
+| **Drawer: marks-upload** | 480px · Subject-wise marks entry per student (or CSV upload) |
+| **Result integration** | On publish: marks flow to Result Archive (page 34) with "Supplementary" tag · Rank recomputation triggered if policy allows |
+| **SLA tracking** | Supplementary exam must be scheduled within 30 days of main result publish — alert if not |
+| **Charts** | Pass rate: main vs supplementary (bar) · Subject-wise supplementary failure rate |
+| **Export** | Eligible students list (CSV) · Supplementary result sheet (PDF) |
+
+---
+
+**78 — Academic Awards & Recognition Manager** `/group/acad/awards/`
+> Gap: Page 31 (Topper Lists) shows rank-based recognition only. No mechanism for effort awards, subject excellence, or improvement-based recognition.
+> Structured group-level recognition workflow: define award → auto-generate eligible list → approve → issue certificates.
+
+| Element | Spec |
+|---|---|
+| **Access** | CAO G4 (full — approve and publish) · Academic Director G3 (create + manage) · Stream Coordinators G3 (own-stream nominees) · MIS Officer G1 (read) |
+| **Award types** | Subject Excellence (top scorer per subject) · Most Improved (largest % improvement term-on-term) · Merit Scholarship (composite score threshold) · Perfect Attendance + Pass · Olympiad Champion (linked from page 44) · Effort Award (manual nomination) |
+| **Award definition** | Name · Type · Eligibility criteria (auto or manual) · Number of awardees · Prize (cash / certificate / medal) · Term/Year |
+| **Auto-eligibility** | System computes eligible students from existing data (results, attendance, improvement) — reviewed before approval |
+| **Manual nomination** | Branch staff can nominate for Effort Award — goes to Academic Director for approval |
+| **Table columns** | Award · Term · Type · Eligible Students · Approved Awardees · Certificates Issued · Status |
+| **Certificate generation** | Bulk PDF certificates (name, award, date, group signature) — one-time download link |
+| **Drawer: award-create** | 640px · Name · Type · Criteria · Scope (branches/streams) · Prize · Certificate template |
+| **Drawer: award-nominees** | 640px · Auto-generated + manual nominees · Approve/Reject per student · Bulk approve |
+| **Export** | Awardee list (CSV) · Certificate batch (PDF) |
+| **Charts** | Awards by branch (heatmap) · Award type distribution (pie) |
+
+---
+
+**79 — Study Material Dispatch Tracker** `/group/acad/material-dispatch/`
+> Gap: Content Library (page 17) manages digital files. No tracking of physical printed study materials dispatched to branches.
+> Tracks print orders, dispatch quantities, branch receipt acknowledgements.
+
+| Element | Spec |
+|---|---|
+| **Access** | Curriculum Coordinator G2 (full — create dispatch) · CAO G4 (view) · Academic Director G3 (view) |
+| **Table columns** | Material Name · Type (Workbook / Question Sheet / Reference / Lab Manual) · Term · Total Copies · Branches · Dispatched Date · Acknowledged · Outstanding |
+| **Dispatch workflow** | Curriculum Coord creates dispatch record → enters quantity per branch → branch Principal acknowledges receipt via branch portal |
+| **Filters** | Term · Material type · Branch · Acknowledgement status (Acknowledged / Pending / Overdue) |
+| **Alert** | Dispatch not acknowledged by branch within 7 days → alert to Curriculum Coordinator |
+| **Drawer: dispatch-create** | 640px · Material name · Type · Linked content (from page 17, optional) · Quantity per branch (table entry) · Dispatch date · Vendor/Printer |
+| **Drawer: dispatch-detail** | 480px · Per-branch: quantity sent · acknowledged date · acknowledgement proof (upload) |
+| **Reorder tracking** | Note when a branch requests additional copies — tracked as reorder request |
+| **Export** | Dispatch register (PDF) · Acknowledgement status (CSV) · Material consumption report |
+| **Charts** | Dispatch completion % by branch (bar) · Outstanding acknowledgements (sorted bar) |
+
+---
+
 ## Shared Drawers & Overlays (all div-b pages)
 
 | Drawer | Trigger | Width | Tabs | Description |
@@ -1333,71 +1447,85 @@
 
 | Page | CAO G4 | Acad Dir G3 | Curr Coord G2 | Exam Ctrl G3 | Results Coord G3 | Stream MPC G3 | Stream BiPC G3 | Stream MEC/CEC G3 | Stream HEC G3 | JEE/NEET G3 | IIT Found G3 | Olympiad G3 | Special Ed G3 | MIS G1 | Cal Mgr G3 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 01 CAO Dashboard | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — | — |
-| 02 Acad Dir Dashboard | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — |
-| 03 Curr Coord Dashboard | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — |
-| 04 Exam Ctrl Dashboard | — | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — |
-| 05 Results Coord Dashboard | — | — | — | — | ✅ Full | — | — | — | — | — | — | — | — | — |
-| 06 Stream MPC Dashboard | — | — | — | — | — | ✅ Full | — | — | — | — | — | — | — | — |
-| 07 Stream BiPC Dashboard | — | — | — | — | — | — | ✅ Full | — | — | — | — | — | — | — |
-| 08 Stream MEC/CEC Dashboard | — | — | — | — | — | — | — | ✅ Full | — | — | — | — | — | — |
-| 09 JEE/NEET Dashboard | — | — | — | — | — | — | — | — | ✅ Full | — | — | — | — | — |
-| 10 IIT Found Dashboard | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — | — |
-| 11 Olympiad Dashboard | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — |
-| 12 Special Ed Dashboard | — | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | — |
-| 13 MIS Dashboard | ✅ View | ✅ View | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
-| 14 Cal Mgr Dashboard | ✅ View | — | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
-| 15 Syllabus Manager | ✅ Full | ✅ Full | ✅ Edit topics | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC/CEC view | ✅ view | ✅ view | — | — | ✅ Read | — |
-| 16 Lesson Plan Standards | ✅ Full | ✅ Full | ✅ Create templates | — | — | ✅ MPC | ✅ BiPC | ✅ MEC/CEC | — | — | — | — | ✅ Read | — |
-| 17 Content Library | ✅ Full + approve | ✅ Full | ✅ Upload + edit own | — | — | ✅ Upload MPC | ✅ Upload BiPC | ✅ Upload MEC | ✅ Upload JEE | ✅ Upload Found | ✅ Upload Olympiad | — | ✅ Read | — |
-| 18 Subject-Topic Master | ✅ Full | ✅ Full | ✅ Edit | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ view | ✅ view | — | — | — | — |
-| 19 Stream Configuration | ✅ Full | ✅ View + propose | — | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ view | ✅ view | — | — | — | — |
-| 20 Textbook Mapping | ✅ Full | ✅ Full | ✅ Edit | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | — | ✅ Foundation | — | — | ✅ Read | — |
-| 21 Content Upload Queue | ✅ Full + approve | ✅ Approve/reject | ✅ Review + approve | — | — | ✅ Review MPC | ✅ Review BiPC | ✅ Review MEC | ✅ Review JEE | ✅ Review Found | — | — | — | — |
-| 22 Exam Calendar | ✅ Full | ✅ View | — | ✅ Full | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ JEE view | ✅ Found view | ✅ Olympiad view | — | ✅ Read | ✅ Coordinate |
-| 23 Question Bank | ✅ Full | — | ✅ Create | ✅ Full | — | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ JEE/NEET | ✅ Foundation | — | — | — | — |
-| 24 Exam Paper Builder | ✅ Approve | — | — | ✅ Full | — | ✅ Draft MPC | ✅ Draft BiPC | ✅ Draft MEC | ✅ Draft JEE | ✅ Draft Found | — | — | — | — |
-| 25 Branch Exam Schedule | ✅ Full | — | — | ✅ Full | ✅ View | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ JEE view | ✅ Found view | — | — | — | ✅ View |
-| 26 Exam Conflict Monitor | ✅ Resolve | — | — | ✅ Full | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ JEE view | ✅ Found view | — | — | — | ✅ View + propose |
-| 27 Result Moderation | ✅ Full + override | — | — | ✅ Full | ✅ Approve + publish | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ JEE view | ✅ Found view | — | — | ✅ Read | — |
-| 28 Answer Keys | ✅ Finalize | — | — | ✅ Full | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ JEE view | — | — | — | — | — |
-| 29 Results Publisher | ✅ Full override | — | — | ✅ View | ✅ Full publish | — | — | — | ✅ JEE results | ✅ Found results | — | — | ✅ Read | — |
-| 30 Rank Computation | ✅ Override | — | — | ✅ Trigger | ✅ Full | — | — | — | ✅ JEE | ✅ Found | — | — | ✅ Read after compute | — |
-| 31 Topper Lists | ✅ Full | ✅ View | — | — | ✅ Full | ✅ MPC toppers | ✅ BiPC toppers | ✅ MEC toppers | ✅ JEE toppers | ✅ Found toppers | ✅ Olympiad toppers | — | ✅ Read | — |
-| 32 Subject Heatmap | ✅ Full | ✅ Full | — | ✅ Full | ✅ Full | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ JEE | ✅ Found | — | — | ✅ Read | — |
-| 33 Branch Comparison | ✅ Full | ✅ Full | — | ✅ Full | ✅ Full | ✅ MPC | ✅ BiPC | ✅ MEC | — | — | — | — | ✅ Read | — |
-| 34 Result Archive | ✅ Read | ✅ Read | — | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | — | ✅ Read | — |
-| 35 JEE/NEET Test Series | ✅ Approve | — | — | ✅ Paper assign | ✅ Publish results | — | — | — | ✅ Full | — | — | — | ✅ Read | — |
-| 36 Coaching Schedule | ✅ View | — | — | — | — | ✅ MPC view | ✅ BiPC view | — | ✅ Full | — | — | — | — | ✅ View |
-| 37 JEE/NEET Performance | ✅ View | ✅ View | — | — | — | — | — | — | ✅ Full | — | — | — | ✅ Read | — |
-| 38 NTA Syllabus Coverage | ✅ View | — | ✅ Edit | — | — | — | — | — | ✅ Full | — | — | — | — | — |
-| 39 Foundation Program Mgr | ✅ View | — | ✅ Content upload | — | — | — | — | — | — | ✅ Full | — | — | — | — |
-| 40 Foundation Test Series | ✅ Approve | — | — | ✅ Paper | ✅ Publish | — | — | — | — | ✅ Full | — | — | — | — |
-| 41 Foundation Performance | ✅ View | ✅ View | — | — | — | — | — | — | — | ✅ Full | — | — | ✅ Read | — |
-| 42 Olympiad Registry | ✅ View | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — |
-| 43 Olympiad Registrations | ✅ View | — | — | — | — | — | — | — | — | — | ✅ Full | — | ✅ Read | — |
-| 44 Olympiad Results | ✅ View | — | — | — | — | — | — | — | — | — | ✅ Full | — | ✅ Read | — |
-| 45 Scholarship Exam Mgr | ✅ Approve | — | — | ✅ Paper | ✅ Publish results | — | — | — | — | — | ✅ Full | — | — | — |
-| 46 Special Needs Registry | ✅ View | ✅ View summary | — | — | — | — | — | — | — | — | — | ✅ Full | ✅ Anon stats | — |
-| 47 IEP Manager | ✅ View + sign-off | ✅ View | — | — | — | — | — | — | — | — | — | ✅ Full | ✅ Anon count | — |
-| 48 Accommodation Tracker | ✅ Override | — | — | ✅ View approved | — | — | — | — | — | — | — | ✅ Full | — | — |
-| 49 Special Ed Reports | ✅ Download | ✅ Download | — | — | — | — | — | — | — | — | — | ✅ Generate | ✅ Download | — |
-| 50 Teacher Performance | ✅ View + override | ✅ Full | — | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | — | — | — | — | ✅ Anon read | — |
-| 51 Observation Log | ✅ View | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | — | — | — | — | — | — |
-| 52 CPD Tracker | ✅ View | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | — | — | — | — | ✅ Read | — |
-| 53 Teaching Load | ✅ View | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | — | — | — | — | — | — |
-| 54 Academic MIS Report | ✅ Approve dist | ✅ Generate | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
-| 55 Branch Health | ✅ Full | ✅ Full | — | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | — | — | — | — | ✅ Full | — |
-| 56 Dropout Signals | ✅ View | ✅ Full | — | — | — | — | — | — | — | — | — | ✅ Own students | ✅ Read | — |
-| 57 Attendance Correlator | ✅ View | ✅ Full | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
-| 58 Trend Analytics | ✅ Full | ✅ Full | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
-| 59 Group Academic Calendar | ✅ Approve mandatory | ✅ View | — | ✅ View | — | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | — | — | ✅ Full |
-| 60 PTM Schedule | ✅ View | ✅ View | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
-| 61 Holiday Manager | ✅ Approve | — | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
-| 62 Calendar Compliance | ✅ View | ✅ View | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
-| 63 Standardisation Audit | ✅ Initiate | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | — | — | — | — | — | — |
-| 64 Paper Distribution | ✅ View | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — |
-| 65 Academic Policy | ✅ Full | ✅ Draft + propose | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ Read | ✅ View |
+| 01 CAO Dashboard | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 02 Acad Dir Dashboard | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| 03 Curr Coord Dashboard | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — |
+| 04 Exam Ctrl Dashboard | — | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — |
+| 05 Results Coord Dashboard | — | — | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — |
+| 06 Stream MPC Dashboard | — | — | — | — | — | ✅ Full | — | — | — | — | — | — | — | — | — |
+| 07 Stream BiPC Dashboard | — | — | — | — | — | — | ✅ Full | — | — | — | — | — | — | — | — |
+| 08 Stream MEC/CEC Dashboard | — | — | — | — | — | — | — | ✅ Full | — | — | — | — | — | — | — |
+| 09 JEE/NEET Dashboard | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — | — | — |
+| 10 IIT Found Dashboard | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — | — |
+| 11 Olympiad Dashboard | — | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — |
+| 12 Special Ed Dashboard | — | — | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | — |
+| 13 MIS Dashboard | ✅ View | ✅ View | — | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
+| 14 Cal Mgr Dashboard | ✅ View | — | — | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
+| 15 Syllabus Manager | ✅ Full | ✅ Full | ✅ Edit topics | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC/CEC view | ✅ HEC view | ✅ view | ✅ view | — | — | ✅ Read | — |
+| 16 Lesson Plan Standards | ✅ Full | ✅ Full | ✅ Create templates | — | — | ✅ MPC | ✅ BiPC | ✅ MEC/CEC | ✅ HEC | — | — | — | — | ✅ Read | — |
+| 17 Content Library | ✅ Full + approve | ✅ Full | ✅ Upload + edit own | — | — | ✅ Upload MPC | ✅ Upload BiPC | ✅ Upload MEC | ✅ Upload HEC | ✅ Upload JEE | ✅ Upload Found | ✅ Upload Olympiad | — | ✅ Read | — |
+| 18 Subject-Topic Master | ✅ Full | ✅ Full | ✅ Edit | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | ✅ view | ✅ view | — | — | — | — |
+| 19 Stream Configuration | ✅ Full | ✅ View + propose | — | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | ✅ view | ✅ view | — | — | — | — |
+| 20 Textbook Mapping | ✅ Full | ✅ Full | ✅ Edit | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | — | ✅ Foundation | — | — | ✅ Read | — |
+| 21 Content Upload Queue | ✅ Full + approve | ✅ Approve/reject | ✅ Review + approve | — | — | ✅ Review MPC | ✅ Review BiPC | ✅ Review MEC | ✅ Review HEC | ✅ Review JEE | ✅ Review Found | — | — | — | — |
+| 22 Exam Calendar | ✅ Full | ✅ View | — | ✅ Full | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | ✅ JEE view | ✅ Found view | ✅ Olympiad view | — | ✅ Read | ✅ Coordinate |
+| 23 Question Bank | ✅ Full | — | ✅ Create | ✅ Full | — | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | ✅ JEE/NEET | ✅ Foundation | — | — | — | — |
+| 24 Exam Paper Builder | ✅ Approve | — | — | ✅ Full | — | ✅ Draft MPC | ✅ Draft BiPC | ✅ Draft MEC | ✅ Draft HEC | ✅ Draft JEE | ✅ Draft Found | — | — | — | — |
+| 25 Branch Exam Schedule | ✅ Full | — | — | ✅ Full | ✅ View | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | ✅ JEE view | ✅ Found view | — | — | — | ✅ View |
+| 26 Exam Conflict Monitor | ✅ Resolve | — | — | ✅ Full | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | ✅ JEE view | ✅ Found view | — | — | — | ✅ View + propose |
+| 27 Result Moderation | ✅ Full + override | — | — | ✅ Full | ✅ Approve + publish | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | ✅ JEE view | ✅ Found view | — | — | ✅ Read | — |
+| 28 Answer Keys | ✅ Finalize | — | — | ✅ Full | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | ✅ JEE view | — | — | — | — | — |
+| 29 Results Publisher | ✅ Full override | — | — | ✅ View | ✅ Full publish | — | — | — | — | ✅ JEE results | ✅ Found results | — | — | ✅ Read | — |
+| 30 Rank Computation | ✅ Override | — | — | ✅ Trigger | ✅ Full | — | — | — | — | ✅ JEE | ✅ Found | — | — | ✅ Read after compute | — |
+| 31 Topper Lists | ✅ Full | ✅ View | — | — | ✅ Full | ✅ MPC toppers | ✅ BiPC toppers | ✅ MEC toppers | ✅ HEC toppers | ✅ JEE toppers | ✅ Found toppers | ✅ Olympiad toppers | — | ✅ Read | — |
+| 32 Subject Heatmap | ✅ Full | ✅ Full | — | ✅ Full | ✅ Full | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | ✅ JEE | ✅ Found | — | — | ✅ Read | — |
+| 33 Branch Comparison | ✅ Full | ✅ Full | — | ✅ Full | ✅ Full | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | — | — | — | — | ✅ Read | — |
+| 34 Result Archive | ✅ Read | ✅ Read | — | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | ✅ Read | — | ✅ Read | — |
+| 35 JEE/NEET Test Series | ✅ Approve | — | — | ✅ Paper assign | ✅ Publish results | — | — | — | — | ✅ Full | — | — | — | ✅ Read | — |
+| 36 Coaching Schedule | ✅ View | — | — | — | — | ✅ MPC view | ✅ BiPC view | — | — | ✅ Full | — | — | — | — | ✅ View |
+| 37 JEE/NEET Performance | ✅ View | ✅ View | — | — | — | — | — | — | — | ✅ Full | — | — | — | ✅ Read | — |
+| 38 NTA Syllabus Coverage | ✅ View | — | ✅ Edit | — | — | — | — | — | — | ✅ Full | — | — | — | — | — |
+| 39 Foundation Program Mgr | ✅ View | — | ✅ Content upload | — | — | — | — | — | — | — | ✅ Full | — | — | — | — |
+| 40 Foundation Test Series | ✅ Approve | — | — | ✅ Paper | ✅ Publish | — | — | — | — | — | ✅ Full | — | — | — | — |
+| 41 Foundation Performance | ✅ View | ✅ View | — | — | — | — | — | — | — | — | ✅ Full | — | — | ✅ Read | — |
+| 42 Olympiad Registry | ✅ View | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — |
+| 43 Olympiad Registrations | ✅ View | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | ✅ Read | — |
+| 44 Olympiad Results | ✅ View | — | — | — | — | — | — | — | — | — | — | ✅ Full | — | ✅ Read | — |
+| 45 Scholarship Exam Mgr | ✅ Approve | — | — | ✅ Paper | ✅ Publish results | — | — | — | — | — | — | ✅ Full | — | — | — |
+| 46 Special Needs Registry | ✅ View | ✅ View summary | — | — | — | — | — | — | — | — | — | — | ✅ Full | ✅ Anon stats | — |
+| 47 IEP Manager | ✅ View + sign-off | ✅ View | — | — | — | — | — | — | — | — | — | — | ✅ Full | ✅ Anon count | — |
+| 48 Accommodation Tracker | ✅ Override | — | — | ✅ View approved | — | — | — | — | — | — | — | — | ✅ Full | — | — |
+| 49 Special Ed Reports | ✅ Download | ✅ Download | — | — | — | — | — | — | — | — | — | — | ✅ Generate | ✅ Download | — |
+| 50 Teacher Performance | ✅ View + override | ✅ Full | — | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | — | — | — | — | ✅ Anon read | — |
+| 51 Observation Log | ✅ View | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | — | — | — | — | — | — |
+| 52 CPD Tracker | ✅ View | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | — | — | — | — | ✅ Read | — |
+| 53 Teaching Load | ✅ View | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | — | — | — | — | — | — |
+| 54 Academic MIS Report | ✅ Approve dist | ✅ Generate | — | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
+| 55 Branch Health | ✅ Full | ✅ Full | — | — | — | ✅ MPC view | ✅ BiPC view | ✅ MEC view | ✅ HEC view | — | — | — | — | ✅ Full | — |
+| 56 Dropout Signals | ✅ View | ✅ Full | — | — | — | — | — | — | — | — | — | — | ✅ Own students | ✅ Read | — |
+| 57 Attendance Correlator | ✅ View | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
+| 58 Trend Analytics | ✅ Full | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | ✅ Full | — |
+| 59 Group Academic Calendar | ✅ Approve mandatory | ✅ View | — | ✅ View | — | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | — | — | ✅ Full |
+| 60 PTM Schedule | ✅ View | ✅ View | — | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
+| 61 Holiday Manager | ✅ Approve | — | — | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
+| 62 Calendar Compliance | ✅ View | ✅ View | — | — | — | — | — | — | — | — | — | — | — | — | ✅ Full |
+| 63 Standardisation Audit | ✅ Initiate | ✅ Full | — | — | — | ✅ MPC | ✅ BiPC | ✅ MEC | ✅ HEC | — | — | — | — | — | — |
+| 64 Paper Distribution | ✅ View | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — |
+| 65 Academic Policy | ✅ Full | ✅ Draft + propose | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ Read | ✅ View |
+| 66 HEC Stream Dashboard | — | — | — | — | — | — | — | — | ✅ Full | — | — | — | — | — | — |
+| 67 AY Setup Wizard | ✅ Full | ✅ Review | — | — | — | — | — | — | — | — | — | — | — | ✅ Read | — |
+| 68 Board Exam Tracker | ✅ View | ✅ View | — | ✅ Full | — | — | — | — | — | — | — | — | — | ✅ Read | — |
+| 69 Student Acad Profile | ✅ Full | ✅ Full | — | ✅ Full | ✅ Full | ✅ Own str | ✅ Own str | ✅ Own str | ✅ Own str | — | — | — | — | ✅ Anon | — |
+| 70 Teacher Vacancy Monitor | ✅ View | ✅ Full | — | — | — | ✅ Own str | ✅ Own str | ✅ Own str | ✅ Own str | — | — | — | — | — | — |
+| 71 Re-evaluation Requests | ✅ Override | — | — | ✅ Full | ✅ View + decide | — | — | — | — | — | — | — | — | — | — |
+| 72 Remedial Programme Mgr | ✅ View | ✅ Full | — | — | — | ✅ Own str | ✅ Own str | ✅ Own str | ✅ Own str | — | — | — | — | — | — |
+| 73 Inter-Branch Events | ✅ View + approve | ✅ Full | — | — | — | — | — | — | — | — | — | ✅ Full | — | — | — |
+| 74 Timetable Standards | ✅ Full | ✅ View + audit | ✅ Edit standards | — | — | ✅ Own str | ✅ Own str | ✅ Own str | ✅ Own str | — | — | — | — | — | — |
+| 75 Chapter Progress Tracker | ✅ View | ✅ Full | ✅ View | — | — | ✅ Own str | ✅ Own str | ✅ Own str | ✅ Own str | — | — | — | — | ✅ Read | — |
+| 76 Teacher Assignment Matrix | ✅ View | ✅ Full | — | — | — | ✅ Own str | ✅ Own str | ✅ Own str | ✅ Own str | — | — | — | — | — | — |
+| 77 Supplementary Exam Mgr | ✅ Override | — | — | ✅ Full | ✅ View + publish | — | — | — | — | — | — | — | — | — | — |
+| 78 Academic Awards Mgr | ✅ Full | ✅ Create + manage | — | — | — | ✅ Own str nominees | ✅ Own str nominees | ✅ Own str nominees | ✅ Own str nominees | — | — | — | — | ✅ Read | — |
+| 79 Material Dispatch Tracker | ✅ View | ✅ View | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — |
 
 ---
 
@@ -1458,6 +1586,20 @@
 | 51 | Audit whether branches actually follow group standards | Academic Dir | 63 |
 | 52 | Securely distribute question papers to branches with audit trail | Exam Controller | 64 |
 | 53 | Maintain versioned academic policies (result/re-exam/promotion) | CAO | 65 |
+| 54 | Manage HEC stream curriculum, teaching quality, and performance | Stream Coord HEC | 66 |
+| 55 | Roll over the academic year — promote students, reset syllabus, calendar | CAO / Academic Dir | 67 |
+| 56 | Track Class 10/12 board exam registration, hall tickets, and results | Exam Controller | 68 |
+| 57 | View any student's full cross-branch academic history | CAO / Academic Dir / Exam Ctrl | 69 |
+| 58 | Detect unfilled teacher posts before they impact teaching quality | Academic Director | 70 |
+| 59 | Manage student requests to have subjective marks re-checked | Exam Controller | 71 |
+| 60 | Coordinate group-level remedial classes for weak students | Academic Director | 72 |
+| 61 | Organise and track inter-branch academic competitions | Academic Director | 73 |
+| 62 | Set and audit minimum periods-per-subject across all branches | CAO / Curriculum Coord | 74 |
+| 63 | Track actual chapter completion per branch vs. planned pacing | Academic Director / Stream Coords | 75 |
+| 64 | Validate every class-section has an assigned teacher per subject | Academic Director | 76 |
+| 65 | Manage supplementary exams for failed/absent students end-to-end | Exam Controller | 77 |
+| 66 | Recognise students beyond rank — effort, improvement, subject excellence | CAO / Academic Dir | 78 |
+| 67 | Track dispatch and branch receipt of physical study materials | Curriculum Coordinator | 79 |
 
 ---
 
@@ -1501,6 +1643,20 @@
 | No mechanism to verify branches follow group curriculum | Page 63 — Academic Standardisation Audit |
 | Question papers emailed to branches — no distribution audit trail | Page 64 — Exam Paper Distribution Pipeline with one-time download links |
 | Academic policies (re-exam, grace marks) shared informally | Page 65 — Academic Policy Manager with versioning and acknowledgements |
+| HEC stream (Humanities, Economics, Commerce) had no dedicated stream coordinator dashboard | Page 66 — Stream Coordinator HEC Dashboard |
+| Academic year rollover done ad-hoc — no platform wizard, causing data inconsistency | Page 67 — Academic Year Setup Wizard |
+| Board exam (CBSE/State) logistics tracked in spreadsheets — no central visibility | Page 68 — Board Exam Tracker |
+| No group-level view of individual student academic history across branches | Page 69 — Student Academic Profile Viewer |
+| Teacher vacancies not tracked centrally — shortages discovered only at branch level | Page 70 — Teacher Adequacy & Vacancy Monitor |
+| Mark dispute emails/calls only — no formal re-evaluation workflow | Page 71 — Result Re-evaluation Request Manager |
+| Remedial classes run ad-hoc at branch level — no group coordination | Page 72 — Remedial Programme Manager |
+| Inter-branch academic competitions (Quiz, Debate, Science Fair) managed outside platform | Page 73 — Inter-Branch Academic Events Manager |
+| Each branch built its own timetable — no group-mandated subject period minimums | Page 74 — Group Timetable Standards |
+| Syllabus defined but no live chapter pacing — branches fell behind undetected | Page 75 — Chapter / Unit Progress Tracker |
+| Teaching Load Monitor showed periods; no class-section assignment completeness check | Page 76 — Teacher-Subject-Class Assignment Matrix |
+| Students who fail exams had no structured platform workflow for re-exams | Page 77 — Supplementary / Make-Up Exam Manager |
+| Topper lists only captured rank-based recognition — no effort or improvement awards | Page 78 — Academic Awards & Recognition Manager |
+| Physical study material dispatch tracked by email/phone — no dispatch or receipt log | Page 79 — Study Material Dispatch Tracker |
 
 ---
 
@@ -1520,7 +1676,9 @@
 | 10 — Academic MIS & Analytics | 5 | P0–P2 |
 | 11 — Academic Calendar | 4 | P0–P1 |
 | 12 — Gap-Fill Additions | 3 | P1–P2 |
-| **Total** | **65** | |
+| 13 — Second Audit Gap-Fill | 9 | P0–P2 |
+| 14 — Third Audit Gap-Fill | 5 | P1–P2 |
+| **Total** | **79** | |
 
 ---
 
@@ -1528,7 +1686,7 @@
 
 ```
 P0 — Before group academic portal goes live
-  01–14   All 14 role dashboards
+  01–15   All 15 role dashboards (including HEC stream coord, page 66)
   15      Syllabus Manager
   17      Shared Content Library
   18      Subject-Topic Master
@@ -1540,15 +1698,17 @@ P0 — Before group academic portal goes live
   30      Group Rank Computation
   54      Academic MIS Report
   59      Group Academic Calendar
+  67      Academic Year Setup Wizard
 
 P1 — Sprint 2
   16, 19, 20, 21, 25, 26, 28, 31, 32, 33, 35, 36, 37, 39, 40,
-  42, 43, 44, 45, 46, 47, 48, 50, 51, 52, 55, 56, 60, 61, 62, 63, 64
+  42, 43, 44, 45, 46, 47, 48, 50, 51, 52, 55, 56, 60, 61, 62, 63, 64,
+  68, 69, 70, 71, 72, 74, 75, 76, 77
 
 P2 — Sprint 3
-  34, 38, 41, 49, 53, 57, 58, 65
+  34, 38, 41, 49, 53, 57, 58, 65, 73, 78, 79
 ```
 
 ---
 
-*Last updated: 2026-03-21 · Total pages: 65 · Roles: 14 · Gaps resolved: 34*
+*Last updated: 2026-03-21 · Total pages: 79 · Roles: 15 · Gaps resolved: 49*
