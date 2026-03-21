@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 96 roles across 15 divisions.
+> Total: 99 roles across 15 divisions.
 
 ---
 
@@ -241,30 +241,40 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division L — Marketing & Growth (5 roles)
+## Division L — Marketing & Growth (8 roles)
 
-> No platform system access — they use external tools (Meta Ads, Google Search Console, YouTube Studio).
+> Original 5 roles (64–68) have Level 0 for the EduForge student/institution platform — they use external tools (Meta Ads, Google Search Console, YouTube Studio).
+> 3 new roles added (#98, #99, #100) to complete the division.
+> All 8 roles access the internal Marketing Operations portal (`/marketing/`) for campaign mgmt, content pipeline, SEO, social, brand, attribution, and reporting.
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 64 | Marketing Manager | 0 | Brand strategy, campaigns across all 6 exam domains |
-| 65 | SEO / Content Executive | 0 | Blog, landing pages, exam prep articles for organic traffic |
-| 66 | Social Media Manager | 0 | YouTube, Instagram, Twitter — student community building |
-| 67 | Performance Marketing Exec | 0 | Google Ads, Meta Ads — school/coaching decision-maker targeting |
-| 68 | Brand Manager | 0 | Visual identity per domain (SSC brand ≠ School brand) |
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 64 | Marketing Manager | 0 | Brand strategy; approve all content, assets, campaigns; quarterly budget allocation; full L-portal access | EduForge platform config; billing; infra; sales pipeline edits |
+| 65 | SEO / Content Executive | 0 | Blog, landing pages, exam prep articles for organic traffic; keyword tracking; GSC monitoring | Approve own content; approve brand assets; paid ad config |
+| 66 | Social Media Manager | 0 | YouTube, Instagram, Twitter — student community building; post scheduling; platform analytics | Performance ad budget; content publishing approval; brand asset upload |
+| 67 | Performance Marketing Exec | 0 | Google Ads, Meta Ads — school/coaching decision-maker targeting; UTM config; A/B test campaigns | Content approve; brand asset upload; attribution model config |
+| 68 | Brand Manager | 0 | Visual identity per domain (SSC brand ≠ School brand); asset upload, versioning, deprecation; brand compliance review | Performance ad management; content authoring; social post scheduling |
+| 98 | Marketing Analyst | 1 | Attribution model config (First/Last/Linear); CAC/ROAS/CPL reporting; conversion funnel analytics; channel mix analysis; lead quality scoring; weekly data pack | No campaign edits; no content edits; no asset uploads; no customer-facing comms |
+| 99 | Content Strategist | 2 | Editorial calendar CRUD; content brief creation and assignment; keyword cluster strategy; content performance review; approve content (co-gate with Marketing Manager) | Performance ad management; brand asset upload; social scheduling; no EduForge platform writes |
+| 100 | Email & CRM Marketing Executive | 0 | Drip sequence creation; email template authoring; contact list management; send scheduling; open/click/bounce analytics; WhatsApp broadcast scripts | Cannot send to >10K contacts without Manager approval; no access to sales financial data; no platform config |
 
 ---
 
-## Division M — Finance & Billing (6 roles)
+## Division M — Finance & Billing (8 roles)
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 69 | Finance Manager | 1 | Revenue P&L, Razorpay reconciliation, investor reporting |
-| 70 | Billing Admin | 3 | Subscription plans, invoice generation, refund approvals |
-| 71 | Accounts Receivable Exec | 1 | Outstanding dues tracking, payment follow-up per institution |
-| 72 | GST / Tax Consultant | 1 | SAC 9993 compliance, CGST/SGST/IGST filing, TDS |
-| 73 | Refund Processing Exec | 3 | Validate and trigger refunds via Razorpay API |
-| 74 | Pricing Admin | 3 | Configure subscription tiers, discounts, promo codes |
+> At 2,050 institutions and ₹18Cr–₹90Cr ARR, finance operations span invoice generation, Razorpay settlement reconciliation, GST compliance (SAC 9993), refund processing, and subscription tier management.
+> ~2,050 invoices generated per month. Overdue rate 3–5% (~60–100 institutions). GST obligations under GSTR-1/3B/9.
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 69 | Finance Manager | 1 | Revenue P&L oversight, Razorpay reconciliation sign-off, investor reporting, refund approvals > ₹10K, write-off decisions, AR escalation resolution | Cannot edit invoices directly (must go via Billing Admin); cannot configure plan tiers (Pricing Admin) |
+| 70 | Billing Admin | 3 | Invoice generation, subscription plan assignment, invoice edits, refund request creation, account suspension/reactivation, bulk invoice dispatch | Cannot approve refunds > ₹10K (Finance Manager approval required); cannot configure plan tiers (Pricing Admin owns that) |
+| 71 | Accounts Receivable Exec | 1 | Outstanding dues tracking, reminder dispatch, promise-to-pay logging, payment follow-up for 0–60 day overdue accounts, AR aging report review | No invoice writes; cannot issue demand notices or suspend accounts; read-only on all financial records |
+| 72 | GST / Tax Consultant | 1 | SAC 9993 compliance, CGST/SGST/IGST computation per invoice, GSTR-1/3B/9 filing, TDS 194J tracking, Razorpay TCS reconciliation | Cannot edit invoices or subscriptions; no access to pricing configuration or refund processing |
+| 73 | Refund Processing Exec | 3 | Validate refund eligibility against policy, process approved refunds via Razorpay API, track Razorpay refund_id and status, handle failed refunds | Cannot approve refunds > ₹10K (Finance Manager approves first); cannot create refund requests (Billing Admin or Finance Manager creates them) |
+| 74 | Pricing Admin | 3 | Subscription tier configuration (create/edit/archive plans), institution-specific custom discounts, promo code lifecycle management, pricing change history | Cannot assign plans to institutions (Billing Admin does that); cannot approve discounts > 20% (Finance Manager must approve) |
+| 101 | Finance Analyst | 1 | ARR/MRR waterfall analysis (new/expansion/contraction/churn), P&L variance investigation, investor deck data preparation, cohort revenue analysis, NRR/GRR modelling, revenue forecast maintenance, segment-wise revenue attribution | No data edits anywhere; read-only across all finance modules; can export aggregated analytics only (not raw payment/invoice records) |
+| 102 | Collections Executive | 3 | Outbound dunning calls for 60+ day overdue accounts, formal demand notice generation and dispatch, payment plan negotiation and structured agreement logging, suspension coordination with Billing Admin, escalation of unresolvable accounts to Finance Manager for write-off | Cannot write off invoices; cannot approve refunds; no access to subscriptions, pricing config, or GST module |
 
 ---
 
@@ -308,11 +318,11 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | I — Customer Support | 7 |
 | J — Customer Success | 6 |
 | K — Sales & Business Development | 10 (7 original + 3 new: #95, #96, #97) |
-| L — Marketing & Growth | 5 |
-| M — Finance & Billing | 6 |
+| L — Marketing & Growth | 8 (5 original + 3 new: #98, #99, #100) |
+| M — Finance & Billing | 8 (6 original + 2 new: #101, #102) |
 | N — Legal & Compliance | 4 |
 | O — HR & Administration | 3 |
-| **Total** | **96** |
+| **Total** | **101** |
 
 ---
 
