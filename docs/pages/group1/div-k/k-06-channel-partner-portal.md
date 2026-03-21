@@ -292,6 +292,8 @@ Detailed `sales_channel_deal` rows for this partner. Loaded via `htmx/k/channel-
 4. Finance team (#70) processes bank transfer offline → marks PAID; `paid_at` = now()
 5. Disputes: sets status = DISPUTED; dispute reason stored; notification to #57 and Finance
 
+Note on Div-I integration: When a channel-partner-sourced deal (is_channel_deal=True) reaches CLOSED_WON, the same onboarding task creation applies as non-channel deals — Onboarding Specialist (#51, Div-I) receives both an in-app notification AND a task record is created in the support_onboarding_task table. Commission flow is separate from onboarding flow.
+
 Ledger re-renders via HTMX after each approval or dispute action.
 
 **Commission Dispute Resolution Workflow:**
@@ -428,9 +430,26 @@ Shows all `sales_channel_deal` rows WHERE `commission_status='PENDING'` across a
 
 ---
 
+---
+
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[63, 57, 95])` applied to `ChannelPartnerView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Channel Partner Mgr (#63) | Full CRUD on channel partners, deals attribution, activity log |
+| Sales Manager (#57) | Read all + approve/reject commissions. POST to onboard partner triggers approval workflow (not immediate activation). |
+| Sales Ops (#95) | Read-only. All POST/PATCH/DELETE return 403. |
+| Commission approval endpoint | POST `/k/channel-partners/commissions/<id>/approve/` — restricted to #57 only. Returns 403 for all others. |
+| `bank_account_verified` PATCH | Not available in Sales API. Only Django admin (Platform Admin #10) can write this field. |
+| Any other role | 403 Forbidden |
+
+---
+
 ## Role-Based View Summary
 
-| Feature | #57 Manager | #63 Channel PM | #95 Ops Analyst | Others |
+| Feature | #57 Manager | #63 Channel Partner Mgr | #95 Ops Analyst | Others |
 |---|---|---|---|---|
 | View partner list | Full | Full | Read-only | No access |
 | Onboard partner | Approve only | Full | No | No |

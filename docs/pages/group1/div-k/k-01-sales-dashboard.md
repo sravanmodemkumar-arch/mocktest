@@ -114,7 +114,7 @@ Each part responds with an HTML fragment only; no full page reload required. Fil
 
 **Tile 4 — Avg Deal Size:** AVG(arr_estimate_paise) WHERE stage='CLOSED_WON' AND won_at in period. Formatted as ₹X.XL. Shows delta vs last period. Guard: if 0 closed deals in period, shows "— (no wins yet)" in grey. Useful for detecting ARR dilution from heavy discounting.
 
-**Tile 5 — Demo-to-Close Rate:** CLOSED_WON count ÷ (count of leads that reached DEMO_DONE or later stages at any point in their history) × 100. Uses stage history from `sales_activity` where activity_type='DEMO' and outcome != 'NO_SHOW'. Guard: if fewer than 5 demos in period, shows "Low data" in amber. Tracked as a conversion health metric for the Demo Manager's calibration.
+**Tile 5 — Demo-to-Close Rate:** **Demo-to-Close Rate:** COUNT(CLOSED_WON leads WHERE a sales_activity of type='DEMO' with outcome in ('POSITIVE','NEUTRAL') exists on the lead) ÷ COUNT(all leads where any sales_activity of type='DEMO' exists) × 100. Note: Activity-based definition (not stage-history-based) — counts any lead with a logged DEMO activity as having "reached demo stage", regardless of current lead stage. This avoids the need for a stage history table. Guard: if fewer than 5 demos in period, shows "Low data" in amber. Tracked as a conversion health metric for the Demo Manager's calibration.
 
 Edge cases: If denominator (leads that reached DEMO_DONE or later) < 5 in the period, tile shows "Low data" in amber with tooltip "Less than 5 demos completed this period — rate may not be representative." If denominator = 0, shows "—" (em-dash, not 0%).
 
@@ -273,12 +273,29 @@ Last 20 `sales_activity` records ordered by `occurred_at DESC`. For execs: own a
 
 ---
 
+---
+
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[57, 58, 59, 60, 95, 97])` applied to `SalesDashboardView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Unauthenticated | Redirect to `/login/?next=/group1/k/dashboard/` |
+| Wrong role (e.g., #62 Demo Manager navigates here) | 403 redirect to `/403/` |
+| Sales Exec (#58–60) | Queryset filtered to `owner_id = request.user.id`; all KPI tiles show own data only |
+| Sales Ops (#95) | Full read-only; no period/segment controls are blocked but all data is pre-aggregated (no raw query access) |
+
+**HTMX partial security:** All partial-load routes (`htmx/k/kpi-strip/`, etc.) enforce the same role checks. Direct calls without a valid session return 403.
+
+---
+
 ## Role-Based UI Visibility Summary
 
-| Component | 57 Manager | 58/59/60 Execs | 95 Ops Analyst | 97 Inside Sales | 61 Partnership | 62 Demo Mgr |
+| Component | 57 Manager | 58/59/60 Execs | 95 Ops Analyst | #97 Inside Sales Exec | 61 Partnership | 62 Demo Manager (#62) |
 |---|---|---|---|---|---|---|
 | KPI Strip | All 5 tiles, org-wide | All 5 tiles, own segment | All 5 tiles, org-wide (read-only) | Tiles 1–2 own only | Pipeline value tile only | Tile 5 (Demo-to-Close) only |
-| Pipeline Funnel Chart | Full, all execs, with exec toggle | Own segment only, no exec toggle | Full org-wide, no interactions | Own inbound funnel | Read-only all | Read-only all |
+| Pipeline Funnel Chart | Full, all execs, with exec toggle | Own segment only, no exec toggle | Full org-wide, no interactions | Own inbound leads | Read-only all | Read-only all |
 | Team Leaderboard | Full — all execs, sortable | Hidden | Full — read-only | Hidden | Hidden | Hidden |
 | Stale Leads Widget | All execs' stale leads | Own stale leads only | All stale leads read-only | Own inbound stale leads | Hidden | Hidden |
 | Upcoming Demos Strip | Full — all execs' demos + tenant status | Own demos only | Full read-only | Hidden | Hidden | Full + [Setup Demo Tenant] links |

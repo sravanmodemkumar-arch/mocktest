@@ -203,7 +203,7 @@ Triggered by the `[+ Create Lead]` button in the page header. Opens as a right-s
 | Expected Close Date (optional) | Date picker | Optional; must be a future date if set; validation: close_date > today. Maximum forward limit: Cannot be more than 3 years from today (prevents joke entries). If beyond 3 years: "Expected close date seems far out. Please confirm." validation warning (soft, not hard block). Past dates: blocked with error "Expected close date cannot be in the past." |
 | Notes (optional) | Textarea | Optional; max 2000 chars |
 
-**ARR validation bounds:** Minimum ₹0 (allowed but triggers amber warning "Estimated ARR seems low — please confirm"). Maximum per type: SCHOOL ₹50L, COLLEGE ₹30L, COACHING ₹2Cr, GROUP ₹5Cr. Values exceeding max show validation error "ARR estimate exceeds typical range for this institution type." Both client-side (HTML5 max attribute) and server-side (DRF serializer) enforced.
+**ARR validation bounds:** Minimum ₹0 (allowed but triggers amber warning "Estimated ARR seems low — please confirm"). Maximum per type: SCHOOL ₹50L, COLLEGE ₹30L, COACHING ₹2Cr, GROUP ₹5Cr. Values exceeding max show validation error "ARR estimate exceeds typical range for this institution type." Both client-side (HTML5 max attribute) and server-side (DRF serializer) enforced. **Zero-ARR policy:** ₹0 ARR is allowed at form submission (lead may be created before deal size is known). Amber warning shown inline: "Estimated ARR is ₹0 — please update before closing." Server-side constraint: if stage transition to CLOSED_WON is attempted with arr_estimate_paise = 0, server returns validation error: "ARR must be greater than ₹0 to mark this deal as Won." This is enforced in Django model clean() method, not DB constraint, to preserve admin override capability.
 
 **ARR auto-calculation logic:**
 - When institution_type is set AND student_count_estimate is entered, ARR field auto-populates:
@@ -244,6 +244,7 @@ Triggered by the `[+ Create Lead]` button in the page header. Opens as a right-s
 | Stage tab is empty (e.g., Negotiation tab: 0 leads) | "No leads in [Stage Name] right now." with stage icon | [View all leads] link back to All tab |
 | No stale leads (Stale Only filter checked but 0 results) | "No stale leads — your pipeline is up to date." with green shield | — |
 | Pre-Sales #96 with no assigned leads | "No leads assigned to you yet. Leads with ARR > ₹2L will appear here when assigned by the Sales Manager." | — |
+| Duplicate institution name detected on create | "A lead for [Institution Name] already exists in pipeline. [View existing →]" — shown as inline error below Institution Name field (not toast). Submit button disabled until name is changed or user explicitly acknowledges. | — |
 
 ---
 
@@ -254,6 +255,8 @@ Triggered by the `[+ Create Lead]` button in the page header. Opens as a right-s
 | Lead created successfully | "Lead created for [Institution Name]. Redirecting to account profile..." | Green (success) |
 | Stage moved | "[Institution Name] moved to [New Stage]." | Green (success) |
 | Stage move to CLOSED_WON | "Deal closed! [Institution Name] — ₹[ARR] ARR. Onboarding handoff initiated." | Green (success, auto-dismissed after 5s) |
+
+Note: CLOSED_WON trigger also initiates a subscription activation task in Division M — Billing Admin (#70) receives in-app + email notification with institution name, ARR, plan tier, and deal ID. This is documented in the Integration Points section of div-k-pages-list.md.
 | Bulk assignment complete | "[N] leads assigned to [Exec Name]." | Green (success) |
 | Bulk stage move complete | "[N] leads moved to [Stage]." | Green (success) |
 | Export queued (async) | "Export queued — download link will be emailed to [user email]." | Amber (info) |
@@ -263,9 +266,25 @@ Triggered by the `[+ Create Lead]` button in the page header. Opens as a right-s
 
 ---
 
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[57, 58, 59, 60, 95, 96, 97])` applied to `LeadPipelineView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Unauthenticated | Redirect to login |
+| Sales Exec (#58–60) | `sales_lead` queryset filtered to `WHERE owner_id = request.user.id` |
+| Inside Sales (#97) | Queryset filtered to `WHERE owner_id = request.user.id AND lead_source IN ('ORGANIC_INBOUND', 'MARKETING_CAMPAIGN')` |
+| Pre-Sales (#96) | Queryset filtered to `WHERE presales_id = request.user.id` |
+| Sales Ops (#95) | Unscoped read. All write endpoints (POST/PATCH/DELETE) return 403. |
+| Bulk Delete POST with non-#57 user | 403 Forbidden |
+| Lead belonging to different exec (direct URL) | 404 Not Found (not 403 — avoids information leakage) |
+
+---
+
 ## Role-Based View Differences
 
-| Feature | 57 Manager | 58/59/60 Execs | 95 Ops Analyst | 97 Inside Sales | 96 Pre-Sales | 62 Demo Mgr |
+| Feature | 57 Manager | 58/59/60 Execs | 95 Ops Analyst | 97 Inside Sales Exec (#97) | 96 Pre-Sales | 62 Demo Mgr |
 |---|---|---|---|---|---|---|
 | See all leads | Yes — full org | Own segment leads only | Yes — read-only all | Own inbound leads only | Assigned leads only | Read-only all (demo status focus) |
 | Owner filter | Yes | No (scoped to self) | Yes (read-only) | No (scoped to self) | No | No |

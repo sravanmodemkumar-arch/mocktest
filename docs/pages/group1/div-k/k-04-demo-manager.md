@@ -5,6 +5,8 @@
 **Primary role:** Demo Manager (#62)
 **Also sees:** B2B Sales Manager (#57 — view + extend expiry only), Sales Executives #58–60 (own linked demos, view only)
 
+Sales Manager (#57) has full read access to all demo tenant records (not just linked demos). They can view usage stats and trigger expiry extension but cannot create new demo tenants, reset demo data, or generate access links — those actions are restricted to Demo Manager (#62) only.
+
 ---
 
 ## Purpose
@@ -280,6 +282,8 @@ Confirm modal: "Reset all data? Student progress, exam results, and customisatio
 *Extend Expiry:*
 Dropdown options: +7 days / +14 days / +30 days. Guard: `expires_at + extension` must not exceed `created_at + 90 days`. If over 90 days: "Cannot extend beyond 90 days from creation. Contact Sales Manager for an exception." PATCH `sales_demo_tenant.expires_at`.
 
+**ENTERPRISE_POC approval gate on extensions:** For demo_type=ENTERPRISE_POC, extensions beyond the approved original duration require the same Sales Manager approval as initial creation (see Create Demo Tenant Wizard, Step 2). The "Extend Expiry" button for ENTERPRISE_POC tenants shows "Submit Extension Request" instead of immediate options, triggering the same approval workflow. Once approved, the tenant's expires_at is updated. Maximum 90 days from creation_date regardless of extension approvals.
+
 *Deactivate:*
 Confirm: "Are you sure? The prospect will lose access immediately." PATCH `is_active=False`. Row turns red in table. KPI strip recalculates.
 
@@ -355,9 +359,25 @@ All cells editable inline (click to edit). PATCH on change. Affects future demo 
 
 ---
 
+---
+
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[62, 57, 58, 59, 60])` applied to `DemoManagerView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Demo Manager (#62) | Full CRUD access |
+| Sales Manager (#57) | Read all + extend expiry only. POST to `/demos/create/` returns 403. POST to `/demos/<id>/reset/` returns 403. |
+| Sales Execs (#58–60) | Read own linked demos only (queryset: `WHERE lead_id IN (SELECT id FROM sales_lead WHERE owner_id = request.user.id)`). No write access. |
+| Any other role | 403 Forbidden |
+| Provisioning webhook callback | Authenticated via `X-Provisioning-Secret` header (shared secret stored in AWS Secrets Manager); not user-session-based. |
+
+---
+
 ## Role-Based View Summary
 
-| Feature | #62 Demo Mgr | #57 Sales Mgr | #58 Schools | #59 Colleges | #60 Coaching | #63/#95/#96/#97 |
+| Feature | Demo Manager (#62) | #57 Sales Manager | #58 Schools | #59 Colleges | #60 Coaching | #63/#95/#96/#97 |
 |---|---|---|---|---|---|---|
 | View active demo list | Yes (all) | Yes (all) | Own linked | Own linked | Own linked | No access |
 | View demo detail drawer | Yes | Yes | Own linked | Own linked | Own linked | No access |

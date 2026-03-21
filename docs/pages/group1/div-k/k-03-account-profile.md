@@ -56,7 +56,7 @@ Tab selection updates URL via `hx-push-url` without full page reload.
 │  Contact: Ramesh Kumar · 9876543210 · ramesh@kims.edu           │
 │  ARR: ₹1.2L   Students: ~800   Territory: TELANGANA             │
 │  Owner: Rahul (Schools Exec)   Pre-Sales: Anika   Mgr: Vikram   │
-├──PROSPECT──CONTACTED──DEMO_DONE──●PROPOSAL──NEGOTIATION──WON────┤
+├──PROSPECT──CONTACTED──DEMO_SCHEDULED──DEMO_DONE──●PROPOSAL_SENT──NEGOTIATION──CLOSED_WON──┤
 │  Stage Progress Bar (current stage highlighted)                 │
 │  [Move to Proposal →]   [Log Activity]   [Schedule Demo]        │
 ├─────────────────────────────────────────────────────────┬───────┤
@@ -127,7 +127,7 @@ PROSPECT → CONTACTED → DEMO_SCHEDULED → DEMO_DONE → PROPOSAL_SENT → NE
 - Clicking CLOSED_LOST at any time → opens Stage Move Modal with lost_reason field required
 - Backward stage move (clicking earlier stage) → requires Manager (#57) approval; shows warning: "Moving backward requires Sales Manager approval. Continue?" — submits for approval rather than immediately updating
 
-**Backward stage move when Manager is unavailable:** If no Manager is logged in for >24 hours, backward move request escalates to Platform COO (#3) via the same in-app notification. The request auto-expires (rejected) after 72 hours if no action — exec is notified "Stage move request expired. Resubmit when manager is available."
+**Backward stage move when Manager is unavailable:** If no Manager is logged in for >24 hours, backward move request escalates to Platform COO (#3) via the same in-app notification. This escalation event ("Backward stage move escalated to COO") is logged in the Notification Events table in div-k-pages-list.md. Platform COO (#3) approves or rejects via their standard platform notification centre — they do not need access to Division K pages directly. The approval/rejection is a simple in-app action that updates the stage move request status. The request auto-expires (rejected) after 72 hours if no action — exec is notified "Stage move request expired. Resubmit when manager is available."
 
 **Stage badge colours:** PROSPECT=grey / CONTACTED=blue / DEMO_SCHEDULED=cyan / DEMO_DONE=violet / PROPOSAL_SENT=amber / NEGOTIATION=orange / CLOSED_WON=green / CLOSED_LOST=red
 
@@ -159,7 +159,7 @@ Right-hand sidebar (fixed, not scrolled away on timeline scroll).
 └─────────────────────────────────────────────────────┘
 ```
 
-On CLOSED_WON confirmation: (1) stage → CLOSED_WON, won_at = now(). (2) System creates csm_account_assignment (Div-J table) with institution_id + csm_id pre-populated from Sales Manager's default CSM map for that territory (editable in K-07). (3) Notification sent to: Sales Manager (#57), Onboarding Specialist (#51, Div-I), Billing Admin (#70, Div-M), ISM (#94, Div-J). (4) If no CSM is mapped to this territory, shows modal: "Assign Customer Success Manager before closing" with CSM dropdown — required before close can complete.
+On CLOSED_WON confirmation: (1) stage → CLOSED_WON, won_at = now(). (2) System creates csm_account_assignment (Div-J table) with institution_id + csm_id pre-populated from Sales Manager's default CSM map for that territory (editable in K-07). (3) Notification sent to: Sales Manager (#57), Onboarding Specialist (#51, Div-I), Billing Admin (#70, Div-M), ISM (#94, Div-J). (4) Division M integration: Billing Admin (#70) receives subscription activation task payload: { institution_id, arr_estimate_paise, plan_tier (derived from segment_size), deal_id, won_at }. This triggers subscription provisioning in Division M. See Integration Points in div-k-pages-list.md. (5) If no CSM is mapped to this territory, shows modal: "Assign Customer Success Manager before closing" with CSM dropdown — required before close can complete.
 
 **Assign Pre-Sales modal:** Dropdown filtered to users with role #96. Shows name + current workload (N active PoCs). Saves to `sales_lead.presales_id`. Sends in-app notification to assigned Pre-Sales Engineer.
 
@@ -373,6 +373,26 @@ Visible to: record owner and #57.
 | Lead converted to Lost | "KIMS High School marked as CLOSED_LOST" (red) |
 | Notes saved | "Notes saved" (grey/silent) |
 | Stage move requires approval | "Backward stage move submitted for Sales Manager approval" (amber) |
+
+---
+
+---
+
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[57, 58, 59, 60, 61, 62, 95, 96, 97])` applied to `LeadDetailView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Sales Exec accessing own lead | 200 OK |
+| Sales Exec accessing another exec's lead | 404 Not Found (not 403 — information leakage prevention) |
+| Demo Manager (#62) accessing lead with no demo tenant | 200 OK — Demo Tenant tab shows "No demo tenant" empty state |
+| Pre-Sales (#96) accessing non-assigned lead | 404 Not Found |
+| Sales Ops (#95) accessing any lead | 200 OK — all edit actions hidden (read-only view) |
+| Partnership Manager (#61) accessing lead | 200 OK — no edit controls shown; read-only header view |
+| Unauthenticated | Redirect to login |
+
+**Stage move authorization:** Stage advance PATCH `/group1/k/account/<id>/stage/` checks: (1) user is owner_id or manager_id. (2) For backward moves: additionally checks approval_status from pending approval record. Server returns 403 if neither condition met.
 
 ---
 

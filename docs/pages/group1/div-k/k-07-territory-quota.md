@@ -9,6 +9,8 @@
 
 ## Purpose
 
+**Viewport:** Desktop-only (minimum 1280px recommended for attainment gauge strip with multiple exec rows). No mobile layout provided.
+
 Territory assignment and quota management hub for the Sales division. The B2B Sales Manager defines which Sales Executive owns which geographic territories and institution segments, then sets monthly or quarterly deal-count and ARR targets for each. Real-time attainment tracking — backed by live actuals from `sales_lead` and pre-computed gauges from Celery — lets the Manager spot underperforming territories and rebalance headcount or leads before a quarter-end shortfall becomes irreversible. At scale with 2,050 institutions spread across 28 states, territory clarity prevents duplicate outreach and ensures every institution has a single accountable owner. Executives see their own row only; they cannot view peers' quotas. The Sales Ops Analyst has full read access across all executives and periods and can export quota reports.
 
 ---
@@ -199,7 +201,7 @@ Per-exec quota setting. Accessible via row Edit button or [Set / Edit Quotas] ba
 - Target Deals: required; integer; minimum 1; maximum 999.
 - Target ARR: required; positive number entered in lakhs (₹L) on UI; multiplied by 1,00,000 × 100 before storing as paise.
 - Past-period warning: "You are setting a quota for a past period ([period]). This is allowed but unusual." — shows warning but does not block submission. Requires confirmation checkbox.
-- Cannot set quota for a user whose role is not Sales Executive or Inside Sales (#57 can only set quotas for roles #58, #59, #60, #97).
+- Cannot set quota for a user whose role is not Sales Executive or Inside Sales Exec (#97) (#57 can only set quotas for roles #58, #59, #60, #97).
 - Duplicate handling: UPSERT on `UNIQUE(owner_id, period_type, period_year, period_num)` — editing an existing quota updates it.
 
 On save: POST/PATCH to `/group1/k/territory/quota/save/`. Success toast. HTMX refreshes quota table and attainment gauges.
@@ -352,9 +354,25 @@ Source: `analytics_sales_funnel` WHERE `period_date` spans last 6 periods. Falls
 
 ---
 
+---
+
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[57, 58, 59, 60, 95, 97])` applied to `TerritoryQuotaView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Sales Manager (#57) | Full access — view all execs, set/edit quotas, rebalance territories |
+| Sales Execs (#58–60) | Queryset filtered to own quota rows only. Rebalance Wizard: 403 if accessed directly. |
+| Inside Sales Exec (#97) | Own quota row only (read-only). Territory view not accessible. |
+| Sales Ops (#95) | Read-only all. Export quota report allowed. All POST/PATCH return 403. |
+| Quota UPSERT endpoint POST `/k/territory/quota/` | Only #57. Others return 403. |
+| Territory reassignment POST `/k/territory/rebalance/` | Only #57. Others return 403. |
+| Any other role | 403 Forbidden |
+
 ## Role-Based View Summary
 
-| Feature | #57 Manager | #58–60 Execs | #95 Ops Analyst | #97 Inside Sales | Others |
+| Feature | #57 Manager | #58–60 Execs | #95 Ops Analyst | #97 Inside Sales Exec | Others |
 |---|---|---|---|---|---|
 | View attainment gauges | All execs | Own row only | All execs | Own row only | No access |
 | View quota table | All rows | Own row only | All rows | Own row only | No access |

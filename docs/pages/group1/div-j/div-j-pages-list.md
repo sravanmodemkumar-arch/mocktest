@@ -431,6 +431,9 @@ CREATE INDEX csm_assignment_history_inst ON csm_account_assignment_history (inst
 | `at_risk_default_playbook_template_id` | `null` | Set post-seed once AT_RISK_RECOVERY template is created |
 | `churn_risk_default_playbook_template_id` | `null` | Set post-seed once CHURN_SAVE template is created |
 | `last_health_compute_at` | `null` | Updated by Task J-1 on each successful completion; read by Task J-4 |
+| `nps_survey_expiry_days` | `14` | Days after sending before a survey link expires; used by `csm_nps_survey.link_expires_at = sent_at + interval '14 days'` |
+
+**Who can edit csm_config keys:** Admin staff via Django admin interface (superuser or staff with `csm.change_csm_config` permission). CSM (#53) can read config values in the UI (visible in Settings panel) but cannot edit them directly — config changes require a platform admin to prevent misconfiguration at scale. Changes to config keys are logged via Django admin's built-in `LogEntry` mechanism (`updated_by_id` field).
 
 ---
 
@@ -640,7 +643,7 @@ All Division J routes under `/csm/` prefix. Django app name: `csm`.
 | AT_RISK threshold crossed (score drops below 65) | Assigned CSM | In-app + Email | Task J-4 |
 | CHURNED_RISK threshold crossed (score drops below 25) | Assigned CSM + Escalation Manager | In-app + Email | Task J-4 |
 | Renewal due ≤30d, no touchpoint in 14d | Assigned AM + Renewal Exec | In-app + WhatsApp | Task J-2 |
-| Renewal due ≤7d, stage = IDENTIFIED | Assigned AM + CSM | In-app + WhatsApp | Task J-2 |
+| Renewal due ≤7d, all active stages (IDENTIFIED, OUTREACH_SENT, QUOTE_SENT, NEGOTIATING) | Assigned AM + CSM | In-app + WhatsApp | Task J-2 |
 | Renewal stage → COMMITTED | Assigned CSM + AM | In-app | Post-save signal on csm_renewal |
 | P1 Escalation auto-created (from Div-I L3 flag) | Escalation Manager + CSM | In-app | Post-save signal on csm_escalation |
 | Escalation commit SLA breached | Assigned Escalation Manager + CSM | In-app | Task J-1 (nightly SLA flag check) |

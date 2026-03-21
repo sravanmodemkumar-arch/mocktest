@@ -89,7 +89,7 @@ Lead-to-close conversion target: 30–40% across all segments. Channel partner d
 | contact_phone | varchar(15) | NOT NULL; validated ^[6-9]\d{9}$ |
 | contact_email | varchar(254) | NULLABLE |
 | student_count_estimate | int | NULLABLE; used for ARR auto-calculation |
-| arr_estimate_paise | bigint | NOT NULL DEFAULT 0; in paise (₹1 = 100 paise) |
+| arr_estimate_paise | bigint | NOT NULL DEFAULT 0; in paise (₹1 = 100 paise). Application-level constraint: arr_estimate_paise must be > 0 when stage transitions to CLOSED_WON (enforced in Django model clean() method). Allowed to be 0 during early pipeline stages (PROSPECT through NEGOTIATION) — prompts amber warning in UI but does not block form submission. |
 | expected_close_date | date | NULLABLE; must be future at creation |
 | won_at | timestamptz | Set when stage → CLOSED_WON |
 | lost_at | timestamptz | Set when stage → CLOSED_LOST |
@@ -196,7 +196,7 @@ CREATE INDEX sales_activity_logged_by_idx ON sales_activity (logged_by, occurred
 | total_arr_paise | bigint | NOT NULL DEFAULT 0; Denormalised — updated by Celery Task K-5 via UPDATE ... SET total_arr_paise = total_arr_paise + new_arr, total_deals_closed = total_deals_closed + 1 WHERE id = channel_partner_id. Uses SELECT FOR UPDATE on sales_channel_partner row to prevent race conditions during concurrent CLOSED_WON events. |
 | commission_earned_paise | bigint | NOT NULL DEFAULT 0; total commissions earned (lifetime) |
 | commission_paid_paise | bigint | NOT NULL DEFAULT 0; total commissions paid out (lifetime) |
-| bank_account_verified | boolean | NOT NULL DEFAULT false; required before first commission payment |
+| bank_account_verified | boolean | DEFAULT FALSE. Read-only via Sales module API (DRF serializer marks field as read_only=True). Can only be set to TRUE via Django admin by Platform Admin (#10) after offline bank account verification. No API endpoint in the Sales app allows writing this field — prevents programmatic bypass. |
 | contact_name | varchar(200) | NOT NULL |
 | contact_phone | varchar(15) | NOT NULL |
 | contact_email | varchar(254) | NOT NULL |
@@ -287,7 +287,7 @@ UNIQUE: (computed_at, period_date, stage, segment, owner_id)
 
 | Task ID | Name | Schedule | Description |
 |---|---|---|---|
-| K-1 | `compute_pipeline_summary` | Every 6 hours | Aggregates deals per stage + ARR totals per territory, segment, and exec. Writes results to `analytics_sales_funnel` (Div-H read). Also recomputes `avg_deal_size`, `demo_to_close_rate`, and `pipeline_velocity` metrics used in K-01 KPI strip. Duration ~3–5 min on 2,000+ lead dataset. |
+| K-1 | `compute_pipeline_summary` | Every 6 hours | Aggregates deals per stage + ARR totals per territory, segment, and exec. Writes results to `analytics_sales_funnel` (Div-H read). Also recomputes `avg_deal_size`, `demo_to_close_rate`, and `pipeline_velocity` metrics used in K-01 KPI strip. Duration ~3–5 min on 2,000+ lead dataset. Runs every 6 hours (NOT nightly). K-08 Reports references "nightly" incorrectly — the source is refreshed every 6 hours. |
 | K-2 | `compute_quota_attainment` | Daily 07:00 IST | For each active quota record in `sales_quota`, queries `sales_lead` WHERE stage=CLOSED_WON AND won_at within period. Computes actual_deals, actual_arr_paise, attainment_pct. Results stored in `analytics_quota_attainment` for K-07 and K-08. Sends in-app notification to execs at <50% attainment with 7 days left in period. |
 | K-3 | `flag_stale_leads` | Daily 09:00 IST | For each lead not in CLOSED_WON/CLOSED_LOST, checks MAX(occurred_at) in `sales_activity` for that lead_id. If last activity > 14 days ago (or no activity at all since creation > 7 days ago), marks lead as stale in a `sales_lead_flag` shadow store (not a column). Sends in-app alert to lead owner. Sends escalation alert to manager_id if lead is stale AND expected_close_date < today + 7 days. |
 | K-4 | `expire_demo_tenants` | Daily 02:00 IST | Sets `is_active=False` on `sales_demo_tenant` rows where `expires_at < now()` and `is_active=True`. Sends in-app + email notification to Demo Manager (#62) listing all expired tenants. Also sends a deactivation request to Platform Admin (#10) via Div-C integration to revoke tenant access. Does not delete tenant data — preserved for 30 days post-expiry before Platform Admin hard-deletes. |
@@ -359,6 +359,35 @@ All Division K routes under `/group1/k/` prefix. Django app name: `sales`.
 
 ---
 
+## Authorization & Security
+
+### Role Enforcement
+All Division K views enforce role-based access via a `@division_k_required` decorator applied to every Django view class. The decorator:
+1. Verifies the user is authenticated (`request.user.is_authenticated`).
+2. Checks the user's role ID is in the allowed set for that view.
+3. Returns `403 Forbidden` (JSON `{"error": "Access denied"}`) for API endpoints; redirects to `/403/` for template views.
+
+| Access Scenario | Response |
+|---|---|
+| Unauthenticated request to any K route | 302 redirect to `/login/?next=<url>` |
+| Authenticated user with wrong role | 403 Forbidden |
+| Exec accessing another exec's lead | 403 Forbidden (filtered at queryset level — exec sees 404 not 403, to avoid information leakage) |
+| Manager accessing any lead | 200 OK |
+| Read-only role (#95, #63) attempting POST | 403 Forbidden |
+
+### Multi-Tenant Data Isolation
+All `sales_lead` queries are scoped to `owner_id = request.user.id` for Sales Executives (#58–60, #97). Sales Manager (#57) and Sales Ops (#95) queries are unscoped (platform-wide). Pre-Sales Engineer (#96) queries filter by `presales_id = request.user.id`.
+
+No sales data is tenant-scoped in the institution sense — Division K is a platform-internal module. All `sales_lead` records are EduForge-internal data, not visible to institution users.
+
+### Sensitive Field Protection
+- `bank_account_verified` on `sales_channel_partner`: read-only in all Sales API serializers; writable only via Django admin.
+- `commission_paise` on `sales_channel_deal`: computed server-side on CLOSED_WON event; not settable via API.
+- `arr_estimate_paise` on CLOSED_WON leads: server validates > 0 in model `clean()` before save.
+- All soft-deleted leads (`deleted_at IS NOT NULL`): excluded from all queryset filters via a default manager that adds `.filter(deleted_at__isnull=True)`.
+
+---
+
 ## Notification Events
 
 | Event | Trigger | Recipient | Channel |
@@ -381,3 +410,4 @@ All Division K routes under `/group1/k/` prefix. Django app name: `sales`.
 | Demo tenant provisioning failed | Provisioning webhook returns error status | Demo Manager (#62) + Lead owner | In-app + email |
 | Demo template refresh completed | Template refresh async task completes | Demo Manager (#62) | In-app |
 | ENTERPRISE_POC trial requested >30 days | demo_type=ENTERPRISE_POC AND trial_duration > 30 | Sales Manager (#57) | In-app |
+| Backward stage move escalated to COO | No Sales Manager action in 24h after backward-move request | Platform COO (#3) | In-app + email |

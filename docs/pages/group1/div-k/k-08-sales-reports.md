@@ -9,6 +9,8 @@
 
 ## Purpose
 
+**Viewport:** Desktop-only. Report charts (Chart.js) require minimum 800px width for readable funnel bars. Cohort table with 6+ columns requires horizontal scroll on narrower viewports. Not optimized for mobile.
+
 Analytics hub for the Sales division. Provides win/loss analysis, funnel conversion rates, lead source attribution, quota attainment summary, activity volume reports, and cohort analysis — all in one consolidated view. At 2,050 institutions and with deal sizes ranging from ₹80K to ₹5L+ ARR, even a 5-percentage-point improvement in funnel conversion translates to significant revenue. All reports use pre-aggregated data from `analytics_sales_funnel` where possible; live queries are used only for drill-down exports to avoid page latency. The Manager uses this page for weekly pipeline reviews, monthly board decks, and diagnosing specific funnel bottlenecks. The Sales Ops Analyst uses it for quota reporting and attribution analysis. Sales Executives can review their own funnel and activity data but cannot see team-wide metrics or peers' performance.
 
 ---
@@ -17,7 +19,7 @@ Analytics hub for the Sales division. Provides win/loss analysis, funnel convers
 
 | Section | Source | Cache TTL |
 |---|---|---|
-| Funnel conversion | `analytics_sales_funnel` pre-aggregated (Celery nightly) | 1 hour |
+| Funnel conversion | `analytics_sales_funnel` (pre-aggregated by Celery Task K-1 every 6 hours — NOT nightly). Cache TTL: 1 hour. | 1 hour |
 | Win/loss detail (charts) | `sales_lead` aggregated WHERE `won_at` or `lost_at` IS NOT NULL | 1 hour |
 | Win/loss drill-down table | `sales_lead` live query (used only on tab open + export) | No cache |
 | Lead source attribution | `sales_lead` GROUP BY `lead_source` | 1 hour |
@@ -212,7 +214,7 @@ Colour coding:
 
 Tooltip: "COMPETITOR_WON — 9 deals (28% of lost)"
 
-**Lost Deals Detail Table** — below both charts. Live query. Sortable. Max 100 rows; "Load More" button on scroll.
+**Lost Deals Detail Table** — below both charts. Live query. Sortable. Max 100 rows; "Load More" on scroll. Default sort: lost_at DESC (most recently lost deals first). Sortable by: institution_name (A–Z), arr_estimate (high to low), lost_at (newest/oldest), stage_at_loss.
 
 | Column | Detail |
 |---|---|
@@ -446,6 +448,22 @@ Sync threshold: date range ≤ 3 months AND total leads ≤ 500 → immediate do
 | Individual report export done | No toast — immediate file download |
 
 ---
+
+---
+
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[57, 95, 58, 59, 60])` applied to `SalesReportsView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Sales Manager (#57) | Full access — all tabs, all execs, export all |
+| Sales Ops (#95) | Full read-only — all tabs, all execs, export all |
+| Sales Execs (#58–60) | All tabs visible but data filtered to `owner_id = request.user.id`. Quota tab replaced with direct link to K-07 own quota row. Export scoped to own data only. |
+| Inside Sales Exec (#97) | No access — 403 redirect |
+| All other roles | 403 Forbidden |
+| Export ALL endpoint POST `/k/reports/export/` | Only #57 and #95. Execs get 403 on "Export All" button; "Export My Data" is separate endpoint `/k/reports/export/own/`. |
+| HTMX partial routes | Same role restrictions. Direct partial calls without session return 403. |
 
 ## Role-Based View Summary
 

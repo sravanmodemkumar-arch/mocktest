@@ -11,6 +11,8 @@
 
 Track and manage government contracts, coaching chain MoUs, state board agreements, and institutional partnership deals. These are multi-institution agreements where a single signed contract can enable onboarding of 5–50+ institutions at once. A state board MoU can unlock 200+ schools; a coaching chain agreement can cover 28 centres in one stroke. This page is the Partnership Manager's primary workspace for pipeline management, document storage, expiry tracking, and renewal scheduling. It is also where the Sales Manager comes to approve status moves to MOU_SIGNED and ACTIVE.
 
+**Viewport:** This page is desktop-only (minimum 1024px viewport). Partnership managers operate from desktop environments. No mobile-specific layout is provided. The page uses responsive table (horizontal scroll on narrower viewports) but is not optimized for mobile.
+
 ---
 
 ## Data Sources
@@ -355,6 +357,21 @@ Export is synchronous (max ~200 rows typical — no async needed for partnership
 | Upload error (type) | "Invalid file type. Only PDF, DOC, and DOCX are accepted." (red) |
 | Activity logged | "Activity logged for AP State Board" (green) |
 | Renewal CSV exported | "Renewal schedule downloaded" (green) |
+
+---
+
+---
+
+## Authorization
+
+**Route guard:** `@division_k_required(allowed_roles=[61, 57])` applied to `PartnershipTrackerView`.
+
+| Scenario | Behaviour |
+|---|---|
+| Partnership Manager (#61) | Full CRUD — create, edit, upload MoU, log activity, change status |
+| Sales Manager (#57) | Read + approve status changes (MOU_SIGNED/ACTIVE). POST to create or edit returns 403 if not status-change action. |
+| Any other role | 403 Forbidden |
+| Document upload (multipart POST) | Validated server-side: file type (PDF/DOC/DOCX only), max 20MB. Malformed uploads return 400 Bad Request. File stored in S3; path saved only after S3 confirmation. |
 
 ---
 
