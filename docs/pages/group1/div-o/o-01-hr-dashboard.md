@@ -56,6 +56,7 @@ Cache keys scoped to `(role_id, user_id)`. `?nocache=true` available to HR Manag
 | Recruitment strip | `?part=recruitment_strip` | Page load | 10 min | `#o1-recruitment-strip` |
 | Payroll strip | `?part=payroll_strip` | Page load | 5 min | `#o1-payroll-strip` |
 | L&D strip | `?part=ld_strip` | Page load | 15 min | `#o1-ld-strip` |
+| eNPS/Culture Survey strip | `?part=enps_strip` | Page load | 30 min | `#o1-enps-strip` |
 | Asset strip | `?part=asset_strip` | Page load | 15 min | `#o1-asset-strip` |
 
 All parts respond with HTML fragments only. Non-primary roles receive only their permitted strip(s); all other parts return HTTP 204 No Content.
@@ -285,6 +286,31 @@ Two-column panel.
 
 ---
 
+## eNPS / Culture Survey Strip
+
+Shown only to HR Business Partner (#106) and HR Manager (#79).
+
+```
+  Last eNPS Pulse — Q1 2026 (Jan 2026)
+  ─────────────────────────────────────────────────────────────
+  eNPS Score: +42   Responses: 78/112 (69.6% response rate)
+  Promoters: 51%  ·  Passives: 40%  ·  Detractors: 9%
+  Next dispatch: 1 Apr 2026 (in 11 days)   [Preview Respondents →]
+
+  Active survey: Culture Pulse Q1 2026
+  Sent: 15 Mar 2026   Response rate: 42%   Deadline: 28 Mar   [Send Reminder]
+```
+
+- eNPS score colour: green if ≥ 40, amber if 20–39, red if < 20 (matches J-07 NPS convention)
+- Response rate: amber if < 50%, red if < 30%
+- [Send Reminder]: HRBP (#106) only → triggers O-18 survey reminder early (outside automated schedule)
+- [Preview Respondents →]: links to O-07?tab=surveys (anonymous aggregate only — no individual names shown to HRBP)
+- [View all →] links to O-07?tab=surveys
+
+Data source: `hr_survey` + `hr_survey_response` aggregated. Cache: 30 min.
+
+---
+
 ## Asset Strip
 
 ```
@@ -359,6 +385,7 @@ Two-column panel.
 | Recruitment strip | Yes | Yes (full) | No | No | No | No |
 | Payroll strip | Yes (full) | No | No | Yes (full) | No | No |
 | L&D strip | Yes (full) | No | No | No | Yes (read) | Yes (full) |
+| eNPS / Culture Survey strip | No | No | No | No | Yes (full) | No |
 | Asset strip | Yes (full) | No | Yes (full) | No | No | No |
 | [?nocache=true] | Yes | No | No | No | No | No |
 

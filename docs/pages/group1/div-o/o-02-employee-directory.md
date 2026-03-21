@@ -379,3 +379,78 @@ Sensitive fields (PAN, Aadhaar, bank details) are NOT included in the general em
 | HTMX drawer for non-permitted fields | Fields omitted from HTML response |
 | Export CSV by non-HR-Manager role | 403 |
 | Edit action by Recruiter (#80) | [Edit] button not rendered |
+
+---
+
+## Salary Revision Workflow
+
+When performance calibration is finalised in O-07 and an increment/promotion is approved, the CTC and grade in this page must be updated before the next payroll run.
+
+**Flow:**
+1. HRBP locks calibration in O-07 → system creates `hr_salary_revision_history` record per affected employee (old_ctc, new_ctc, old_grade, new_grade, effective_date, source_cycle_id)
+2. HR Manager approves in O-07 → record status transitions to `APPROVED`
+3. Payroll Exec notified via Task O-16 (daily 08:00) of all approved revisions with effective_date in next payroll period
+4. HR Manager (or Payroll Exec) applies revision: opens employee profile in O-02 → [Edit Employee] → updates `ctc` and `grade` fields → system records to `hr_salary_revision_history` with `revision_type='ANNUAL_INCREMENT'`
+5. O-05 payroll run picks up new CTC for the effective month
+
+**O-02 Employee Profile — Salary History display (visible to HR Manager only):**
+
+In the Profile tab (Tab 1), below current CTC, a collapsible "Salary History" section shows:
+
+```
+  CTC History
+  ─────────────────────────────
+  ₹16,80,000 p.a.   Effective: 1 Apr 2026   ANNUAL_INCREMENT (+16.7%)   FY2025-26 Annual Cycle
+  ₹14,40,000 p.a.   Effective: 12 Jun 2024  JOINING_OFFER               —
+```
+
+Immutable read-only view from `hr_salary_revision_history`. No edit allowed here — all changes must go through [Edit Employee] which creates a new revision record.
+
+---
+
+## Role-Based UI Visibility Summary
+
+| Element | 79 HR Mgr | 80 Recruiter | 81 Office Admin | 105 Payroll Exec | 106 HRBP | 107 L&D Coord |
+|---|---|---|---|---|---|---|
+| Employee table — all employees | Yes | No | Read (name/location only) | Read (payroll fields) | Yes (read) | Read (name/div/skills) |
+| [+ Add Employee] | Yes | No | No | No | No | No |
+| Profile — Personal & Employment tab | Yes | No | No | No | Yes (no CTC) | No |
+| Profile — Documents tab | Yes | No | No | Statutory docs only | Non-financial docs | No |
+| Profile — Assets tab | Yes | No | Yes (full) | No | No | No |
+| Profile — Leave tab | Yes | No | No | No | Yes (read) | No |
+| Profile — Skills & Certs tab | Yes | No | No | No | Yes (full) | Yes (full) |
+| Profile — Timeline tab | Yes | No | No | No | Yes (read) | No |
+| Salary History (within Profile) | Yes | No | No | No | No | No |
+| [Edit Employee] — all fields | Yes | No | No | Payroll fields only | Designation/grade/mgr only | No |
+| [Initiate Exit] | Yes | No | No | No | No | No |
+| [Reset Password] | Yes | No | No | No | No | No |
+| Org chart | Yes | No | No | No | Yes | No |
+| [Export Org Chart PNG] | Yes | No | No | No | No | No |
+| Export Employee CSV | Yes | No | No | No | No | No |
+| [?nocache=true] | Yes | No | No | No | No | No |
+
+---
+
+## Performance Requirements
+
+| Metric | Target | Notes |
+|---|---|---|
+| Employee table load (150 rows) | < 800ms P95 (cache: 5 min) | Server-side paginated, 25/page |
+| Employee profile drawer | < 500ms P95 (no cache) | Single-row join across 5 tables |
+| Org chart render (150 nodes) | < 3s P95 | D3.js SVG — chunked layout computation |
+| Org chart export (PNG) | < 5s | Server-side Pillow/wkhtmltoimage conversion |
+| Document viewer (PDF) | < 2s first byte | Streamed from R2 with KMS decrypt |
+| `?nocache=true` | < 4s | All joins re-fetched from DB |
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `g` `e` | Go to Employee Directory (O-02) |
+| `n` | [+ Add Employee] (when table is in focus) |
+| `/` | Focus search bar |
+| `v` | Toggle between table and org chart view |
+| `Esc` | Close open drawer or modal |
+| `?` | Show keyboard shortcut help overlay |
