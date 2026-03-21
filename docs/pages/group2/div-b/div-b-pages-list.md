@@ -1,7 +1,7 @@
 # Group 2 — Division B: Group Academic Leadership — Pages Reference
 
 > **Division:** B — Group Academic Leadership
-> **Roles:** 14 roles (see Role Summary)
+> **Roles:** 15 roles (see Role Summary)
 > **Base URL prefix:** `/group/acad/`
 > **Theme:** Light (`portal_base.html`)
 > **Status key:** ✅ Spec done · ⬜ Not started
@@ -40,6 +40,7 @@
 | 14 | Group Stream Coord — MPC | G3 | ✅ Dedicated | ❌ | `/group/acad/stream/mpc/` |
 | 15 | Group Stream Coord — BiPC | G3 | ✅ Dedicated | ❌ | `/group/acad/stream/bipc/` |
 | 16 | Group Stream Coord — MEC/CEC | G3 | ✅ Dedicated | ❌ | `/group/acad/stream/mec-cec/` |
+| 16a | Group Stream Coord — HEC *(2nd-audit addition)* | G3 | ✅ Dedicated | ❌ | `/group/acad/stream/hec/` |
 | 17 | Group JEE/NEET Integration Head | G3 | ✅ Dedicated | ❌ | `/group/acad/jee-neet/` |
 | 18 | Group IIT Foundation Director | G3 | ✅ Dedicated | ❌ | `/group/acad/iit-foundation/` |
 | 19 | Group Olympiad & Scholarship Coord | G3 | ✅ Dedicated | ✅ shared | `/group/acad/olympiad/` |
@@ -1073,6 +1074,197 @@
 
 ---
 
+## Section 13 — Second Audit Gap-Fill (Pages 66–74)
+
+> Added during second deep audit (2026-03-21). These pages close functional gaps not covered by the initial 65-page set.
+
+| # | Page | URL | File | Priority | Status |
+|---|---|---|---|---|---|
+| 66 | Stream Coordinator HEC Dashboard | `/group/acad/stream/hec/` | `66-stream-hec-dashboard.md` | P0 | ⬜ |
+| 67 | Academic Year Setup Wizard | `/group/acad/year-setup/` | `67-academic-year-setup-wizard.md` | P0 | ⬜ |
+| 68 | Board Exam Tracker | `/group/acad/board-exams/` | `68-board-exam-tracker.md` | P1 | ⬜ |
+| 69 | Student Academic Profile Viewer | `/group/acad/student-profile/` | `69-student-academic-profile.md` | P1 | ⬜ |
+| 70 | Teacher Adequacy & Vacancy Monitor | `/group/acad/teacher-vacancies/` | `70-teacher-vacancy-monitor.md` | P1 | ⬜ |
+| 71 | Result Re-evaluation Request Manager | `/group/acad/reevaluation/` | `71-result-reevaluation-requests.md` | P1 | ⬜ |
+| 72 | Remedial Programme Manager | `/group/acad/remedial/` | `72-remedial-programme-manager.md` | P1 | ⬜ |
+| 73 | Inter-Branch Academic Events Manager | `/group/acad/inter-branch-events/` | `73-inter-branch-academic-events.md` | P2 | ⬜ |
+| 74 | Group Timetable Standards | `/group/acad/timetable-standards/` | `74-group-timetable-standards.md` | P1 | ⬜ |
+
+---
+
+**66 — Stream Coordinator HEC Dashboard** `/group/acad/stream/hec/`
+> Role: Group Stream Coordinator — HEC (Humanities, Economics, Commerce) · G3 · Large groups only.
+> HEC covers streams where core subjects include History/Economics/Civics and/or Commerce/Accounts.
+> Identical functional scope to pages 06 (MPC) and 07 (BiPC) but scoped to HEC subjects and branches.
+
+| Widget | Type | Description |
+|---|---|---|
+| HEC Branches | Count card | Branches offering HEC stream |
+| Enrolled Students | Count card | Total HEC-stream students across group |
+| Syllabus Coverage | Horizontal bar | % HEC syllabus completed per branch — red < 70% |
+| Subject Performance | Heatmap | Branch × HEC subject (Economics, History, Commerce, Civics, Accounts) |
+| Toppers in HEC | Table | Top 10 HEC students across group this term |
+| Low Performers | Alert list | Students below 40% in any HEC subject |
+| Teacher Vacancies | Alert badge | Unfilled HEC subject teacher positions |
+
+| Element | Spec |
+|---|---|
+| **Role** | G3 — view and manage HEC stream data across all branches |
+| **Quick actions** | Upload lesson plan template · Flag branch underperformance · View subject heatmap |
+| **Filters** | Branch · Class · Subject · Term |
+
+---
+
+**67 — Academic Year Setup Wizard** `/group/acad/year-setup/`
+> Gap: No platform workflow for year-end rollover — done ad-hoc across branches, causing data inconsistency.
+> One-time wizard per academic year that configures the new year and promotes students.
+
+| Element | Spec |
+|---|---|
+| **Access** | CAO G4 (initiate) · Academic Director G3 (review) |
+| **Wizard steps** | 1 — Confirm year dates · 2 — Promote students (class-wise, with exceptions) · 3 — Activate new syllabus version · 4 — Reset exam calendar · 5 — Configure fee structure handoff · 6 — Notify branches + confirm |
+| **Step 2 — Promotion** | Table: Class → next class · Exception list (detained students) · Rule: minimum marks required for promotion (configurable) |
+| **Step 3 — Syllabus** | Confirm new syllabus version per stream/class · Option to clone from previous year with edits |
+| **Step 4 — Calendar** | Import mandatory events into new year calendar |
+| **Step 5 — Handoff** | Marks the fee module rollover as initiated (branch-level fee setup follows) |
+| **Step 6 — Notify** | Sends branch portal notification to all Principals: "AY [year] setup complete — review and confirm your branch" |
+| **Branch confirmation** | Branch Principal must confirm receipt — tracked in wizard dashboard |
+| **Draft save** | Wizard can be paused and resumed — partial state saved |
+| **Guard** | Cannot initiate if previous year still has unresolved result moderation (alert + link) |
+| **Role visibility** | CAO: Full initiate + submit · Academic Dir: Review + comment on each step · MIS Officer: Read final confirmation |
+
+---
+
+**68 — Board Exam Tracker** `/group/acad/board-exams/`
+> Gap: CBSE/State Board Class 10 and 12 board exam logistics tracked in spreadsheets — no central platform view.
+> Covers registration, hall ticket distribution, exam centre coordination, and result entry.
+
+| Element | Spec |
+|---|---|
+| **Access** | Exam Controller G3 (full) · CAO G4 (view + approve) · Academic Director G3 (view) |
+| **Table columns** | Branch · Board · Class (10/12) · Students Appearing · Registration Status · Hall Tickets Distributed · Centre Allotted · Results Entered |
+| **Filters** | Board (CBSE/State) · Class · Branch · Stream · Status |
+| **Phases** | Registration → Hall Tickets → Exam Day → Result Entry → Mark Verification |
+| **Alert types** | Branch missing registration deadline · Hall tickets not distributed 7 days before exam · Result not entered 30 days after exam |
+| **Drawer: board-exam-detail** | 640px · Branch · Students list · Board registration numbers · Hall ticket status · Centre info · Result entry |
+| **Integration** | Results entered here flow into Result Archive (page 34) with board-exam tag |
+| **Charts** | Board pass % by branch · Subject-wise board vs internal exam correlation |
+| **Export** | Centre-wise student list (CSV) · Board registration summary (CSV) |
+
+---
+
+**69 — Student Academic Profile Viewer** `/group/acad/student-profile/`
+> Gap: No group-level cross-branch view of individual student academic history — only branch portals had this.
+> Read-only viewer for group academic roles to audit any student's academic record.
+
+| Element | Spec |
+|---|---|
+| **Access** | CAO G4 (full) · Academic Director G3 · Exam Controller G3 · Results Coordinator G3 · Stream Coordinators G3 (own-stream students) · MIS G1 (anonymised) |
+| **Search** | Search by student name, roll number, or branch |
+| **Profile sections** | Identity · Current Enrolment · Subject-wise Marks (all exams, all terms) · Attendance Record · Rank History · Olympiad Entries · IEP flag (if applicable — masked per DPDP) |
+| **Marks table** | Exam name · Date · Subject · Max · Scored · % · Branch rank · Group rank |
+| **Trend charts** | Subject performance trend across terms · Attendance trend |
+| **Drawer: profile-full** | 680px · All sections in tabs: Overview · Marks · Attendance · Events · Flags |
+| **DPDP controls** | IEP/Special-needs flag visible only to Special Ed Coordinator and CAO · G1 MIS sees anonymised profile only |
+| **Audit log** | Every profile view is logged — visible to CAO and Data Protection Officer |
+| **Export** | PDF student academic report (watermarked, one-time link, auto-expires 48 hrs) |
+
+---
+
+**70 — Teacher Adequacy & Vacancy Monitor** `/group/acad/teacher-vacancies/`
+> Gap: Page 53 covers overload (too many periods). This page covers shortages — unfilled positions and subject-level adequacy.
+> Distinct from teaching load monitor: focuses on vacancies, not workload distribution.
+
+| Element | Spec |
+|---|---|
+| **Access** | Academic Director G3 (full) · CAO G4 (view + escalate) · Stream Coordinators G3 (own stream) |
+| **Summary stats** | Total sanctioned posts · Filled posts · Vacant posts · Vacancy % · Branches with critical vacancy (>20%) |
+| **Table columns** | Branch · Subject · Required Teachers · Filled · Vacant · Vacancy % · Days Vacant (longest) · Covering Arrangement |
+| **Filters** | Branch · Subject · Stream · Vacancy severity (Critical >20% / Moderate 10–20% / Low <10%) |
+| **Alert logic** | Vacancy >20% in core subject → red alert to Academic Director + CAO |
+| **Covering arrangement** | Track how vacancy is covered: Guest faculty / Peer cover / No cover (critical) |
+| **Drawer: vacancy-detail** | 560px · Subject · Branch · Sanctioned posts · Filled · Vacant since · Job description link · Covering plan · Escalation history |
+| **Charts** | Vacancy by subject (bar) · Vacancy by branch (map/bar) · Vacancy trend (line) |
+| **Export** | CSV for HR team · Branch-wise vacancy report PDF |
+
+---
+
+**71 — Result Re-evaluation Request Manager** `/group/acad/reevaluation/`
+> Gap: Students disputing subjective marks had no formal platform workflow — emails/calls only.
+> Manages the complete re-evaluation lifecycle from student request to final mark update.
+
+| Element | Spec |
+|---|---|
+| **Access** | Exam Controller G3 (full) · Results Coordinator G3 (view + decision) · CAO G4 (override) |
+| **Request sources** | Branch portal (student submits) → reaches group Exam Controller |
+| **Table columns** | Student · Branch · Exam · Subject · Original Mark · Requested By · Submitted Date · Assigned To · Status · Decision |
+| **Status flow** | Submitted → Assigned → Under Review → Decision Pending → Resolved |
+| **Filters** | Branch · Exam · Subject · Status · Date range |
+| **Drawer: request-review** | 680px · Tabs: Request Details · Original answer (scanned upload) · Reviewer Notes · Mark Comparison · Decision |
+| **Decision options** | No change (with reason) · Mark revised (new mark entered) · Re-paper (exam repeated) |
+| **Audit** | Full change log — original mark, reviewer, reason, new mark — immutable |
+| **Integration** | Approved mark changes propagate back to Result Moderation (page 27) and re-trigger rank recomputation (page 30) |
+| **SLA tracking** | Request must be resolved within 15 working days — escalation alert if breached |
+
+---
+
+**72 — Remedial Programme Manager** `/group/acad/remedial/`
+> Gap: Remedial classes run ad-hoc at branch level — no group coordination, no tracking of which branches have programmes.
+> Provides group-level oversight and standardisation of remedial academic support.
+
+| Element | Spec |
+|---|---|
+| **Access** | Academic Director G3 (full) · Stream Coordinators G3 (own stream) · CAO G4 (view) |
+| **Table columns** | Branch · Stream · Subject · Target Group (criteria: <40%) · Sessions Scheduled · Sessions Completed · Students Enrolled · Pre/Post Assessment |
+| **Filters** | Branch · Stream · Subject · Status (Active/Completed/Not Started) |
+| **Trigger logic** | Auto-flag: if branch has >15% students below 40% in a subject, prompt creation of remedial programme |
+| **Drawer: remedial-create** | 640px · Branch · Stream · Subject · Target criteria · Schedule (days/periods) · Assigned teacher · Duration · Assessment plan |
+| **Progress tracking** | Session attendance % · Pre-assessment score vs post-assessment score (improvement metric) |
+| **Charts** | Remedial programme coverage by branch (bar) · Pre vs post assessment improvement (grouped bar) |
+| **Group templates** | Academic Director can publish a remedial session template — branches can clone |
+| **Export** | Branch-wise remedial progress report (PDF) |
+
+---
+
+**73 — Inter-Branch Academic Events Manager** `/group/acad/inter-branch-events/`
+> Gap: Quiz Bowls, Science Fairs, Debate Competitions organized informally — no central registration, results, or recognition tracking.
+> Covers group-owned competitive academic events across branches.
+
+| Element | Spec |
+|---|---|
+| **Access** | Academic Director G3 (full) · Olympiad Coordinator G3 (full) · CAO G4 (view + approve) |
+| **Event types** | Quiz Bowl · Science Fair · Debate · Essay Competition · Maths Olympiad (group-internal) · Spelling Bee · GK Championship |
+| **Table columns** | Event Name · Type · Date · Branches Participating · Students Registered · Status · Winner Branch |
+| **Filters** | Event type · Date range · Branch · Stream · Status |
+| **Drawer: event-create** | 640px · Name · Type · Date & Venue · Branch scope (invite all / select) · Class eligibility · Registration deadline · Judging criteria · Prize |
+| **Drawer: event-detail** | 640px · Tabs: Overview · Registrations (student list) · Schedule · Results · Gallery link |
+| **Registration management** | Branch staff registers students via branch portal · Group side sees all registrations |
+| **Results entry** | Enter team/individual ranks · Auto-generate winner certificate (PDF) |
+| **Charts** | Events per term (bar) · Branch participation rate (heatmap) · Winning branch history |
+| **Export** | Participation certificates (bulk PDF) · Results report |
+
+---
+
+**74 — Group Timetable Standards** `/group/acad/timetable-standards/`
+> Gap: Each branch built its own timetable — no group-mandated minimum periods per subject per week.
+> Sets and monitors group-wide timetable standards; branches audit against them.
+
+| Element | Spec |
+|---|---|
+| **Access** | CAO G4 (full) · Curriculum Coordinator G2 (edit standards) · Academic Director G3 (view + audit) · Stream Coordinators G3 (own stream) |
+| **Standards definition** | Min periods per week per subject per class/stream — e.g. "MPC Class 11 — Maths: 8 periods/week min" |
+| **Standards table** | Stream · Class · Subject · Min Periods/Week · Recommended · Is Mandatory |
+| **Compliance audit** | Upload branch timetable (CSV or PDF) → system checks against standards → deviation report |
+| **Branch compliance table** | Branch · Standard · Actual · Gap · Status (Compliant/Non-Compliant) |
+| **Filters** | Stream · Class · Subject · Branch · Compliance status |
+| **Alert** | Branch with >3 non-compliant subjects → alert to Academic Director |
+| **Drawer: standard-edit** | 480px · Stream · Class · Subject · Min periods · Mandatory Y/N · Effective from |
+| **Drawer: branch-compliance-detail** | 560px · Branch timetable vs standards side-by-side · Deviations list · Action required |
+| **Charts** | Compliance rate by branch (bar) · Non-compliant subjects (sorted bar) |
+| **Export** | Standards document (PDF for branch notice board) · Compliance audit report (CSV) |
+
+---
+
 ## Shared Drawers & Overlays (all div-b pages)
 
 | Drawer | Trigger | Width | Tabs | Description |
@@ -1139,8 +1331,8 @@
 
 ## Role → Page Access Matrix
 
-| Page | CAO G4 | Acad Dir G3 | Curr Coord G2 | Exam Ctrl G3 | Results Coord G3 | Stream MPC G3 | Stream BiPC G3 | Stream MEC/CEC G3 | JEE/NEET G3 | IIT Found G3 | Olympiad G3 | Special Ed G3 | MIS G1 | Cal Mgr G3 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Page | CAO G4 | Acad Dir G3 | Curr Coord G2 | Exam Ctrl G3 | Results Coord G3 | Stream MPC G3 | Stream BiPC G3 | Stream MEC/CEC G3 | Stream HEC G3 | JEE/NEET G3 | IIT Found G3 | Olympiad G3 | Special Ed G3 | MIS G1 | Cal Mgr G3 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 01 CAO Dashboard | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — | — |
 | 02 Acad Dir Dashboard | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — | — |
 | 03 Curr Coord Dashboard | — | — | ✅ Full | — | — | — | — | — | — | — | — | — | — | — |
