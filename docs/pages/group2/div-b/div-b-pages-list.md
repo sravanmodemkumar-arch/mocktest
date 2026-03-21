@@ -1080,15 +1080,15 @@
 
 | # | Page | URL | File | Priority | Status |
 |---|---|---|---|---|---|
-| 66 | Stream Coordinator HEC Dashboard | `/group/acad/stream/hec/` | `66-stream-hec-dashboard.md` | P0 | ⬜ |
-| 67 | Academic Year Setup Wizard | `/group/acad/year-setup/` | `67-academic-year-setup-wizard.md` | P0 | ⬜ |
-| 68 | Board Exam Tracker | `/group/acad/board-exams/` | `68-board-exam-tracker.md` | P1 | ⬜ |
-| 69 | Student Academic Profile Viewer | `/group/acad/student-profile/` | `69-student-academic-profile.md` | P1 | ⬜ |
-| 70 | Teacher Adequacy & Vacancy Monitor | `/group/acad/teacher-vacancies/` | `70-teacher-vacancy-monitor.md` | P1 | ⬜ |
-| 71 | Result Re-evaluation Request Manager | `/group/acad/reevaluation/` | `71-result-reevaluation-requests.md` | P1 | ⬜ |
-| 72 | Remedial Programme Manager | `/group/acad/remedial/` | `72-remedial-programme-manager.md` | P1 | ⬜ |
-| 73 | Inter-Branch Academic Events Manager | `/group/acad/inter-branch-events/` | `73-inter-branch-academic-events.md` | P2 | ⬜ |
-| 74 | Group Timetable Standards | `/group/acad/timetable-standards/` | `74-group-timetable-standards.md` | P1 | ⬜ |
+| 66 | Stream Coordinator HEC Dashboard | `/group/acad/stream/hec/` | `66-stream-hec-dashboard.md` | P0 | ✅ |
+| 67 | Academic Year Setup Wizard | `/group/acad/year-setup/` | `67-academic-year-setup-wizard.md` | P0 | ✅ |
+| 68 | Board Exam Tracker | `/group/acad/board-exams/` | `68-board-exam-tracker.md` | P1 | ✅ |
+| 69 | Student Academic Profile Viewer | `/group/acad/student-profile/` | `69-student-academic-profile.md` | P1 | ✅ |
+| 70 | Teacher Adequacy & Vacancy Monitor | `/group/acad/teacher-vacancies/` | `70-teacher-vacancy-monitor.md` | P1 | ✅ |
+| 71 | Result Re-evaluation Request Manager | `/group/acad/reevaluation/` | `71-result-reevaluation-requests.md` | P1 | ✅ |
+| 72 | Remedial Programme Manager | `/group/acad/remedial/` | `72-remedial-programme-manager.md` | P1 | ✅ |
+| 73 | Inter-Branch Academic Events Manager | `/group/acad/inter-branch-events/` | `73-inter-branch-academic-events.md` | P2 | ✅ |
+| 74 | Group Timetable Standards | `/group/acad/timetable-standards/` | `74-group-timetable-standards.md` | P1 | ✅ |
 
 ---
 
@@ -1271,11 +1271,11 @@
 
 | # | Page | URL | File | Priority | Status |
 |---|---|---|---|---|---|
-| 75 | Chapter / Unit Progress Tracker | `/group/acad/chapter-progress/` | `75-chapter-progress-tracker.md` | P1 | ⬜ |
-| 76 | Teacher-Subject-Class Assignment Matrix | `/group/acad/teacher-assignments/` | `76-teacher-subject-class-matrix.md` | P1 | ⬜ |
-| 77 | Supplementary / Make-Up Exam Manager | `/group/acad/supplementary-exams/` | `77-supplementary-exam-manager.md` | P1 | ⬜ |
-| 78 | Academic Awards & Recognition Manager | `/group/acad/awards/` | `78-academic-awards-manager.md` | P2 | ⬜ |
-| 79 | Study Material Dispatch Tracker | `/group/acad/material-dispatch/` | `79-study-material-dispatch.md` | P2 | ⬜ |
+| 75 | Chapter / Unit Progress Tracker | `/group/acad/chapter-progress/` | `75-chapter-progress-tracker.md` | P1 | ✅ |
+| 76 | Teacher-Subject-Class Assignment Matrix | `/group/acad/teacher-assignments/` | `76-teacher-subject-class-matrix.md` | P1 | ✅ |
+| 77 | Supplementary / Make-Up Exam Manager | `/group/acad/supplementary-exams/` | `77-supplementary-exam-manager.md` | P1 | ✅ |
+| 78 | Academic Awards & Recognition Manager | `/group/acad/awards/` | `78-academic-awards-manager.md` | P2 | ✅ |
+| 79 | Study Material Dispatch Tracker | `/group/acad/material-dispatch/` | `79-study-material-dispatch.md` | P2 | ✅ |
 
 ---
 
