@@ -231,7 +231,7 @@ If CSAT drops below 3.5 for 3 consecutive days → red alert banner.
 **Audit Queue (Support Quality Lead / Support Manager only)**
 Count of tickets pending quality audit (tickets resolved within last 14 days, `quality_audit_score IS NULL`).
 Random sample size shown: "12 tickets sampled for audit this week (25% of resolved)"
-[Start Auditing →] links to I-02 filtered to auditable tickets.
+[Start Auditing →] links to `/support/tickets/?status=RESOLVED,CLOSED&quality_audit_pending=true` — this filter shows tickets resolved within the last 14 days with no quality audit score recorded yet (see I-02 `?quality_audit_pending=true` URL param).
 
 Role visibility:
 - Support Manager: sees both sections

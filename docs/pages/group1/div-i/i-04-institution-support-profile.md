@@ -45,6 +45,7 @@ At scale: some institutions (coaching centres with 10,000–15,000 students) wil
 | Part | Route | Trigger |
 |---|---|---|
 | KPI strip | `?part=kpi` | Page load |
+| Subscription badge | `?part=subscription` | Page load; `?part=subscription&nocache=true` on [↻ Refresh] click (Support Manager only) |
 | Active tickets | `?part=active_tickets` | Tab switch to active |
 | Ticket history table | `?part=history&page={n}` | Tab switch + pagination |
 | Onboarding panel | `?part=onboarding` | Tab switch to onboarding |
@@ -89,6 +90,10 @@ Subscription status badge:
 - TRIAL → blue
 - EXPIRED → red
 - SUSPENDED → red + "Billing issue" tooltip
+
+**Near-expiry warning**: If `subscription_expires_at` is within 30 days and status is ACTIVE, show an amber inline label: "⚠ Expires in N days" directly after the expiry date. At ≤7 days: red bold "⚠ Expires in N days — renewal required".
+
+**Subscription data freshness**: Subscription data is fetched from Division M (read-only, 30-min Memcached TTL). A small [↻ Refresh] link appears next to the subscription badge (Support Manager only); clicking calls the Part-Load route `?part=subscription&nocache=true` which bypasses Memcached and re-fetches from Division M. If Division M is unreachable, subscription section shows "Status unavailable — data may be stale" (amber) regardless of cached value.
 
 [Create Ticket for Inst] opens the New Ticket drawer (from I-02) pre-filled with this institution.
 
@@ -194,8 +199,8 @@ Last contacted: 5 Nov 2024
 ```
 
 Actions per contact (Support Manager + Onboarding Specialist):
-- [Edit] → inline edit fields
-- [Remove] → confirmation "Remove this contact from support directory?"
+- [Edit] → inline edit fields; fields become editable in-place; [Save] / [Cancel] buttons appear
+- [Delete] → confirmation modal "Delete this contact permanently? This cannot be undone." → hard-delete from `institution_contact`; row removed via HTMX swap; audit log entry created
 
 [+ Add Contact] button → adds a new contact card with fields: Name, Role, Email, Phone, Preferred contact (Email/Phone/WhatsApp), Notes.
 

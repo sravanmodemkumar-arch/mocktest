@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 91 roles across 15 divisions.
+> Total: 93 roles across 15 divisions.
 
 ---
 
@@ -204,14 +204,19 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division J — Customer Success (4 roles)
+## Division J — Customer Success (6 roles)
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 53 | Customer Success Manager | 3 | Institution health score, retention risk, renewal pipeline |
-| 54 | Account Manager | 3 | Existing institution relationship, upsell, expansion seats |
-| 55 | Escalation Manager | 3 | Critical institution complaints, SLA breach handling |
-| 56 | Renewal Executive | 1 | Track subscription expiry, send renewal reminders |
+> At 2,050 institutions and ₹ARR across school/college/coaching segments, CS owns retention, expansion, and escalation resolution.
+> Health scores computed nightly from exam frequency, engagement depth, support burden, payment health, and relationship recency.
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 53 | Customer Success Manager | 3 | Institution health score, retention risk, renewal pipeline, playbook governance, NPS programme, portfolio strategy | Billing config, infra config |
+| 54 | Account Manager | 3 | Existing institution relationship, upsell, expansion seats, renewal co-ownership | Cannot send bulk surveys; cannot approve playbook templates |
+| 55 | Escalation Manager | 3 | Critical institution complaints, SLA breach handling, cross-division war-room coordination for account-threatening incidents | Cannot approve content; cannot modify billing |
+| 56 | Renewal Executive | 1 | Track subscription expiry, send renewal reminders, update renewal stage to COMMITTED | Cannot close/win renewals (AM or CSM must confirm); no data writes outside renewal module |
+| 93 | Customer Success Analyst | 1 | Health score model maintenance, churn signal analysis, portfolio cohort analytics, NPS/CSAT data analysis, weekly CS performance data pack | No customer-facing comms; no playbook execution; no billing access; no notifications |
+| 94 | Implementation Success Manager | 3 | First-90-day post-onboarding success journey (receives handoff from Division I Onboarding Specialist #51), time-to-value tracking, go-live readiness verification, first EBR facilitation | Billing config; renewal ownership hands off to Account Manager at day 90; no L2/L3 support queue access |
 
 ---
 
@@ -294,13 +299,13 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | G — Background Verification | 4 |
 | H — Data & Analytics | 5 |
 | I — Customer Support | 7 |
-| J — Customer Success | 4 |
+| J — Customer Success | 6 |
 | K — Sales & Business Development | 7 |
 | L — Marketing & Growth | 5 |
 | M — Finance & Billing | 6 |
 | N — Legal & Compliance | 4 |
 | O — HR & Administration | 3 |
-| **Total** | **91** |
+| **Total** | **93** |
 
 ---
 

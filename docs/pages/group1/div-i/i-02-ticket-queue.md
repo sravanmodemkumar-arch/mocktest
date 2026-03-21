@@ -40,6 +40,7 @@ At scale, this page must handle 5,700+ tickets/month (normal) and 25,000+ during
 | `?created_after` | `YYYY-MM-DD` | Date range filter |
 | `?created_before` | `YYYY-MM-DD` | Date range filter |
 | `?sort` | `sla_asc`, `created_desc`, `priority_desc`, `updated_desc` | Sort order; default `sla_asc` |
+| `?quality_audit_pending` | `true` | Show only tickets where `quality_audit_score IS NULL AND status IN ('RESOLVED','CLOSED') AND resolved_at >= now() - interval '14 days'`; used by I-01 [Start Auditing →] link; Support Quality Lead and Support Manager only |
 | `?page` | integer | Pagination offset |
 | `?per_page` | `25`, `50`, `100` | Rows per page |
 
@@ -52,6 +53,8 @@ At scale, this page must handle 5,700+ tickets/month (normal) and 25,000+ during
 | Ticket table rows | `?part=table` | Page load, filter change, pagination click |
 | Stats bar | `?part=stats` | Page load; auto-refresh every 60s |
 | Active filter pills | `?part=filter_pills` | Filter apply |
+| Quick Reply inline form | `?part=quick_reply&ticket_id={id}` | [Quick Reply] row button click; loads 200-char textarea inline within the row; HTMX swap target = row reply area |
+| Inline priority update | `?part=row&ticket_id={id}` | [Change Priority ▼] dropdown change; refreshes the single row in-place (HTMX `hx-swap="outerHTML"` on the `<tr>`) |
 
 ---
 
@@ -216,7 +219,7 @@ Opens a Create Ticket drawer (not modal — wider form needed):
 - [Assign to me] checkbox (default checked)
 - Or: search for specific agent
 
-[Create Ticket] button → POST `/support/tickets/create/`; success toast "Ticket SUP-YYYYMMDD-NNNNNN created"; drawer closes; table reloads.
+[Create Ticket] button → POST `/support/tickets/create/`; shows spinner on button during submit (button disabled, text "Creating…"); on success: toast "Ticket SUP-YYYYMMDD-NNNNNN created ✓" (green, auto-dismiss 4s); drawer closes; table reloads via `?part=table`. On error: 400 → inline field errors under each invalid field; 429 → toast "Too many tickets from this institution. Please wait before submitting another." (amber, persists until dismissed); 500 → toast "Something went wrong. Please try again or contact Platform Admin." (red).
 
 Validation:
 - Subject: required
@@ -254,7 +257,8 @@ Page size selector: 25 / 50 / 100. Default 25.
 2. **PENDING_CUSTOMER ticket SLA**: SLA timer shows "Paused" with the total pause duration. Effective SLA = `sla_breach_at + sla_pause_duration_seconds`. Timer resumes on next customer reply.
 3. **L1 agent tries to view L2 ticket URL directly**: Returns 403 with "This ticket is in the L2 queue. You don't have access." — does not silently show ticket.
 4. **Exam day: >500 CRITICAL tickets open**: Table auto-applies `priority=CRITICAL&exam_day=true` filter with a banner "Exam day mode active. Showing critical tickets only. [Show all]". If surge threshold exceeded (>200 EXAM_DAY_INCIDENT open), Support Manager sees [Activate Triage Mode] button — see Workflow 1 in pages-list.
-5. **Agent has 0 assigned tickets and no unassigned in their queue**: "No open tickets in your queue. [Check unassigned tickets]" button links to `?assigned=unassigned`.
+5. **Agent has 0 assigned tickets and no unassigned in their queue**: "No open tickets in your queue. [Check unassigned tickets →]" button links to `?assigned=unassigned&tier={agent_tier}`.
+5a. **Sort order fallback for CLOSED/RESOLVED tickets**: when filtering by `?status=RESOLVED,CLOSED`, default sort switches from `sla_asc` to `created_desc` (CLOSED tickets have no SLA countdown). Applied automatically by server when all items in result set have `status IN ('RESOLVED','CLOSED')`. Sort header shows "Created (newest first)" as active sort indicator.
 6. **Support Quality Lead (#90) row actions**: All row action buttons hidden; no create button shown. Only [View →] available.
 7. **Ticket number search**: `?q=SUP-20241105` matches all tickets with that date prefix — useful for bulk exam-day lookup.
 8. **Export while filters active**: Export applies current filter state; downloaded file name includes filter summary: `tickets_export_L1_CRITICAL_20241105.csv`.
@@ -263,6 +267,8 @@ Page size selector: 25 / 50 / 100. Default 25.
 
 ## Notifications
 
-- Assignment notification: when Support Manager assigns a ticket to an agent → F-06 push to agent
+- Assignment notification: when Support Manager assigns a ticket to an agent → F-06 push to agent: "Ticket #SUP-... assigned to you by {manager}"
+- **Bulk assign notification**: each agent receiving tickets from a bulk-assign action gets one consolidated F-06 push: "{N} tickets assigned to you by {manager}" (not one push per ticket)
 - Queue becomes empty: no notification (intentional — don't interrupt agent rest)
 - Breached ticket assigned to agent: F-06 push on assignment ("⚠ Breached ticket assigned to you")
+- **Role demotion**: if an agent is demoted to a role with no I-02 access (e.g., L1 → Training Coordinator), their existing ticket assignments are NOT auto-cleared. Platform Admin must manually re-assign orphaned tickets. Celery Task 6 (`alert_unassigned_queue`) does not surface these (they still have `assigned_to_id` set). Support Manager must periodically check for "assigned but inactive" agents via I-07 agent performance table (agents with 0 activity in the last 7 days while having open tickets).

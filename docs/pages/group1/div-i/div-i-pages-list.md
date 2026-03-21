@@ -118,6 +118,7 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 - `TECHNICAL_BUG` → auto-tier = L1; Celery Task 2 flags for escalation if first-response SLA is breached and status still = OPEN (agent must escalate manually — no auto-tier change)
 - All others → tier = L1
 - **Catch-all**: any category not listed above → tier = L1, priority = MEDIUM
+- **Internal ticket validation**: tickets with `source=INTERNAL` (created via [+ New Ticket] with "internal ticket" checked) MUST have at least one of: `institution_id` OR `requester_name` OR `requester_email`. A ticket with all three null is rejected at the API level with 400: "Internal tickets must have at least one requester identifier."
 
 **Ticket number sequence**: `ticket_number` uses a PostgreSQL daily sequence (`support_ticket_seq_{YYYYMMDD}`). Sequence created on first ticket of each day; auto-increments without gaps. Max throughput: PostgreSQL sequences are lockless — handles exam-day peak (25,000 tickets/48h = ~520/hour) without collision.
 
@@ -200,7 +201,9 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | actual_go_live_at | date | Set when stage transitions to LIVE |
 | completed_at | timestamptz | Set when stage = COMPLETED |
 | stalled_since | timestamptz | Set by Celery Task 4 when `last_activity_at < now() - interval '7 days'` |
-| last_activity_at | timestamptz DEFAULT now() | Updated whenever: a checklist item is completed, a training session is created, or the stage changes; used by Celery Task 4 for stall detection (NOT `updated_at`, which only updates on direct instance edits) |
+| last_activity_at | timestamptz DEFAULT now() | Updated whenever: a checklist item is completed, a training session is created or completed, or the stage changes; used by Celery Task 4 for stall detection (NOT `updated_at`, which only updates on direct instance edits) |
+| is_re_onboarding | boolean DEFAULT false | True if this is a second+ onboarding for the same institution after a prior COMPLETED instance |
+| re_onboarding_sequence | smallint DEFAULT 1 | 1=first onboarding, 2=first re-onboarding, etc. `UNIQUE(institution_id, re_onboarding_sequence)` replaces `UNIQUE(institution_id)`; system auto-sets to `MAX(sequence for institution) + 1` on create; prevents accidental duplicate creation |
 | notes | text | Specialist notes |
 | updated_at | timestamptz DEFAULT now() | Updated on direct instance edits; do NOT use for stall detection — use `last_activity_at` |
 
@@ -543,6 +546,108 @@ This means a ticket that waited 4h for a customer reply effectively gets 4h adde
 4. Published articles auto-linked to matching ticket categories
 5. L1 agents in I-03 see suggested KB articles when viewing tickets of matching category
 6. Support Quality Lead can flag any article for review if identified as inaccurate/outdated
+
+---
+
+## Attachment Security Policy
+
+Applied to all file uploads across Division I (ticket replies, quality annotations):
+
+| Rule | Specification |
+|---|---|
+| Max file size | 10 MB per file |
+| Max files per upload | 3 files per message/reply |
+| Max total per ticket | No hard limit per ticket lifetime; application does not restrict cumulative attachment count |
+| Allowed MIME types | `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `application/pdf`, `text/plain`, `text/csv`, `application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/zip` (support logs only) |
+| Blocked types | All executables: `.exe`, `.bat`, `.sh`, `.cmd`, `.scr`, `.msi`, `.dll`, `.jar`; scripts: `.js`, `.php`, `.py`, `.rb`; enforced by MIME type check AND file extension check (both must pass) |
+| MIME spoofing protection | Server validates MIME type using `python-magic` (libmagic) against actual file bytes, not just `Content-Type` header. A `.exe` renamed to `.pdf` will be rejected. |
+| Malware scanning | Files scanned via ClamAV (self-hosted, sidecar container) before writing to R2. Infected files: rejected with error "File failed security scan. Please contact your IT team." R2 write happens only after scan passes. |
+| R2 key format | `tickets/{ticket_id}/messages/{message_id}/{timestamp}_{original_filename}` |
+| Signed URL TTL | 24 hours; [Download] regenerates a fresh signed URL on click |
+| Upload error messages | "File too large (max 10 MB)" · "File type not allowed" · "Too many files (max 3)" · "Security scan failed" · "Upload failed — please try again" |
+
+---
+
+## Database Performance & Indexes
+
+Critical indexes required for support queue performance at 25,000+ ticket scale:
+
+```sql
+-- I-02 stats bar queries (run every 60s per agent)
+CREATE INDEX idx_ticket_sla_status ON support_ticket(sla_breach_at, status)
+  WHERE status NOT IN ('RESOLVED', 'CLOSED');
+
+-- I-02 queue by tier + assigned agent
+CREATE INDEX idx_ticket_assigned_status_tier ON support_ticket(assigned_to_id, status, tier);
+
+-- Celery Task 1: breach scan every 5 min
+CREATE INDEX idx_ticket_breach_open ON support_ticket(sla_breach_at)
+  WHERE status NOT IN ('RESOLVED', 'CLOSED');
+
+-- I-02 full-text search on subject
+ALTER TABLE support_ticket ADD COLUMN subject_tsv tsvector
+  GENERATED ALWAYS AS (to_tsvector('english', subject)) STORED;
+CREATE INDEX idx_ticket_subject_fts ON support_ticket USING GIN(subject_tsv);
+-- ticket_number prefix search: btree index
+CREATE INDEX idx_ticket_number_prefix ON support_ticket(ticket_number varchar_pattern_ops);
+
+-- I-04 institution ticket history
+CREATE INDEX idx_ticket_institution_created ON support_ticket(institution_id, created_at DESC);
+
+-- Celery Task 6: unassigned alert
+CREATE INDEX idx_ticket_unassigned_created ON support_ticket(created_at)
+  WHERE assigned_to_id IS NULL AND status NOT IN ('RESOLVED', 'CLOSED');
+
+-- I-07 agent performance aggregation
+CREATE INDEX idx_ticket_assigned_resolved ON support_ticket(assigned_to_id, resolved_at)
+  WHERE resolved_at IS NOT NULL;
+
+-- kb_article_vote dedup enforcement
+-- UNIQUE(article_id, voted_by_id) already serves as index via PK constraint
+```
+
+All queries against `support_ticket` in I-02 stats bar, I-01 KPI strip, and Celery tasks 1, 2, 6 use these indexes. Without them, a 25,000-row scan takes ~200ms per query; with them, <5ms.
+
+---
+
+## Rate Limiting
+
+| Endpoint | Limit | Scope | Response if exceeded |
+|---|---|---|---|
+| `POST /api/support/tickets/` (PORTAL source) | 10 tickets/hour per institution | Per `institution_id` | HTTP 429 "Too many tickets submitted. Please wait 60 minutes or contact support via email." |
+| `POST /api/support/tickets/` (EMAIL inbound) | 20 emails/hour per sender email | Per `requester_email` | Email silently discarded; no bounce (prevents confirmation spam) |
+| `POST /api/support/tickets/` (INTERNAL source) | 100 tickets/hour per platform user | Per `created_by_id` | HTTP 429 with retry-after header |
+| `POST /api/support/tickets/{id}/reply/` | 30 replies/hour per user | Per `author_id` | HTTP 429 "Reply limit reached. Wait before sending another message." |
+| Attachment upload | 20 files/hour per user | Per `author_id` | HTTP 429 "File upload limit reached." |
+
+Rate limiting implemented via Django Rate Limit middleware with Redis counters (1-hour sliding window). Note: Division I is the only module where Redis is used — strictly for rate limit counters only, not for caching (which uses Memcached per project memory rules).
+
+---
+
+## Timezone Handling
+
+All timestamps stored as `timestamptz` (UTC) in PostgreSQL. Display rules:
+- **Default display**: IST (UTC+5:30) — the platform's primary operating timezone
+- **Per-user preference**: support staff can set preferred timezone in their profile settings (stored in `user.timezone` field); if set, all Division I timestamps display in their timezone
+- **SLA countdown timers**: always displayed in agent's local timezone; the deadline is identical regardless of timezone (it's a UTC timestamp)
+- **Date filters** (e.g., `?created_after=2024-11-05`): interpreted as midnight IST by default; agents in other timezones should be aware of this when filtering by date
+- **CSV exports**: timestamps exported in UTC with ISO 8601 format (`2024-11-05T08:30:00Z`) to avoid ambiguity
+
+---
+
+## SLA Config Management
+
+`support_sla_config` table is managed via **Django Admin** (`/admin/support/slaconfigentry/`) — not via any Division I page. Only Platform Admin (#10) can modify SLA thresholds via Django Admin. Support Manager (#47) can VIEW current SLA config on the I-07 reports page (a static read-only table showing current thresholds) but cannot edit.
+
+**Process for changing SLA thresholds**: Support Manager submits a request to Platform Admin → Platform Admin updates via Django Admin → change takes effect for all new tickets immediately (existing tickets retain their original `sla_breach_at` and `first_response_sla_at` computed at creation).
+
+---
+
+## Audit Log Access
+
+All system-level audit events (PII access, bulk actions, CSAT resends, ticket closures, escalations, re-opens) are recorded as `SYSTEM` type messages in `support_ticket_message`. This provides a per-ticket audit trail accessible in I-03 thread.
+
+**Platform-level audit log**: the Data Privacy Officer (#76) and Platform Admin (#10) have access to a platform-wide audit log (outside Division I scope — managed by Division C Engineering). Division I does NOT have its own dedicated audit log page. Support Manager can view per-ticket audit trails via I-03 thread history only.
 
 ---
 

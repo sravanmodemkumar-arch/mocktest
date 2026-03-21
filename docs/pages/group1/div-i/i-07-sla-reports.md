@@ -201,7 +201,7 @@ Top 5 categories with highest escalation rates — table with [View Tickets →]
 
 Columns: Agent | Tier | Tickets Handled | Avg Resolution Time | SLA Met % | CSAT Avg | Escalations Received | Escalations Initiated | Quality Score Avg
 
-Sortable by any column.
+Sortable by any column. **Default sort: Tickets Handled DESC** (busiest agents first; most actionable view for workload balancing). Column header shows sort indicator (↓ on Tickets Handled by default).
 
 Rows with SLA compliance below tier target: highlighted amber/red.
 Rows with CSAT < 3.5: highlighted red.
@@ -244,6 +244,30 @@ Agents with avg score < 3.0: row highlighted red.
 Generates a PDF report of the current view with all charts (using server-side chart rendering). Filename: `support_report_{period}_{date}.pdf`. Generated async via Celery `exports` queue; download link emailed to Support Manager when ready.
 
 [Export CSV] button below each chart: downloads the raw data for that specific chart.
+
+---
+
+### Report Scheduling (Support Manager only)
+
+**[Schedule Report ▼]** button in the header bar (next to [Export PDF]):
+
+```
+Schedule Automated Report
+
+Frequency:  ● Weekly (Monday 09:00 IST)   ○ Monthly (1st of month)
+Period:     [30d ▼]
+Format:     [✓ PDF]  [✓ CSV summary]
+Recipients: [support.manager@platform.in    ] [+ Add recipient]
+            (email addresses; space-separated)
+
+[Cancel]   [Save Schedule]
+```
+
+- Saves a `support_report_schedule` record (not a model exposed in Division I data model — stored as a simple JSON config in Support Manager's user preferences).
+- Celery Task 5 (`generate_support_weekly_report`) already runs Mondays 09:00 IST; if a schedule is active, it also emails the PDF/CSV to the configured recipients list.
+- **Multiple recipients supported**: space/comma separated; validated as email addresses.
+- [Cancel Schedule] button appears in the same dropdown when a schedule is active; cancels by clearing the schedule config.
+- If the Support Manager wants a one-off report immediately: use [Export PDF] instead.
 
 ---
 

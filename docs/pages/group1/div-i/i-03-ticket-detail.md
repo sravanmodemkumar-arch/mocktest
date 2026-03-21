@@ -3,7 +3,7 @@
 **Route:** `GET /support/tickets/{id}/`
 **Method:** Django CBV (`DetailView`) + HTMX part-loads
 **Primary roles:** L1 (#48), L2 (#49), L3 (#50), Support Manager (#47)
-**Also sees:** Support Quality Lead (#90) — read + quality annotation only
+**Also sees:** Support Quality Lead (#90) — read + quality annotation only; Onboarding Specialist (#51) — read only for `ONBOARDING_HELP` category tickets only (cannot see other categories)
 
 ---
 
@@ -40,9 +40,9 @@ Full ticket view with conversation thread, requester context, SLA tracker, escal
 
 | Part | Route | Trigger |
 |---|---|---|
-| Thread messages | `?part=thread` | Page load; auto-refresh every 30s via `hx-trigger="every 30s"`; **suspended while reply textarea has focus** (implemented via `hx-trigger="every 30s [!document.activeElement.closest('.reply-form')]"` — HTMX conditional trigger); resumes immediately on textarea blur |
+| Thread messages | `?part=thread` | Page load; auto-refresh every 30s via `hx-trigger="every 30s"`; **suspended while reply textarea has focus** (implemented via `hx-trigger="every 30s [!document.activeElement.closest('.reply-form')]"` — HTMX conditional trigger); resumes immediately on textarea blur; `?part=thread&before={message_id}` for "Load earlier messages" — returns 50 messages chronologically BEFORE the given `message_id` (ascending order: oldest first within the batch, appended at TOP of thread); auto-scroll NOT triggered on earlier-message load (user stays at current scroll position) |
 | SLA tracker | `?part=sla` | Page load; auto-refresh every 60s |
-| Ticket metadata header | `?part=header` | After any status/priority/tier change |
+| Ticket metadata header | `?part=header` | After any status/priority/tier change, after [Link Exam] saves |
 | KB suggestions | `?part=kb_suggestions` | Page load |
 | Related tickets | `?part=related` | Page load |
 
@@ -147,10 +147,12 @@ Tabbed interface below the thread:
 - [Share with agent] checkbox (default unchecked; if checked, agent sees the annotation)
 
 **[Send Reply] button** (Tab 1/2):
+- Shows spinner on click ("Sending…"); button disabled during submit
 - POST `/support/tickets/{id}/reply/`
-- Validates: non-empty body
-- On success: thread HTMX refresh; `first_response_at` set if this is first reply
+- Validates: non-empty body (inline error "Reply cannot be empty"); attachments must all complete upload before [Send Reply] enabled
+- On success: thread HTMX refresh; reply box clears; `first_response_at` set if this is first reply; toast "Reply sent ✓" (green, 3s auto-dismiss)
 - If `status=OPEN` or `PENDING_CUSTOMER` and Tab 1 reply: status auto-changes to `IN_PROGRESS`; header part refreshes
+- On 500 error: toast "Failed to send reply. Your message has been preserved in the text box. Please try again." (red, persists); text box NOT cleared
 
 **[Submit Annotation] button** (Tab 3):
 - POST `/support/tickets/{id}/quality-audit/`
@@ -249,8 +251,10 @@ Vertical list of action buttons on right panel, below institution context:
 ```
 Escalate Ticket
 
-Destination tier: [L2 ▼]  ← Support Manager can select L2 or L3 directly
-                            L1/L2 agents: destination pre-set to next tier
+Destination tier: [L2 ▼]  ← Support Manager: can select L2 or L3 (skip allowed)
+                            L1 agents: locked to L2 only (dropdown disabled)
+                            L2 agents: locked to L3 only (dropdown disabled)
+                            L3 tickets: [Escalate] button not shown at all
 
 Reason type: [▼ Select type] (required)
   - Needs DB investigation
@@ -347,6 +351,8 @@ All attachments across all messages listed in one panel:
 
 Files served via R2 signed URL (24h validity). [Download] generates fresh signed URL.
 
+**Attachment upload UX** (in reply box): drag-and-drop zone or [Browse files] button. During upload: progress bar per file ("Uploading… 67%"); file name shown with spinner. On completion: file chip with name + size + [✕ Remove] before sending reply. On error: inline chip error state ("File too large", "File type not allowed", "Scan failed") in red with [✕] to dismiss. Attachments are NOT uploaded on reply-box open — only when user explicitly adds files; upload begins immediately on file selection (before [Send Reply] click) and the R2 key is embedded in the form on completion.
+
 ---
 
 ## Edge Cases
@@ -360,7 +366,7 @@ Files served via R2 signed URL (24h validity). [Download] generates fresh signed
 7. **Thread auto-refresh conflicts with typing**: Auto-refresh (`?part=thread`) is suspended while reply textarea has focus; resumes on blur.
 8. **Merge creates orphan attachments**: Both tickets' attachments are moved to the primary ticket on merge; orphan records cleaned up by background job.
 9. **Quality annotation on own ticket (Quality Lead is also the assigned agent)**: Not possible — Quality Lead (#90) cannot be assigned to tickets; this is enforced at **application level**: the ticket assignment API rejects `assigned_to_id` values where the target user has role=90; the dropdown in I-02/I-03 excludes role-90 users.
-10. **CSAT already submitted**: CSAT section on right panel shows the submitted score and comment (read-only). [Resend CSAT] button shown to Support Manager; resending: sets `csat_submitted_at=null`, `csat_score=null`, `csat_comment=null`, `csat_sent_at=now()`, sends a new survey link; the old score is gone (no history of previous CSAT submissions stored).
+10. **CSAT already submitted**: CSAT section on right panel shows the submitted score and comment (read-only). [Resend CSAT] button: shown to Support Manager when ticket is RESOLVED or CLOSED. Resending clears `csat_submitted_at`, `csat_score`, `csat_comment`; sets `csat_sent_at=now()`, `csat_link_expires_at=now()+30d`; sends new survey. The old CSAT score is lost (no history table). Consequence: if old score was already factored into I-07 weekly report, the report is NOT retroactively corrected — this is a known trade-off.
 11. **Thread pagination**: If a ticket has >100 messages, thread shows the last 50 by default with a "Load earlier messages (N more)" link at the top (HTMX: `?part=thread&before={message_id}`). Auto-scroll always to bottom on initial load.
 12. **[Flag KB gap] access**: All roles with I-03 access (L1, L2, L3, Support Manager, Quality Lead, Onboarding Specialist) can click [Flag KB gap →] in the KB suggestions section. Creates `kb_article_gap_flag` record with ticket's category pre-filled as `ticket_category`, `gap_type=MISSING_ARTICLE`.
 

@@ -105,8 +105,9 @@ Each article as a table row (not card — better for scanning many articles):
 - [Approve] — only for PENDING_REVIEW articles; confirmation "Publish this article? It will be visible to all support staff immediately."
 - [Reject] — returns to DRAFT with feedback note field
 - [Edit] — can edit any article (inline or redirect to full editor)
-- [Archive] — any article
-- [Restore] — archived articles only (returns to DRAFT)
+- [Archive] — any non-archived article; changes status to ARCHIVED
+- [Restore] — ARCHIVED articles only; returns status to DRAFT
+- [Delete] — ARCHIVED articles only; hard-delete with confirmation modal: "Permanently delete '{title}'? This cannot be undone. The article will be removed from all KB suggestion lists immediately." → POST `/support/knowledge-base/{id}/delete/`; row removed; if article is linked in any `support_ticket_message.kb_article_id` reference, the FK is set to NULL (reference preserved as text in message body). Deletion logged to audit trail.
 
 **L1/L2/L3 / Onboarding Specialist / Quality Lead row actions:**
 - [View] — opens read-only article preview
