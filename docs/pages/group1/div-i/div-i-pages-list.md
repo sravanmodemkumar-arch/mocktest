@@ -100,12 +100,17 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | first_response_sla_at | timestamptz NOT NULL | Computed at creation: `created_at + first_response_minutes` from `support_sla_config`; used for first-response SLA tracking in I-03 SLA tracker |
 | sla_warning_sent | boolean DEFAULT false | Set to true when Task 2 sends the at-risk warning; prevents duplicate notifications within same breach window; reset to false when ticket is re-escalated (tier change recomputes SLA) |
 | csat_sent_at | timestamptz | Set when CSAT survey is sent on RESOLVED; used by Task 3 to distinguish initial send from reminder |
+| csat_link_expires_at | timestamptz | Set to `csat_sent_at + interval '30 days'`; CSAT submission portal rejects submissions after this timestamp; reset when CSAT is resent via [Resend CSAT] |
 | tags | varchar[] DEFAULT '{}' | Free-form tags; editable by assigned agent and Support Manager; not editable by Quality Lead (#90) |
 | created_at | timestamptz DEFAULT now() | — |
 | updated_at | timestamptz DEFAULT now() | — |
 
-**Category enum (11 values):**
-`LOGIN_ISSUE`, `OTP_FAILURE`, `EXAM_ACCESS`, `RESULT_QUERY`, `BILLING_QUERY`, `TECHNICAL_BUG`, `FEATURE_REQUEST`, `ONBOARDING_HELP`, `DATA_CORRECTION`, `EXAM_DAY_INCIDENT`, `OTHER`
+**Category enum (12 values):**
+`LOGIN_ISSUE`, `OTP_FAILURE`, `EXAM_ACCESS`, `RESULT_QUERY`, `BILLING_QUERY`, `TECHNICAL_BUG`, `FEATURE_REQUEST`, `ONBOARDING_HELP`, `DATA_CORRECTION`, `EXAM_DAY_INCIDENT`, `BGV_QUERY`, `OTHER`
+
+> `BGV_QUERY` added: any BGV-related institution query. Auto-routes to BGV Manager (#39) via post-save signal (see Integration Points — Division G). BGV Manager is an external role that does NOT access Division I pages; they receive an F-06 notification with a direct link to the ticket in I-03 (read-only view). Division I retains ownership for SLA tracking; BGV Manager resolves by adding a reply in I-03.
+>
+> `ONBOARDING_HELP` creation: any of L1, L2, L3, Support Manager, or Onboarding Specialist (#51) can create this category. It is not restricted to Onboarding Specialist alone.
 
 **Routing rules at creation:**
 - `EXAM_DAY_INCIDENT` → auto-tier = L2, auto-priority = CRITICAL, `exam_day_incident=true`; never appears in L1 queue unless Support Manager explicitly overrides tier (with audit note)
@@ -250,6 +255,8 @@ Parallel: any stage → `STALLED` (Celery auto-sets after 7 days inactivity); Su
 | notes | text | Post-session notes |
 | created_at | timestamptz DEFAULT now() | — |
 
+> **Standalone sessions** (`instance_id=null`): FK constraint is NULLABLE (no FK violation). Application validates: `title` and `scheduled_at` are always required regardless of `instance_id`. Standalone sessions are created via I-06 Training tab by Training Coordinator (#52) or Support Manager; they represent platform-wide training events not tied to any onboarding instance (e.g., periodic refresher webinars for all institution admins). Onboarding Specialist (#51) can also create standalone sessions from I-06.
+
 ---
 
 ### `kb_article`
@@ -373,6 +380,23 @@ Training Coordinator (#52) authors; Support Manager (#47) approves. Support Qual
 
 ---
 
+### `kb_article_vote`
+
+> Tracks per-user votes on KB articles to enforce one-vote-per-user idempotency.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | bigserial PK | — |
+| article_id | int FK → kb_article | — |
+| voted_by_id | int FK → user | The support staff member who voted |
+| vote | varchar(10) NOT NULL | `HELPFUL`, `NOT_HELPFUL` |
+| created_at | timestamptz DEFAULT now() | — |
+| UNIQUE(article_id, voted_by_id) | — | One vote per user per article; re-voting updates the row (UPDATE, not INSERT) |
+
+On INSERT or UPDATE: increments/decrements `kb_article.helpful_votes` or `not_helpful_votes` accordingly.
+
+---
+
 ## Ticket Status State Machine
 
 ```
@@ -384,14 +408,22 @@ OPEN
   │     │     │
   │     │     └─ Customer replies → IN_PROGRESS (SLA timer resumes)
   │     │
-  │     ├─ Needs L2/L3 → ESCALATED (tier updated)
+  │     ├─ Escalation action → ESCALATED
+  │     │     │  (tier updated; new SLA computed; assigned_to_id cleared)
+  │     │     └─ New-tier agent picks up → IN_PROGRESS
+  │     │        (ESCALATED is transient: it exists from escalation action
+  │     │         until the new-tier agent first replies or changes status)
   │     │
   │     └─ Issue fixed → RESOLVED
   │           │
   │           └─ [Auto-close after 7 days no activity] → CLOSED
   │
-  └─ (Unassigned >30min, Support Manager assigns) → IN_PROGRESS
+  └─ (Unassigned; Support Manager assigns OR agent clicks [Assign to me]) → IN_PROGRESS
 ```
+
+**ESCALATED** is a **distinct status** (not just a badge): it means "escalated, waiting for new-tier agent to pick up." It is NOT the same as IN_PROGRESS at the new tier. Filtering by `status=ESCALATED` in I-02 shows tickets pending pickup at L2/L3. Exiting ESCALATED: any action by the new-tier agent (reply, status change, internal note) transitions to IN_PROGRESS. Support Manager can also re-assign from ESCALATED to IN_PROGRESS manually.
+
+**Re-open CLOSED**: Support Manager only → status = IN_PROGRESS; tier preserved from last tier before closure (not reset to L1/MEDIUM); no new escalation record created; new SLA computed from preserved tier + priority + `support_sla_config`; CSAT not re-sent on re-open (prior CSAT score preserved; `csat_link_expires_at` not reset).
 
 CSAT survey sent to requester **immediately when status changes to `RESOLVED`** (not on CLOSED). Sets `csat_sent_at` timestamp. Celery Task 3 sends a **reminder** (not a new survey) if `csat_submitted_at IS NULL` and ticket auto-closes after 7 days.
 Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason). Re-opening CLOSED → status = `IN_PROGRESS`; new SLA computed from L1/MEDIUM as default (Support Manager can adjust).
@@ -420,6 +452,10 @@ effective_breach_at = sla_breach_at
 
 This means a ticket that waited 4h for a customer reply effectively gets 4h added to its deadline. Task 1 uses `effective_breach_at < now()` (not raw `sla_breach_at`) for breach detection, and does NOT exclude `PENDING_CUSTOMER` tickets — it just adjusts for pause time.
 
+**Rapid toggling**: If status is toggled PENDING_CUSTOMER → IN_PROGRESS → PENDING_CUSTOMER within seconds, the `+=` accumulates even sub-second durations (minimum granularity: 1 second via `EXTRACT(EPOCH ...)`). This is correct behaviour — each transition is independently summed. No minimum pause threshold is enforced; extremely short pauses (< 5s) are architectural noise but do not break SLA accuracy at any meaningful scale.
+
+**KB Article Duplicate Detection Threshold**: I-06 uses PostgreSQL `pg_trgm` trigram similarity for duplicate article detection at >0.8 (80%) threshold. This is intentionally high to avoid false positives on related-but-distinct articles. Common false-positive pairs ("Login Issues" / "Login Problems") will trigger the warning — authors should review and proceed if the content is genuinely different. No exemption list is maintained; the warning is advisory only and never blocks saving.
+
 ---
 
 ## Celery Tasks
@@ -431,6 +467,7 @@ This means a ticket that waited 4h for a customer reply effectively gets 4h adde
 | 3 | `auto_close_resolved_tickets` | Daily at 00:00 IST | `support` | Closes tickets in `RESOLVED` status where `resolved_at < now() - interval '7 days'` and no new `support_ticket_message` rows since `resolved_at`; if `csat_submitted_at IS NULL` and `csat_sent_at IS NOT NULL`, sends one CSAT **reminder** push via F-06 (not a new survey); sets `closed_at = now()` |
 | 4 | `flag_stalled_onboarding` | Daily at 08:00 IST | `support` | Marks onboarding instances as `STALLED` if `last_activity_at < now() - interval '7 days'` and stage NOT IN (`LIVE`, `COMPLETED`); notifies assigned Onboarding Specialist and Support Manager via F-06; does not re-notify if `stalled_since` is already set (idempotent) |
 | 5 | `generate_support_weekly_report` | Every Monday 09:00 IST | `support` | Computes all metrics for the prior week (Mon–Sun); upserts into `support_weekly_report` (idempotent on `week_start`); notifies Support Manager via F-06 push with summary stats |
+| 6 | `alert_unassigned_queue` | Every 30 min during business hours (08:00–20:00 IST) | `support` | Counts open tickets WHERE `assigned_to_id IS NULL` AND `created_at < now() - interval '30 min'`; if count > 0, sends F-06 push notification to Support Manager listing unassigned ticket count + longest-waiting ticket number; does NOT auto-assign — assignment is always a human decision to ensure correct tier/skill match |
 
 ---
 

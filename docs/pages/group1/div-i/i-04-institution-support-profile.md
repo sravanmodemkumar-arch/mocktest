@@ -74,13 +74,15 @@ At scale: some institutions (coaching centres with 10,000–15,000 students) wil
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [Logo placeholder]  Sunrise Public School                   │
+│  [Logo or initials avatar]  Sunrise Public School            │
 │  Type: School  ·  Region: Hyderabad  ·  ID: INST-1042       │
 │  Subscription: ACTIVE (expires 15 Mar 2025)                  │
 │  Admin: Meena Reddy (m.reddy@sunrise.edu.in)                 │
 │                          [Add Note]  [Create Ticket for Inst]│
 └──────────────────────────────────────────────────────────────┘
 ```
+
+Logo display: if institution has a logo uploaded (from institution portal), show 48×48px thumbnail. If no logo: show a square avatar with the institution name initials (e.g., "SP" for Sunrise Public School) on a colour derived from the institution ID hash (consistent colour per institution).
 
 Subscription status badge:
 - ACTIVE → green

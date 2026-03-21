@@ -40,7 +40,7 @@ Full ticket view with conversation thread, requester context, SLA tracker, escal
 
 | Part | Route | Trigger |
 |---|---|---|
-| Thread messages | `?part=thread` | Page load; auto-refresh every 30s |
+| Thread messages | `?part=thread` | Page load; auto-refresh every 30s via `hx-trigger="every 30s"`; **suspended while reply textarea has focus** (implemented via `hx-trigger="every 30s [!document.activeElement.closest('.reply-form')]"` — HTMX conditional trigger); resumes immediately on textarea blur |
 | SLA tracker | `?part=sla` | Page load; auto-refresh every 60s |
 | Ticket metadata header | `?part=header` | After any status/priority/tier change |
 | KB suggestions | `?part=kb_suggestions` | Page load |

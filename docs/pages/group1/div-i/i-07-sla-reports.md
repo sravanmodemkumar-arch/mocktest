@@ -139,7 +139,7 @@ L3 below target: row highlighted red. [View L3 Breached Tickets →] links to I-
 
 Two series:
 - Average CSAT score (primary line, blue, Y-axis 1–5)
-- Ticket response rate (% of resolved tickets that received CSAT, secondary line, grey dashed, Y-axis 0–100%)
+- Ticket response rate: `COUNT(csat_submitted_at IS NOT NULL) / COUNT(status IN ('RESOLVED','CLOSED'))` for the period; secondary line, grey dashed, Y-axis 0–100%
 
 Target line at 4.0 (dashed red horizontal).
 
@@ -162,7 +162,7 @@ Hover tooltip: breakdown per category for that period.
 
 Below chart: top 5 categories ranked by volume for the selected period with % of total.
 
-**Exam-day markers**: On dates where a live exam occurred, a yellow vertical marker is drawn on the X-axis. Implementation: server-side query `SELECT DISTINCT DATE(start_date) FROM exam WHERE DATE(start_date) BETWEEN {from} AND {to}` via read-only service account (Division F DB read replica); result cached for 60 min. Marker tooltip on hover: exam name + student count. If Division F DB is unavailable, markers are omitted silently (no error shown).
+**Exam-day markers**: On dates where a live exam occurred, a yellow vertical marker is drawn on the X-axis. Implementation: server-side query `SELECT DISTINCT DATE(start_date) FROM exam WHERE DATE(start_date) BETWEEN {from} AND {to}` via read-only service account (Division F DB read replica); result cached for 60 min. Marker tooltip on hover: exam name + student count. If Division F DB is unavailable, markers are omitted silently; a subtle footnote appears below the chart: "* Exam-day markers unavailable (Division F data unreachable)" — so the Support Manager knows the markers may be missing rather than assuming no exams ran.
 
 ---
 
@@ -235,7 +235,7 @@ Agents with avg score < 3.0: row highlighted red.
 
 **Open Gap Flags**: Count of unresolved KB gap flags. [View Gaps →] links to I-06 tab=gaps.
 
-**CSAT vs Quality Score correlation** (mini scatter chart): X=agent quality score, Y=CSAT score for their tickets. Should show positive correlation; significant outliers flagged.
+**CSAT vs Quality Score correlation** (mini scatter chart): X=agent quality score (from `support_quality_audit`), Y=average CSAT score for that agent's tickets for the period. Each dot = one agent. Minimum 5 audited tickets required to plot an agent's dot; agents with <5 audits shown as greyed-out dots with tooltip "Insufficient audit data (N audits)". Significant outliers (quality score >4 but CSAT <3, or vice versa) shown with a red ring and tooltip "Outlier — investigate". Quality Lead export of this chart includes the underlying data table.
 
 ---
 
@@ -253,7 +253,7 @@ Generates a PDF report of the current view with all charts (using server-side ch
 |---|---|---|---|
 | Period selector + filters | Full | Own stats only; period selector works but data scoped | Full |
 | Summary KPI row | All 4 tiles | All 4 tiles (own scope) | All 4 tiles |
-| SLA compliance chart | Full team view | Own tier + own line only | Full (read-only) |
+| SLA compliance chart | Full team view | **Own tier only, own metrics line only** — e.g. L1 agent sees only L1 bar and their personal resolution time, not other agents | Full (read-only) |
 | CSAT trend chart | Full | Own CSAT only | Full (read-only) |
 | Volume chart | Full | Hidden | Full (read-only) |
 | Category breakdown | Full | Own ticket categories only | Full (read-only) |

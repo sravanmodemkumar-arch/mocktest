@@ -119,7 +119,7 @@ Columns: Institution | Type | Stage | Specialist | Checklist Progress | Target G
 
 **Days in Stage**: How many days since last stage transition. Amber if 5–7 days (approaching stall threshold); red if >7 days (Celery should have already flagged as STALLED — if showing red but not STALLED, check that Celery Task 4 ran). The 7-day threshold matches the Celery stall detection threshold exactly.
 
-**Status badge**: ACTIVE (green), STALLED (red pulsing), COMPLETED (grey).
+**Status badge**: ACTIVE (green), STALLED (red, **not** pulsing — pulsing reserved for SLA breaches in I-02; stalled uses steady red badge + ⚠ icon), COMPLETED (grey).
 
 Row click: opens the institution's onboarding drawer (see below).
 
@@ -127,6 +127,11 @@ Row click: opens the institution's onboarding drawer (see below).
 - [Checklist] — opens checklist drawer
 - [Schedule Session] — opens training session modal
 - [View Institution →] — links to I-04
+
+**Support Manager additional row actions:**
+- [Override Stage ▼] — dropdown: shows all stages with a required reason text field. Allows moving forward multiple stages at once (skipping) or moving backward. Moving backward: inserts SYSTEM note "Stage moved back from {from} to {to} by {manager} — Reason: {text}"; clears incomplete checklist items for skipped stages; `last_activity_at` updated. Moving forward by skip: marks all mandatory checklist items in skipped stages as completed by Support Manager with note "Auto-completed via stage skip".
+
+**Onboarding Specialist backward movement request**: Specialist cannot drag backward in kanban, but can click [Request Stage Rewind] in the onboarding drawer. This creates an `INTERNAL_NOTE` message on the institution's onboarding record (not a ticket) and sends an F-06 push to Support Manager: "Onboarding Specialist {name} requested stage rewind for {institution} — from {current} to {target}." Support Manager reviews and uses [Override Stage] to action it. This prevents unauthorized stage regression while still enabling self-service recovery requests.
 
 ---
 
@@ -153,7 +158,7 @@ Each card:
 └─────────────────────────────┘
 ```
 
-STALLED cards: red left border + "⚠ Stalled 12d" label.
+STALLED cards: red left border (4px) + steady red "⚠ Stalled 12d" label (matches table view — no pulsing).
 OVERDUE cards (past go-live, not LIVE): amber left border + "Overdue" label.
 
 Drag-and-drop to move cards between stages (Onboarding Specialist; Support Manager). On drag-drop:

@@ -47,7 +47,8 @@ Real-time health dashboard for the support operation. Surfaces active SLA risk, 
 | Quality panel | `?part=quality` | Page load |
 | Escalation feed | `?part=escalations` | Page load + auto-refresh every 60s |
 | Onboarding strip | `?part=onboarding` | Page load |
-| Exam day banner | `?part=exam_banner` | Page load; absent if no exam live |
+| Exam day banner | `?part=exam_banner` | Page load; auto-refresh every 30s via `hx-trigger="every 30s"`; if exam ends mid-session, banner returns empty HTML on next refresh (HTMX removes element); triggers the banner disappearance without full page reload |
+| Exam day live feed | `?part=exam_live_feed` | `?view=exam_day` only; auto-refresh every 15s |
 
 ---
 
@@ -86,9 +87,44 @@ Shown when any exam in `exam` table has `status=LIVE` (checked at page load).
 ```
 
 - Background: red-50 border-red-400
-- CRITICAL ticket count refreshes every 30s via HTMX poll
+- CRITICAL ticket count refreshes every 30s via HTMX poll (standalone `?part=exam_banner` route)
 - [View Exam-Day Tickets →] links to `/support/tickets/?exam_day=true&priority=CRITICAL`
-- [Exam Day Mode ↗] links to `?view=exam_day` — expands the banner into a full-page overlay with real-time ticket triage
+- [Exam Day Mode ↗] links to `?view=exam_day` — full-page overlay (see below)
+
+**Exam Day Mode overlay** (`?view=exam_day`):
+
+Replaces normal dashboard content entirely. Full-page two-panel layout:
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  🔴 EXAM DAY WAR ROOM · SSC CGL Mock 12 · 41,200 students live   │
+│  [← Normal View]   Running: 1h 24m   Ends at: 14:00 IST          │
+├──────────────────────────┬────────────────────────────────────────┤
+│  LIVE TICKET FEED        │  STATS PANEL                           │
+│  (auto-refreshes 15s)    │  Open CRITICAL: 12                     │
+│                          │  In Progress: 8                         │
+│  SUP-…-000347 CRITICAL   │  Resolved (exam day): 3                │
+│  "Exam session expired"  │  Avg first response: 4m                │
+│  L2 · Priya · 4m ago     │  SLA at risk: 2                       │
+│                          │  SLA breached: 0                       │
+│  SUP-…-000341 CRITICAL   │                                        │
+│  "OTP not received"      │  TEAM STATUS                           │
+│  L1 · Unassigned · 7m    │  L1 on duty: 4 agents                 │
+│  [Assign →]              │  L2 on duty: 2 agents                 │
+│                          │  L3 on duty: 1 agent                  │
+│  SUP-…-000338 HIGH       │                                        │
+│  "Result not visible"    │  SURGE STATUS                          │
+│  L1 · Rahul · 12m        │  ● Normal (< 200 CRITICAL open)       │
+│                          │  [Activate Triage Mode ▼]             │
+└──────────────────────────┴────────────────────────────────────────┘
+```
+
+- Live ticket feed: scrollable; shows top 20 unresolved exam-day tickets sorted by SLA soonest first; auto-refreshes every 15s via `?part=exam_live_feed`
+- Each feed item: ticket number, subject (truncated), tier, assigned agent or "Unassigned" (red), time since creation; clicking opens I-03
+- [Assign →] shown only for unassigned tickets; Support Manager assigns from inline mini-form (agent picker dropdown, no modal)
+- Stats panel refreshes every 30s; team status shows agent count per tier based on who has actively assigned tickets in the last 30 min
+- Surge Status: shows "Normal" (green), "Elevated (>200 open)" (amber), "Surge (>500 open)" (red pulsing); [Activate Triage Mode] button available to Support Manager at any surge level
+- Exam day mode only accessible to Support Manager (#47); all other roles are redirected to `/support/tickets/?exam_day=true` instead
 
 ---
 

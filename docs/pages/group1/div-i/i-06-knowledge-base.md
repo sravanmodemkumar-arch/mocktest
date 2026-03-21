@@ -254,9 +254,14 @@ Recording URL (optional):
 
 POST `/support/onboarding/sessions/{id}/complete/`; updates `status`, `attendee_names` (present ones), `notes`, `recording_url`.
 
-[+ New Session] button: opens the same modal as I-05 but without locking to a specific institution (institution is a required search field).
+[+ New Session] button: opens the same modal as I-05 but without locking to a specific institution (institution is an optional autocomplete field — leave blank for a platform-wide standalone session).
 
-Standalone sessions (not linked to an `onboarding_instance`): `instance_id=null`; still stored in `onboarding_training_session` table; distinguished by "Standalone" badge.
+Standalone sessions (`instance_id=null`): `title` and `scheduled_at` are required even without an institution. Stored in `onboarding_training_session` table; distinguished by "Standalone" badge. Visible in I-06 Training tab; also appears in I-05 Training Sessions tab under "Standalone sessions" section if the session has no `instance_id`.
+
+**Training Coordinator permissions summary** (I-06 vs I-05):
+- In I-06: can create and schedule sessions (both standalone and institution-linked), mark sessions as COMPLETED/CANCELLED/NO_SHOW, add attendee records — full write access
+- In I-05: **no access** (cannot view the onboarding tracker page); Onboarding Specialist manages onboarding stages and checklists
+- The separation is intentional: Training Coordinator owns session content delivery; Onboarding Specialist owns onboarding pipeline progression
 
 ---
 
@@ -264,7 +269,7 @@ Standalone sessions (not linked to an `onboarding_instance`): `instance_id=null`
 
 1. **Training Coordinator tries to publish directly**: No [Publish] button shown. [Submit for Review] is the only forward action. Status field is read-only for Training Coordinator.
 2. **Support Manager edits a PUBLISHED article**: Edit saves directly (no re-review required for minor edits); `updated_at` timestamp refreshes on the article; agents see "Updated X min ago" label.
-3. **Article with 0 helpful/not_helpful votes**: Shows "No ratings yet" instead of percentage.
+3. **Article with 0 helpful/not_helpful votes**: Shows "No ratings yet" instead of percentage. Voting is tracked per user via `kb_article_vote` table (one row per user per article; re-voting updates the row from HELPFUL→NOT_HELPFUL or vice versa; `kb_article.helpful_votes` and `not_helpful_votes` are atomically incremented/decremented via DB trigger on `kb_article_vote`). Anonymous users (institution admins viewing published articles from institution portal) cannot vote — voting is support-team-only.
 4. **Search returns 0 results**: "No articles found for '{query}'. [Clear search] or [Flag this as a KB gap →]" — second link opens [+ Flag a Gap] form pre-filled with the query text as description.
 5. **Article linked to ticket category auto-suggestion in I-03**: Only PUBLISHED articles appear as suggestions. DRAFT/PENDING_REVIEW articles never surface in I-03.
 6. **Duplicate article detection**: On article save, if another PUBLISHED article has >80% title similarity (checked server-side via trigram similarity in PostgreSQL `pg_trgm`), show warning: "Similar article found: 'How to resolve student login issues'. Review before saving."
