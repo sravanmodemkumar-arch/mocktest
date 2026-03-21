@@ -229,6 +229,18 @@
 | 23 | Monitor branches with no sports program active | Sports Director | 01 |
 | 24 | Track student participation count per sport per branch | Sports Coordinator | 08 |
 | 25 | Monitor branches without cultural activity this term | Cultural Head | 03 |
+| 26 | Configure and maintain group sport catalog (names, min players, rules) | Sports Director | 21 |
+| 27 | Generate and distribute NSS certificates to 240h achievers | NSS/NCC Coord | 22 |
+| 28 | Manage NSS Programme Officer roster across all branches | NSS/NCC Coord | 22 |
+| 29 | Export volunteer completion list in state NSS Directorate format | NSS/NCC Coord | 22 |
+| 30 | Maintain individual NCC cadet records for camp nominations | NSS/NCC Coord | 23 |
+| 31 | Nominate top cadets for RDC / IDC / TSC / VSC national camps | NSS/NCC Coord | 23 |
+| 32 | Track NCC certificate level (A/B/C) progression per cadet | NSS/NCC Coord | 23 |
+| 33 | Auto-create achievement records when tournament awards are published | Sports Director | 07→19 |
+| 34 | Auto-create achievement records when competition results are published | Cultural Head | 12→19 |
+| 35 | Track medical fitness certificates for state/national sports nominations | Sports Director | 19 |
+| 36 | Flag high-achieving students for Group Marketing brand ambassador use | Sports Dir / Cultural Head | 07, 12, 19 |
+| 37 | View Division L analytics — cross-division intelligence (Division M consumers) | Analytics Director / MIS Officer | 20 |
 
 ---
 
@@ -239,12 +251,20 @@ P0 — Before division portal goes live
   01–05   All 5 role dashboards
 
 P1 — Sprint 2
-  06, 07, 08, 09, 11, 12, 13, 14, 15, 17, 18, 19
+  06, 07, 08, 09, 11, 12, 13, 14, 15, 17, 18, 19, 22, 23
 
 P2 — Sprint 3
-  10, 16, 20
+  10, 16, 20, 21
 ```
 
 ---
 
-*Last updated: 2026-03-21 · Total pages: 20 · Roles: 5 · Audit pass: 1 — zero gaps*
+## Division Count Summary
+
+| Division | Total | Large Uses | Small Uses |
+|---|---|---|---|
+| L — Sports & Extra-Curricular | 23 | 23 | 6–8 |
+
+---
+
+*Last updated: 2026-03-21 · Total pages: 23 · Roles: 5 · Audit pass: 2 — zero gaps · Deep audit: 15-pass*
