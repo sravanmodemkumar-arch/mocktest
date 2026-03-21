@@ -398,3 +398,354 @@ Available to CSM (#53) and CS Analyst (#93).
 | Bulk dispatch control (Task J-3) | Yes | No | No | No | No | No |
 | Export CSV | Yes | No | No | No | Yes | No |
 | [?nocache=true] | Yes | No | No | No | Yes | No |
+
+---
+
+## Toasts, Loaders & Error States
+
+**Toasts:**
+
+| Action | Type | Message |
+|---|---|---|
+| Survey sent (single) | SUCCESS | "Survey sent to {recipient_name} at {institution_name}." |
+| Survey sent (bulk dispatch) | SUCCESS | "{N} NPS surveys dispatched for Q{Q} {YYYY}." |
+| Survey resent | SUCCESS | "Survey resent to {recipient_name}. Previous link has been invalidated." |
+| Follow-up flagged | SUCCESS | "Follow-up flagged for {institution_name}." |
+| Follow-up unflagged | INFO | "Follow-up flag removed." |
+| Follow-up notes saved | SUCCESS | "Follow-up notes saved." |
+| Follow-up resolved | SUCCESS | "Follow-up marked as resolved." |
+| Next dispatch skipped | WARNING | "Q{Q} {YYYY} NPS dispatch skipped. Recorded reason: {reason}." |
+| Export started | INFO | "Preparing export…" |
+| Export ready | SUCCESS | "Export ready. [Download]" |
+| Export failed | ERROR | "Export failed. Try again or reduce the date range." |
+| Escalation created from verbatim | SUCCESS | "Escalation created. [View in J-05]" |
+
+**Skeleton / loading states:**
+
+- **NPS KPI strip:** 5 tile-sized shimmer rectangles on page load and period change.
+- **NPS trend chart:** Full chart-area shimmer (same height as rendered chart) while HTMX loads.
+- **CSAT trend chart:** Same as NPS trend chart shimmer.
+- **Score distribution + NPS by segment:** Side-by-side shimmer blocks.
+- **Survey table:** 10 skeleton rows (grey placeholder lines per column) on initial load and filter change. Pagination shows "Loading…" until resolved.
+- **Verbatim panel:** 3 skeleton feedback cards (avatar + 2 lines of text placeholder).
+- **Pending & follow-up panel:** 3 skeleton rows each side.
+
+All HTMX part-loads use `hx-indicator` pointing to a per-section spinner (`<span class="htmx-indicator">`) inside the target div. Global page spinner is NOT used — each section loads independently.
+
+**Error states:**
+
+- **Survey table load failure:** Inline error card within `#j-survey-table`: "Failed to load surveys. [Retry]". [Retry] re-triggers the HTMX GET.
+- **Chart load failure:** Within each chart container: "Chart data unavailable. [Retry]"
+- **Send Survey failure (network/5xx):** ERROR toast "Failed to send survey — please try again."
+- **Resend to expired survey (race condition):** If survey has already been superseded when [Resend] is clicked, ERROR toast: "This survey has already been superseded. Refresh the page to see the latest state."
+- **Export timeout:** ERROR toast after 30 seconds: "Export is taking longer than expected. Try filtering to a shorter period."
+- **Public survey endpoint rate limit:** If the institution submits the form multiple times in quick succession, the server returns 429 with message "Too many attempts — please wait a moment."
+
+---
+
+## Missing Spec Closes (Audit)
+
+### HTMX Part-Load Target IDs
+
+| Part | Route | Target ID |
+|---|---|---|
+| NPS KPI strip | `?part=nps_kpi` | `#j-nps-kpi` |
+| NPS trend chart | `?part=nps_trend` | `#j-nps-trend` |
+| CSAT trend chart | `?part=csat_trend` | `#j-csat-trend` |
+| Score distribution | `?part=score_dist` | `#j-score-dist` |
+| NPS by segment | `?part=nps_by_segment` | `#j-nps-segment` |
+| Survey table | `?part=survey_table` | `#j-survey-table` |
+| Verbatim panel | `?part=verbatim` | `#j-verbatim` |
+| Pending surveys | `?part=pending` | `#j-pending` |
+| Follow-up panel | `?part=followups` | `#j-followups` |
+
+All part-loads use `hx-push-url="true"` so filter/sort state persists in the URL. Pagination uses `hx-boost` on page links within `#j-survey-table` only.
+
+### Public Survey Endpoint (Institution-Facing Form)
+
+Route: `GET /survey/{token}/` — public, no authentication required. Served by a separate Django view outside the `/csm/` prefix.
+
+**Token validation (server-side, before rendering form):**
+
+| Condition | HTTP Status | Response |
+|---|---|---|
+| Token not found | 404 | "This survey link is not valid." |
+| `superseded_by_id IS NOT NULL` | 410 | "This survey link has been superseded. Please check your email for a newer survey link." |
+| `link_expires_at < now()` | 410 | "This survey link has expired. Please contact your Customer Success Manager to receive a new link." |
+| `responded_at IS NOT NULL` | 200 | Already-responded page (see below) |
+| Valid, not yet responded | 200 | Renders survey form |
+
+**NPS survey form (survey_type IN QUARTERLY_NPS, POST_ONBOARDING_NPS):**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  EduForge                                                    │
+│  ─────────────────────────────────────────────────────────  │
+│  Hello Dr. Ramesh Kumar,                                     │
+│  {custom_message if set, else default intro}                 │
+│                                                              │
+│  How likely are you to recommend EduForge to a colleague     │
+│  or partner institution?                                     │
+│                                                              │
+│  0    1    2    3    4    5    6    7    8    9    10         │
+│  ○    ○    ○    ○    ○    ○    ○    ○    ○    ○    ○          │
+│  Not at all likely              Extremely likely             │
+│                                                              │
+│  What's the main reason for your score? (optional)           │
+│  [                                                    ]      │
+│  (max 2,000 characters)                                      │
+│                                                              │
+│                              [Submit Feedback →]             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**CSAT survey form (survey_type IN RENEWAL_CSAT, EBR_FEEDBACK, AD_HOC when csat):**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  EduForge                                                    │
+│  How would you rate your overall experience with EduForge?   │
+│                                                              │
+│  ★☆☆☆☆  1 — Very Poor                                        │
+│  ★★☆☆☆  2 — Poor                                            │
+│  ★★★☆☆  3 — Neutral                                          │
+│  ★★★★☆  4 — Good                                            │
+│  ★★★★★  5 — Excellent                                        │
+│                                                              │
+│  What could we improve? (optional)                           │
+│  [                                                    ]      │
+│                                                              │
+│                              [Submit Feedback →]             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**AD_HOC survey type:** Can be either NPS (0–10 scale) or CSAT (1–5 scale). Determined by `csm_nps_survey.csat_score IS NULL` (NPS form shown) vs. `csm_nps_survey.nps_score IS NULL` (CSAT form shown). The sender selects "Score type" in the Send Survey modal when `AD_HOC` is chosen.
+
+**Form submission:** POST to `/survey/{token}/submit/`. On success:
+- Sets `responded_at = now()`, `nps_score` or `csat_score`, `verbatim_feedback`, `promoter_category` (computed server-side from nps_score)
+- Returns 200 with thank-you page:
+  > "Thank you, Dr. Ramesh Kumar! Your feedback helps us improve EduForge for institutions across India. You may close this page."
+- No redirect, no follow-up actions visible to respondent
+
+**Already-responded page:**
+> "You have already submitted this survey on {responded_at date}. Thank you for your feedback!"
+
+**Security:** Token is 48-byte URL-safe random string (`secrets.token_urlsafe(48)`) — brute-force infeasible. No internal IDs exposed. Rate limited to 10 submissions per IP per hour (Django middleware).
+
+### Survey Table — Pagination Spec
+
+- Page size: 25 rows per page
+- Pagination controls: `← Previous [1] [2] [3] ... [12] Next →` within `#j-survey-table`
+- "Showing {start}–{end} of {total} surveys" above pagination
+- Clicking a page number triggers HTMX GET `?part=survey_table&page={n}` — no full page reload
+- Filter application resets to `?page=1` silently
+
+### Survey Table — Institution Name Search
+
+Search input above filter row (separate from verbatim search):
+
+```
+[🔍 Search institution name...   ] (debounce 300ms, min 2 chars)
+```
+
+Appends `?q={term}` to all HTMX part-load requests for `#j-survey-table`. ILIKE on `institution.name`. Search state persists in URL via `hx-push-url`.
+
+### Follow-up Resolution
+
+**[Mark Resolved]** button available when `follow_up_required=true` in Survey Detail Drawer and Follow-up panel.
+
+PATCH to `/csm/feedback/surveys/{id}/follow-up/` with body `{"resolved": true}`.
+
+Adds `follow_up_resolved_at` timestamptz and `follow_up_resolved_by_id FK auth_user` to the survey row. (These two columns are missing from the `csm_nps_survey` data model in div-j-pages-list.md — see addendum below.)
+
+In Follow-up Required panel: resolved items move to a collapsed "Resolved (N)" section below the active list. In survey table: flag icon changes from solid yellow to grey tick.
+
+**Who can resolve:** CSM (#53) can resolve any follow-up. AM (#54) and ISM (#94) can resolve follow-ups on their own accounts only.
+
+### Send Survey Modal — Full Spec
+
+**Institution search:** Typeahead on `institution.name`. Min 2 chars, debounce 200ms, shows top 10 matches. Results include institution type badge. Selecting an institution auto-populates `institution_type` (used internally to determine dispatch channel).
+
+**Score type field (AD_HOC only):**
+When `survey_type = AD_HOC` is selected, an additional field appears:
+```
+  Score type*  [● NPS (0–10)  ○ CSAT (1–5)]
+```
+Determines whether `nps_score` or `csat_score` column is populated on response.
+
+**Custom message character limit:** 500 characters. Character counter shown below textarea. Stored in `csm_nps_survey.custom_message` (varchar 500). Default intro text used if left blank.
+
+**WhatsApp dispatch indicator:** When `institution_type = COACHING` and `survey_type = QUARTERLY_NPS`, modal shows an additional info badge below the email field:
+```
+ℹ️ This survey will also be sent via WhatsApp to the institution's primary contact.
+```
+Both channels are triggered via F-06 Notification Manager. `dispatch_channel` stored as `BOTH` for this case.
+
+**Server-side ownership enforcement (AM + ISM):**
+For AM (#54): server validates `csm_account_assignment.account_manager_id = request.user.id` for the selected institution. Rejects with 403 if not assigned.
+For ISM (#94): server validates `csm_account_assignment.ism_id = request.user.id` AND `ism_tenure_end_date >= today`. Rejects with 403 if not assigned or tenure ended.
+
+### Survey Detail Drawer — Full Spec
+
+**CSAT variant:**
+```
+RENEWAL_CSAT  ·  Excel Coaching Centre                [Close ×]
+  Sent to: Priya Sharma (priya@excel.com)
+  Sent by: Ananya K. (CSM)  ·  Sent: 15 Feb 2026
+  Responded: 18 Feb 2026 (3 days later)
+  Expires: 1 Mar 2026
+
+  CSAT Score: 4 / 5  ·  ★★★★☆
+
+  Verbatim: "Support team responds fast but the app crashes sometimes."
+
+  Follow-up required: No    [Mark follow-up required]
+  Follow-up notes: —
+
+  Dispatch channel: Email
+  [View Account Profile ↗]    [Resend]
+```
+
+**All drawers include:**
+- `Dispatch channel:` EMAIL or WHATSAPP (from `csm_nps_survey.dispatch_channel`)
+- `Custom message sent:` {text} or "None" if `custom_message` is null
+- `[View Account Profile ↗]`: links to `J-03 /csm/accounts/{institution_id}/?tab=feedback`
+- `[Resend]`: available if `responded_at IS NULL` OR `superseded_by_id IS NOT NULL`. Opens Send Survey modal pre-filled.
+- Superseded indicator: if `superseded_by_id IS NOT NULL`, amber banner: "This survey was superseded by a newer survey sent on {new survey sent_at}. [View newer survey]"
+
+### Promoter → Case Study Nomination
+
+PROMOTER survey rows (score 9–10) show an additional action in the Survey Detail Drawer:
+
+```
+  [Nominate for Case Study]
+```
+
+POST to `/csm/feedback/surveys/{id}/case-study-nominate/`. Sets `csm_nps_survey.case_study_nominated = true` and `case_study_nominated_at = now()`. Sends in-app notification to Marketing Manager (#64): "PROMOTER: {institution_name} (NPS 9/10) has been nominated for a case study by {csm_name}. [View account →]"
+
+Available to CSM (#53) only.
+
+Nominated institutions appear in the J-08 CS Reports → Promoter Report section as "Case Study Pipeline."
+
+### NPS by Institution Type — Chart Clarification
+
+The chart is a **horizontal bar chart** (single series, one bar per institution type). The description "grouped bar chart" in the section header was a misnomer — it is not grouped (no second data series). The X-axis shows NPS score (-100 to +100); bars are coloured green if score ≥ 40, amber if 20–39, red if < 20. Each bar label on hover shows: NPS score · N responses · Promoter% / Passive% / Detractor%.
+
+### Bulk Dispatch — Skip Reason Storage
+
+**`csm_nps_dispatch_skip` table:**
+
+| Column | Type | Notes |
+|---|---|---|
+| id | bigserial PK | — |
+| skipped_quarter | varchar(10) NOT NULL | e.g., `Q2_2026` |
+| skip_reason | text NOT NULL | Required; entered by CSM in confirmation dialog |
+| skipped_by_id | FK auth_user NOT NULL | |
+| skipped_at | timestamptz NOT NULL DEFAULT now() | |
+| reinstated_at | timestamptz | Set if CSM later re-enables the dispatch via [Reinstate] |
+
+POST `/csm/feedback/dispatch/skip/` requires `{"quarter": "Q2_2026", "reason": "..."}`. Reason min 10 chars.
+
+**[Reinstate] button:** Appears in the Bulk Dispatch panel after a skip, allowing CSM to undo the skip before the dispatch date. POST to `/csm/feedback/dispatch/reinstate/`. Not available after the dispatch date has passed.
+
+**Preview Next Batch modal full spec:**
+
+Opens from [Preview Next Batch]. Modal lists institutions that Task J-3 will include in the next dispatch:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Preview: Q2 2026 NPS Dispatch (1 Apr 2026)       [Close ×] │
+│  Institutions to be surveyed: 134                            │
+│  Skipped (surveyed < 60 days ago): 23                        │
+│  Skipped (CHURNED_RISK tier): 8 (NPS not sent to CHURNED)   │
+│                                                              │
+│  Institution           Type        Last Surveyed             │
+│  DPS Rohini            School      Q3 2025 (+92d)            │
+│  Excel Coaching Hub    Coaching    Q3 2025 (+88d)            │
+│  ...                                                         │
+│                                                              │
+│  [Export preview list as CSV]                                │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Task J-3 skips CHURNED_RISK institutions from bulk dispatch (sending NPS to an already-churned account is counterproductive and risks damaging the relationship further). CSM can override by sending an AD_HOC survey manually.
+
+### Task J-3 — Full Dispatch Spec
+
+| Step | Action |
+|---|---|
+| 1 | Check `csm_config['nps_quarterly_enabled']` — abort if false |
+| 2 | Check for skip record in `csm_nps_dispatch_skip` for current quarter — abort if found |
+| 3 | Select all institutions: `engagement_tier IN ('HEALTHY', 'ENGAGED')` AND last survey `sent_at < now() - interval '60 days'` AND `superseded_by_id IS NULL` |
+| 4 | For each institution: create `csm_nps_survey` row; dispatch via F-06 (EMAIL for all; also WHATSAPP if COACHING type) |
+| 5 | After 7 days: re-check `responded_at IS NULL AND reminder_sent_at IS NULL` — send reminder email; set `reminder_sent_at = now()` |
+| 6 | After `nps_survey_expiry_days` (default 14 days): surveys with `responded_at IS NULL` are treated as expired in UI (no status column — derived from `link_expires_at < now()`) |
+
+### CSAT KPI Tile (6th tile — Analyst-only)
+
+The 5-tile KPI strip shows for all roles. CS Analyst (#93) sees a **6th tile**:
+
+```
+┌──────────────┐
+│ 4.1 / 5      │
+│ Avg CSAT     │
+│ (period)     │
+│ ↑+0.2 vs Q3  │
+└──────────────┘
+```
+
+Sourced from `csm_nps_survey` WHERE `survey_type IN ('RENEWAL_CSAT','EBR_FEEDBACK')` AND `csat_score IS NOT NULL` for the selected period. Shows "— (insufficient data)" if fewer than 5 CSAT responses in period. The tile is hidden for all other roles (CSAT data is analytically sensitive and surfaced in full in J-08 CS Reports for non-Analyst roles).
+
+### Chart Accessibility
+
+All 4 charts (NPS Trend, CSAT Trend, Score Distribution, NPS by Segment) implement:
+- `role="img"` and `aria-label="{chart_title} — {period}"` on the canvas element
+- A visually hidden `<table class="sr-only">` below each chart containing the same data in tabular form, accessible to screen readers
+- Chart.js `spanGaps: false` on NPS and CSAT trend charts (missing months render as breaks, not interpolated lines)
+- Keyboard-navigable tooltips via Chart.js `options.plugins.tooltip.enabled: true` with focus event handlers
+
+### Verbatim Text Search — Multilingual Handling
+
+`to_tsvector('english', verbatim_feedback)` is used for English-language queries. For non-English feedback (Hindi, Telugu, Marathi etc.), PostgreSQL `pg_trgm` trigram similarity is used as a fallback: if the full-text search returns 0 results, the view automatically retries with `similarity(verbatim_feedback, ?)` > 0.3 using the `pg_trgm` extension. This is transparent to the user — they always see one combined result set with English FTS results first, then trigram matches. Trigram results are marked with a small "~" indicator icon beside the match count.
+
+### Export — Async Spec
+
+Export is **asynchronous** for result sets > 500 rows. Trigger: `?export=csv` appended to current filter URL.
+
+- For ≤ 500 rows: synchronous CSV response (immediate download)
+- For > 500 rows: async. [Export CSV] button replaced with "Preparing… ⏳" (disabled). Celery task generates file; on completion SUCCESS toast "Export ready. [Download]" with 60-second pre-signed R2 link. On failure: ERROR toast.
+
+Export includes all columns from the Export CSV section, plus `case_study_nominated` and `dispatch_channel`.
+
+### `csm_nps_survey` — Missing Columns (Addendum to Data Model in div-j-pages-list.md)
+
+These columns are used in J-07 but absent from the `csm_nps_survey` table definition:
+
+| Column | Type | Notes |
+|---|---|---|
+| custom_message | varchar(500) | Optional personalised intro sent with the survey link; null if not set |
+| follow_up_resolved_at | timestamptz | Set when follow-up is marked resolved; null if unresolved |
+| follow_up_resolved_by_id | FK auth_user | Who resolved the follow-up |
+| case_study_nominated | boolean NOT NULL DEFAULT false | Set by CSM to flag promoters for Marketing case study pipeline |
+| case_study_nominated_at | timestamptz | Timestamp of nomination |
+
+### Resend Rate Limiting
+
+A survey can be resent a maximum of **3 times** for the same institution + survey type combination within a 90-day window. On the 4th resend attempt within 90 days, the [Resend] button is disabled with tooltip: "Maximum resends reached for this survey type in this period. Contact your CSM lead if you need an exception." Tracked by counting `csm_nps_survey` rows with the same `institution_id` + `survey_type` where `sent_at >= now() - interval '90 days'`.
+
+### [View All Pending] and [View All Follow-ups] Links
+
+Both links update the main page URL and trigger a full filter refresh:
+- [View all pending] → navigates to `?pending=1` (equivalent to checking the "Pending response" checkbox in the filter row, which re-renders the full survey table showing only pending rows)
+- [View all follow-ups] → navigates to `?follow_up=1`
+These are not modal popups — they apply the filter to the main survey table, bringing full pagination and sort controls.
+
+### Mobile Layout
+
+On viewports < 768px:
+- KPI strip: 2×3 grid (2 tiles per row, 3 rows) — last tile (Response Rate or CSAT) spans full width on last row
+- NPS trend chart and CSAT trend chart: stack vertically (each full width)
+- Score distribution and NPS by segment: stack vertically
+- Survey table: collapses to card view. Each card shows: Institution name · Score badge · Category badge · Sent date · Follow-up flag · [View] button. Other columns hidden.
+- Verbatim panel and Pending/Follow-up panel: stack vertically
+- Bulk Dispatch panel: hidden on mobile (CSM accesses via desktop only — complex control not suited to mobile)
