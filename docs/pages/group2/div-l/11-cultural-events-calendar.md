@@ -24,14 +24,15 @@ Three view modes are available: Month (default), Week, and List. All three share
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Group Cultural Activities Head | G3, Role 99 | Full — view, create, edit, cancel, export | Primary owner of this calendar |
-| Group Sports Director | G3, Role 97 | View only — all event types visible | Read access to detect scheduling conflicts with sports calendar |
-| Group NSS/NCC Coordinator | G3, Role 100 | View only — all events; NSS/NCC events highlighted | No edit capability; read for coordination awareness |
-| Group Sports Coordinator | G3, Role 98 | No access | Redirected to own dashboard |
-| Group Library Head | G2, Role 101 | No access | No cultural calendar access |
-| All other roles | — | No access | Redirected to own dashboard |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Cultural Activities Head | 99 | G3 | Full — view, create, edit, cancel, export | Primary owner of this calendar |
+| Sports Director | 97 | G3 | View only — all event types visible | Read access to detect scheduling conflicts with sports calendar |
+| NSS/NCC Coordinator | 100 | G3 | View only — all events; NSS/NCC events highlighted | No edit capability; read for coordination awareness |
+| Sports Coordinator | 98 | G3 | No access | Redirected to own dashboard |
+| Library Head | 101 | G2 | No access | No cultural calendar access |
+| Branch Cultural Teacher | Branch staff | Branch | No access to this group page | Creates events via branch portal only |
+| All other roles | — | — | No access | Redirected to own dashboard |
 
 > **Access enforcement:** Django decorator `@require_role(['cultural_head'])` on all write endpoints. `@require_role(['cultural_head', 'sports_director', 'nss_ncc_coordinator'])` on all read endpoints. Roles 97 and 100 receive server-rendered pages with all action controls omitted. The `[+ New Event]`, `[Edit]`, and `[Cancel Event]` elements are conditionally rendered via Django template context variable `can_write`.
 
@@ -59,8 +60,12 @@ View mode switcher (inline pill-style, below header): `[Month]  [Week]  [List]` 
 
 ### 3.3 Alert Banners (conditional)
 
+Stacked above the KPI bar. Each banner is individually dismissible for the session.
+
 | Condition | Banner Text | Severity |
 |---|---|---|
+| Event with registration deadline in < 3 days | "[N] inter-branch competition(s) have registration deadlines within 3 days. Act now." | Red |
+| Events with no venue confirmed in next 7 days | "[N] confirmed event(s) in the next 7 days have no venue assigned. Confirm venues immediately." | Red |
 | Branches with no cultural event this term > 0 | "[N] branch(es) have no cultural event scheduled this term. Consider planning coverage." | Amber |
 | Inter-branch competition registration deadline within 7 days | "[N] competition(s) have registration deadlines within 7 days. Review pending registrations." | Amber |
 | Proposed or newly saved event date clashes with a group sports event | "Date conflict detected with sports event '[Name]' on [date]. Review before confirming." | Red |
@@ -74,13 +79,13 @@ View mode switcher (inline pill-style, below header): `[Month]  [Week]  [List]` 
 
 Five metric cards displayed horizontally, refreshed on page load and every 5 minutes via HTMX polling.
 
-| Card | Metric | Colour Rule |
-|---|---|---|
-| Events Scheduled This AY | Total event records for current AY where `status != Cancelled` | Indigo (neutral) |
-| Events This Month | Count where `start_date` falls in current calendar month | Indigo (neutral) |
-| Branches with No Cultural Event This Term | Count of branches with zero confirmed/completed events in current academic term | Red if > 20% of total branches; Amber if 1–20%; Green if 0 |
-| Competitions Pending Registration Deadline | Count of Inter-Branch Competition events where `registration_deadline` within 14 days and `status` in Planned/Confirmed | Red if > 0; Green if 0 |
-| Upcoming Events (Next 30 Days) | Count of events with `start_date` in next 30 days and `status` in Planned/Confirmed | Amber if 0; Indigo if > 0 |
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Events Scheduled This AY | Total event records for current AY where `status != Cancelled` | `COUNT(*) WHERE academic_year = current AND status != 'cancelled'` | Indigo (neutral) | `#kpi-events-ay` |
+| 2 | Events This Month | Count where `start_date` falls in current calendar month | `COUNT(*) WHERE MONTH(start_date) = current_month AND YEAR(start_date) = current_year` | Indigo (neutral) | `#kpi-events-month` |
+| 3 | Branches with No Cultural Event This Term | Count of branches with zero confirmed/completed events in current academic term | `COUNT(branches) WHERE event_count_this_term = 0` | Red if > 20% of total branches; Amber if 1–20%; Green if 0 | `#kpi-no-event-branches` |
+| 4 | Competitions Pending Registration Deadline | Count of Inter-Branch Competition events where `registration_deadline` within 14 days and `status` in Planned/Confirmed | `COUNT(*) WHERE event_type='inter_branch_competition' AND registration_deadline BETWEEN today AND today+14 AND status IN ('planned','confirmed')` | Red if > 0; Green if 0 | `#kpi-reg-deadline` |
+| 5 | Upcoming Events (Next 30 Days) | Count of events with `start_date` in next 30 days and `status` in Planned/Confirmed | `COUNT(*) WHERE start_date BETWEEN today AND today+30 AND status IN ('planned','confirmed')` | Amber if 0; Indigo if > 0 | `#kpi-upcoming` |
 
 ```
 ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐
@@ -90,7 +95,7 @@ Five metric cards displayed horizontally, refreshed on page load and every 5 min
 └──────────────────────┘ └──────────────────────┘ └──────────────────────┘ └──────────────────────┘ └──────────────────────┘
 ```
 
-> **HTMX note:** KPI bar is a single `<div id="cultural-kpi-bar">` with `hx-get="/api/v1/cultural/calendar/kpi-summary/"`, `hx-trigger="load, every 300s"`, `hx-swap="innerHTML"`. Each card is rendered as a shimmer skeleton on first load until the API response arrives.
+**KPI bar HTMX:** `<div id="cultural-kpi-bar" hx-get="/api/v1/cultural/calendar/kpi-summary/" hx-trigger="load, every 300s" hx-swap="innerHTML" hx-indicator="#kpi-spinner">`. Each card is rendered as a shimmer skeleton on first load until the API response arrives.
 
 ---
 
@@ -240,7 +245,7 @@ On change of Start Date or End Date: HTMX call to `/api/v1/cultural/calendar/con
 
 **Footer:** `[Cancel]`  `[Save as Draft]`  `[Save & Confirm Event]`
 
-`[Save as Draft]` → saves with `status = Planned`. `[Save & Confirm Event]` → saves with `status = Confirmed`. Both POST to create endpoint.
+`[Save as Draft]` → saves with `status = Planned`. `[Save & Confirm Event]` → saves with `status = Confirmed`. Both POST to create endpoint. Both buttons show spinner and become disabled during submission.
 
 ---
 
@@ -348,7 +353,7 @@ This action cannot be undone. Provide a reason before proceeding.
 
 **Footer:** `[Go Back]`  `[Confirm Cancellation]`
 
-On confirm: event `status` → Cancelled; `cancel_reason` and `cancelled_by` recorded; notification dispatched if Notify Branches is checked.
+On confirm: event `status` → Cancelled; `cancel_reason` and `cancelled_by` recorded; notification dispatched if Notify Branches is checked. [Confirm Cancellation] shows spinner and becomes disabled during submit.
 
 ---
 
@@ -361,24 +366,32 @@ Charts are placed below the KPI bar and above the calendar, in a two-column row.
 | Property | Value |
 |---|---|
 | Chart type | Donut (Chart.js 4.x) |
+| Title | "Cultural Events by Type — [Current AY]" |
 | Data | Count of non-Cancelled events per `event_type` for current AY |
 | Segment colours | Match event type colours from §5.4 |
 | Legend | Right-side legend with event type name and count |
 | Tooltip | "[Event Type]: [N] events ([N]%)" on hover |
 | Centre label | Total active event count |
-| HTMX load | `hx-get="/api/v1/cultural/calendar/charts/by-type/"` `hx-trigger="load"` |
+| Empty state | "No events recorded for the current academic year." |
+| Export | PNG export button in top-right corner of chart card |
+| API endpoint | `GET /api/v1/cultural/calendar/charts/by-type/` |
+| HTMX | `<div id="chart-by-type" hx-get="/api/v1/cultural/calendar/charts/by-type/" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#chart-type-spinner">` |
 
 ### 7.2 Monthly Event Distribution — Stacked Bar Chart
 
 | Property | Value |
 |---|---|
 | Chart type | Vertical stacked bar (Chart.js 4.x) |
+| Title | "Monthly Event Distribution — [Current AY]" |
 | X-axis | 12 months of current AY (Apr – Mar), abbreviated |
 | Y-axis | Event count |
 | Stacked series | One series per event type, using §5.4 colours |
 | Tooltip | Shows breakdown per type for that month on hover |
 | Annotation | Current month highlighted with a light indigo background band |
-| HTMX load | `hx-get="/api/v1/cultural/calendar/charts/monthly-distribution/"` `hx-trigger="load"` |
+| Empty state | "No events recorded for the current academic year." |
+| Export | PNG export button in top-right corner of chart card |
+| API endpoint | `GET /api/v1/cultural/calendar/charts/monthly-distribution/` |
+| HTMX | `<div id="chart-monthly-dist" hx-get="/api/v1/cultural/calendar/charts/monthly-distribution/" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#chart-monthly-spinner">` |
 
 ---
 
@@ -392,9 +405,9 @@ Charts are placed below the KPI bar and above the calendar, in a two-column row.
 | Event cancelled | "Event '[Name]' cancelled. [N] branch(es) notified." | Success |
 | Scheduling conflict detected | "Date conflict with sports event '[Sports Event Name]'. Review before confirming." | Warning |
 | Media link added | "Media link added to '[Name]'." | Success |
+| Export complete | "Calendar exported to [format]." | Success |
 | PDF report generation started | "Generating PDF report for '[Name]'. Download link will appear shortly." | Info |
 | PDF report ready | "PDF report for '[Name]' is ready." (with download link) | Success |
-| Export complete | "Calendar exported to [format]." | Success |
 | Required field missing on save | "Please complete all required fields before saving." | Error |
 | Network / server error | "Could not save event. Please try again." | Error |
 | Branch notification dispatch failed | "Event cancelled, but branch notifications could not be sent. Retry from event detail." | Warning |
@@ -403,15 +416,16 @@ Charts are placed below the KPI bar and above the calendar, in a two-column row.
 
 ## 9. Empty States
 
-| Context | Illustration | Heading | Sub-text | Action |
+| Context | Icon | Heading | Sub-text | Action |
 |---|---|---|---|---|
-| No events in current AY | Calendar icon | "No Cultural Events Scheduled" | "No cultural events have been created for this academic year. Start planning now." | `[+ New Event]` (Role 99 only) |
-| No events match filters | Funnel icon | "No Events Match Filters" | "Try adjusting your filters or reset to see all events." | `[Reset Filters]` |
-| Month view — empty month | Calendar grid icon | "Nothing Scheduled This Month" | "No cultural events are scheduled for [Month YYYY]." | `[+ New Event]` (Role 99 only) |
-| Week view — empty week | Calendar icon | "No Events This Week" | "No cultural events scheduled for this week." | `[+ New Event]` (Role 99 only) |
-| Results tab — no entries | Trophy icon | "No Results Recorded" | "Results can be added once the event is marked Completed." | `[+ Add Result Entry]` (Role 99, Completed status only) |
-| Media tab — no links | Image placeholder | "No Media Added" | "Add photo or video links to document this event." | `[+ Add Media Link]` (Role 99 only) |
-| Branches tab — none assigned | Building icon | "No Branches Assigned" | "This event has not been assigned to any branches yet." | `[Edit]` (Role 99 only) |
+| No events in current AY | `calendar` | "No Cultural Events Scheduled" | "No cultural events have been created for this academic year. Start planning now." | `[+ New Event]` (Role 99 only) |
+| No events match filters | `funnel` | "No Events Match Filters" | "Try adjusting your filters or reset to see all events." | `[Reset Filters]` |
+| Month view — empty month | `calendar-days` | "Nothing Scheduled This Month" | "No cultural events are scheduled for [Month YYYY]." | `[+ New Event]` (Role 99 only) |
+| Week view — empty week | `calendar` | "No Events This Week" | "No cultural events scheduled for this week." | `[+ New Event]` (Role 99 only) |
+| Results tab — no entries | `trophy` | "No Results Recorded" | "Results can be added once the event is marked Completed." | `[+ Add Result Entry]` (Role 99, Completed status only) |
+| Media tab — no links | `photo` | "No Media Added" | "Add photo or video links to document this event." | `[+ Add Media Link]` (Role 99 only) |
+| Branches tab — none assigned | `building-office` | "No Branches Assigned" | "This event has not been assigned to any branches yet." | `[Edit]` (Role 99 only) |
+| Charts — no data | `chart-bar` | "No data available" | "No event data is available for the selected period." | — |
 
 ---
 
@@ -425,9 +439,12 @@ Charts are placed below the KPI bar and above the calendar, in a two-column row.
 | List view filter or search change | Table rows replaced by 6 shimmer rows with a 20 px indigo spinner centred below toolbar |
 | Event detail drawer opening | Drawer slides in with shimmer tab bar and shimmer content blocks per tab; real content replaces on API response |
 | Conflict check on date change in create drawer | 16 px inline spinner beside the date field; conflict alert area shimmers until response returns |
+| [Save as Draft] / [Save & Confirm Event] form submit | Button disabled + spinner inside button label |
+| [Confirm Cancellation] submit | Button disabled + "Cancelling…" + spinner; modal closes on success |
 | PDF report generation | Button transitions to disabled + "Generating…" + spinner; re-enables and shows download link when job complete |
 | Export | `[Export ↓]` transitions to disabled + "Preparing…" + spinner; re-enables on file ready |
 | KPI auto-refresh (every 300s) | Cards show a subtle pulse animation; values update in place without full shimmer |
+| Chart initial load | Per-chart shimmer rectangle with centred spinner |
 
 ---
 
@@ -570,126 +587,23 @@ Poll status: `GET /api/v1/cultural/calendar/events/{event_id}/report/status/` �
 
 ## 13. HTMX Patterns
 
-### 13.1 KPI Bar Initialisation and Auto-Refresh
-```html
-<div id="cultural-kpi-bar"
-     hx-get="/api/v1/cultural/calendar/kpi-summary/"
-     hx-trigger="load, every 300s"
-     hx-swap="innerHTML"
-     hx-indicator="#kpi-spinner">
-</div>
-```
-
-### 13.2 Month View Calendar Load
-```html
-<div id="cultural-month-calendar"
-     hx-get="/api/v1/cultural/calendar/events/?view=month&year={{ year }}&month={{ month }}"
-     hx-trigger="load"
-     hx-swap="innerHTML"
-     hx-indicator="#calendar-loader">
-</div>
-```
-
-### 13.3 Month Navigation Buttons
-```html
-<button hx-get="/api/v1/cultural/calendar/events/?view=month&year={{ prev_year }}&month={{ prev_month }}"
-        hx-target="#cultural-month-calendar"
-        hx-swap="innerHTML"
-        hx-indicator="#calendar-loader"
-        hx-trigger="click">
-  ‹ Previous
-</button>
-
-<button hx-get="/api/v1/cultural/calendar/events/?view=month&year={{ next_year }}&month={{ next_month }}"
-        hx-target="#cultural-month-calendar"
-        hx-swap="innerHTML"
-        hx-indicator="#calendar-loader"
-        hx-trigger="click">
-  Next ›
-</button>
-```
-
-### 13.4 List View Filter Application
-```html
-<select name="event_type"
-        id="filter-event-type"
-        hx-get="/api/v1/cultural/calendar/events/?view=list"
-        hx-trigger="change"
-        hx-target="#cultural-event-table"
-        hx-swap="innerHTML"
-        hx-include="#filter-branch, #filter-category, #filter-status,
-                    #filter-start-from, #filter-start-to, #search-input">
-</select>
-```
-
-### 13.5 List View Search (Debounced)
-```html
-<input type="text"
-       id="search-input"
-       name="search"
-       placeholder="Search events…"
-       hx-get="/api/v1/cultural/calendar/events/?view=list"
-       hx-trigger="keyup changed delay:400ms"
-       hx-target="#cultural-event-table"
-       hx-swap="innerHTML"
-       hx-include="#filter-event-type, #filter-branch, #filter-category, #filter-status">
-```
-
-### 13.6 Event Detail Drawer Open
-```html
-<button hx-get="/htmx/cultural/calendar/events/{{ event_id }}/detail/"
-        hx-target="#drawer-container"
-        hx-swap="innerHTML"
-        hx-trigger="click"
-        class="text-indigo-600 hover:underline text-sm">
-  View
-</button>
-```
-
-### 13.7 Create Event Form Submission
-```html
-<form id="cultural-event-create-form"
-      hx-post="/api/v1/cultural/calendar/events/"
-      hx-encoding="application/json"
-      hx-target="#cultural-event-table"
-      hx-swap="innerHTML"
-      hx-on::after-request="closeDrawer(); showToast(event); refreshKPI(); refreshCalendar();">
-</form>
-```
-
-### 13.8 Scheduling Conflict Check on Date Change
-```html
-<input type="date"
-       name="start_date"
-       hx-get="/api/v1/cultural/calendar/conflict-check/"
-       hx-trigger="change"
-       hx-target="#conflict-alert-area"
-       hx-swap="innerHTML"
-       hx-include="[name='end_date']">
-```
-Server returns an empty fragment when no conflict; returns a styled warning div when conflicts exist.
-
-### 13.9 Cancel Event Modal Form
-```html
-<form hx-post="/api/v1/cultural/calendar/events/{{ event_id }}/cancel/"
-      hx-encoding="application/json"
-      hx-target="#cultural-event-table"
-      hx-swap="innerHTML"
-      hx-on::after-request="closeModal(); showToast(event); refreshKPI(); refreshCalendar();">
-</form>
-```
-
-### 13.10 Detail Drawer Tab Switching (Lazy Load)
-```html
-<button hx-get="/htmx/cultural/calendar/events/{{ event_id }}/tab/branches/"
-        hx-target="#drawer-tab-content"
-        hx-swap="innerHTML"
-        hx-trigger="click">
-  Branches
-</button>
-```
-Each of the five tabs (Overview / Branches / Results / Media / Report) fetches its partial independently. Overview is fetched on drawer open; remaining tabs are lazy-loaded on first click. This avoids fetching media gallery and result data for users who only need the overview.
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load + auto-refresh | `<div id="cultural-kpi-bar">` | GET `/api/v1/cultural/calendar/kpi-summary/` | `#cultural-kpi-bar` | `innerHTML` | `hx-trigger="load, every 300s"`; shimmer on first load |
+| Chart 7.1 (by type) load | `<div id="chart-by-type">` | GET `/api/v1/cultural/calendar/charts/by-type/` | `#chart-by-type` | `innerHTML` | `hx-trigger="load"`; shimmer until response |
+| Chart 7.2 (monthly dist) load | `<div id="chart-monthly-dist">` | GET `/api/v1/cultural/calendar/charts/monthly-distribution/` | `#chart-monthly-dist` | `innerHTML` | `hx-trigger="load"`; shimmer until response |
+| Month view calendar load | `<div id="cultural-month-calendar">` | GET `/api/v1/cultural/calendar/events/?view=month&year={y}&month={m}` | `#cultural-month-calendar` | `innerHTML` | `hx-trigger="load"` |
+| Month navigation — previous | `<button>‹ Previous</button>` | GET `/api/v1/cultural/calendar/events/?view=month&year={prev_y}&month={prev_m}` | `#cultural-month-calendar` | `innerHTML` | `hx-trigger="click"` |
+| Month navigation — next | `<button>Next ›</button>` | GET `/api/v1/cultural/calendar/events/?view=month&year={next_y}&month={next_m}` | `#cultural-month-calendar` | `innerHTML` | `hx-trigger="click"` |
+| List view search (debounced) | `<input id="search-input">` | GET `/api/v1/cultural/calendar/events/?view=list` | `#cultural-event-table` | `innerHTML` | `hx-trigger="keyup changed delay:400ms"`; includes active filters |
+| List view filter application | Filter selects | GET `/api/v1/cultural/calendar/events/?view=list` | `#cultural-event-table` | `innerHTML` | `hx-trigger="change"`; includes search input and other filters |
+| Pagination (list view) | Pagination buttons | GET `/api/v1/cultural/calendar/events/?view=list&page={n}` | `#cultural-event-table` | `innerHTML` | `hx-trigger="click"` |
+| Event detail drawer open | Event chip / [View] button | GET `/htmx/cultural/calendar/events/{event_id}/detail/` | `#drawer-container` | `innerHTML` | `hx-trigger="click"` |
+| Detail drawer tab switch (lazy load) | Tab buttons | GET `/htmx/cultural/calendar/events/{event_id}/tab/{tab_slug}/` | `#drawer-tab-content` | `innerHTML` | `hx-trigger="click"`; Overview pre-fetched on open |
+| Create event form submit | `<form id="cultural-event-create-form">` | POST `/api/v1/cultural/calendar/events/` | `#cultural-event-table` | `innerHTML` | `hx-encoding="application/json"`; `hx-on::after-request="closeDrawer(); showToast(event); refreshKPI(); refreshCalendar();"` |
+| Scheduling conflict check on date change | `<input name="start_date">` | GET `/api/v1/cultural/calendar/conflict-check/` | `#conflict-alert-area` | `innerHTML` | `hx-trigger="change"`; `hx-include="[name='end_date']"`; returns empty fragment if no conflict |
+| Cancel event modal submit | `<form>` in cancel-event modal | POST `/api/v1/cultural/calendar/events/{event_id}/cancel/` | `#cultural-event-table` | `innerHTML` | `hx-encoding="application/json"`; `hx-on::after-request="closeModal(); showToast(event); refreshKPI(); refreshCalendar();"` |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-21*

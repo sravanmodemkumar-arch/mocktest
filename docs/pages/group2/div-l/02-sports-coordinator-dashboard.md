@@ -24,13 +24,16 @@ Scale: 20–50 branches · 3–8 coaches per branch · 200–500 equipment reque
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Group Sports Coordinator | G3 | Full — all sections, all actions | Exclusive dashboard |
-| Group Sports Director | G3 | — | Has own dashboard `/group/sports/director/` |
-| All others | — | — | Redirected |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Group Sports Coordinator | 98 | G3 | Full — all sections, all actions | Exclusive dashboard |
+| Group Sports Director | 97 | G3 | — | Has own dashboard `/group/sports/director/` |
+| Group Cultural Activities Head | 99 | G3 | — | Separate domain |
+| Group NSS/NCC Coordinator | 100 | G3 | — | Separate domain |
+| Group Library Head | 101 | G2 | — | Separate domain |
+| All others | — | — | — | Redirected |
 
-> **Access enforcement:** `@require_role('sports_coordinator')`.
+> **Access enforcement:** `@require_role('sports_coordinator')` on all views and API endpoints.
 
 ---
 
@@ -61,16 +64,18 @@ AY [current academic year]  ·  [N] Coaches Active  ·  [N] Equipment Requests P
 
 ## 4. KPI Summary Bar (6 cards)
 
-| Card | Metric | Colour Rule | Drill-down |
-|---|---|---|---|
-| Coaches Active | Active coaches group-wide | Blue always | → Coach Registry page 09 |
-| Coach Vacancy Rate | Branches with at least one coaching gap / total | Green = 0% · Yellow > 0% · Red > 10% | → Coach Registry page 09 |
-| Equipment Requests Pending | Open requests not yet procured | Green = 0 · Yellow 1–5 · Red > 5 | → Equipment Inventory page 10 |
-| Events This Month | Sports events in current calendar month | Blue always | → Sports Calendar page 06 |
-| Teams Below Min Roster | Teams with fewer than required player count | Green = 0 · Red > 0 | → Sports Team Registry page 08 |
-| Tournament This Week | Tournaments actively running or starting within 7 days | Blue (info) — pulsing if > 0 | → Tournament Manager page 07 |
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Coaches Active | Active coaches group-wide | `Coach.objects.filter(ay=current_ay, status='active').count()` | Blue always | `#kpi-coaches-active` |
+| 2 | Coach Vacancy Rate | Branches with at least one coaching gap / total | `CoachVacancy.objects.filter(ay=current_ay, filled=False).values('branch').distinct().count() / Branch.objects.filter(active=True).count()` | Green = 0% · Yellow > 0% · Red > 10% | `#kpi-coach-vacancy-rate` |
+| 3 | Equipment Requests Pending | Open requests not yet procured | `EquipmentRequest.objects.filter(ay=current_ay, status='pending').count()` | Green = 0 · Yellow 1–5 · Red > 5 | `#kpi-equipment-pending` |
+| 4 | Events This Month | Sports events in current calendar month | `SportsEvent.objects.filter(date__month=current_month, date__year=current_year).count()` | Blue always | `#kpi-events-month` |
+| 5 | Teams Below Min Roster | Teams with fewer than required player count | `Team.objects.filter(ay=current_ay, player_count__lt=F('sport__min_players')).count()` | Green = 0 · Red > 0 | `#kpi-teams-below-roster` |
+| 6 | Tournament This Week | Tournaments actively running or starting within 7 days | `Tournament.objects.filter(start_date__lte=today+7d, end_date__gte=today).count()` | Blue (info) — pulsing if > 0 | `#kpi-tournament-this-week` |
 
-**HTMX:** `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/sports/coordinator/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
+**HTMX:** Each card loads independently via `hx-get` with `hx-trigger="load"` and shows skeleton while loading. AY change triggers all 6 cards to refresh via `hx-swap-oob="true"`.
+
+Auto-refresh: `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/sports/coordinator/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
 
 ---
 
@@ -195,23 +200,38 @@ AY [current academic year]  ·  [N] Coaches Active  ·  [N] Equipment Requests P
 
 ## 7. Charts
 
+All charts use Chart.js 4.x, are fully responsive, use a colorblind-safe palette, and each has a PNG export button (top-right corner of the chart card).
+
 ### 7.1 Equipment Request Volume (last 6 months)
-- **Type:** Bar chart
-- **Data:** Monthly equipment requests received vs resolved
-- **X-axis:** Last 6 months
-- **Y-axis:** Request count
-- **Colours:** Blue (received) · Green (resolved)
-- **Tooltip:** Month · Received: N · Resolved: N · Pending: N
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Bar chart |
+| Title | "Equipment Request Volume — Last 6 Months" |
+| Data | Monthly equipment requests received vs resolved |
+| X-axis | Last 6 months |
+| Y-axis | Request count |
+| Colours | Blue (received) · Green (resolved) |
+| Tooltip | "[Month] · Received: [N] · Resolved: [N] · Pending: [N]" |
+| API endpoint | `GET /api/v1/group/{id}/sports/analytics/equipment-trend/` |
+| HTMX | `hx-get` on load → `hx-target="#chart-equipment-trend"` → `hx-swap="innerHTML"` |
+| Export | PNG |
 
 ### 7.2 Coach Coverage by Branch
-- **Type:** Horizontal bar chart
-- **Data:** Coach count per branch (sorted ascending)
-- **X-axis:** Coach count
-- **Y-axis:** Branch names
-- **Benchmark line:** Minimum required coaches (configurable, default 3)
-- **Colour:** Red if below minimum, green otherwise
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Horizontal bar chart |
+| Title | "Coach Coverage by Branch" |
+| Data | Coach count per branch (sorted ascending) |
+| X-axis | Coach count |
+| Y-axis | Branch names |
+| Benchmark line | Minimum required coaches (configurable, default 3) |
+| Colour | Red if below minimum, green otherwise |
+| Tooltip | "[Branch]: [N] coaches ([status: below/meets minimum])" |
+| API endpoint | `GET /api/v1/group/{id}/sports/analytics/coach-coverage/` |
+| HTMX | `hx-get` on load → `hx-target="#chart-coach-coverage"` → `hx-swap="innerHTML"` |
+| Export | PNG |
 
 ---
 
@@ -224,17 +244,19 @@ AY [current academic year]  ·  [N] Coaches Active  ·  [N] Equipment Requests P
 | Coach assigned | "[Coach Name] assigned to [Branch] — [Sport]." | Success | 4s |
 | Checklist item saved | "Checklist updated" | Info | 3s |
 | API error | "Failed to load data. Refresh the page." | Error | Manual |
+| Validation error | "Please correct the highlighted fields before saving." | Error | 5s |
+| API / network error | "Something went wrong. Please try again." | Error | Manual dismiss |
 
 ---
 
 ## 9. Empty States
 
-| Condition | Heading | Description | CTA |
-|---|---|---|---|
-| No coach gaps | "All coaching positions filled" | "Every branch has a coach for all active sports" | — |
-| No pending equipment requests | "No equipment requests pending" | "Equipment requests from branches will appear here" | — |
-| No events this week | "No sports events this week" | "Add events to the sports calendar" | [Go to Calendar] |
-| No upcoming tournament | "No tournament in next 14 days" | "Next tournament logistics checklist will appear here when one is scheduled" | — |
+| Condition | Icon | Heading | Description | CTA |
+|---|---|---|---|---|
+| No coach gaps | `users` | "All coaching positions filled" | "Every branch has a coach for all active sports" | — |
+| No pending equipment requests | `calendar` | "No equipment requests pending" | "Equipment requests from branches will appear here" | — |
+| No events this week | `calendar` | "No sports events this week" | "Add events to the sports calendar" | [Go to Calendar] |
+| No upcoming tournament | `alert-circle` | "No tournament in next 14 days" | "Next tournament logistics checklist will appear here when one is scheduled" | — |
 
 ---
 
@@ -279,19 +301,45 @@ AY [current academic year]  ·  [N] Coaches Active  ·  [N] Equipment Requests P
 | GET | `/api/v1/group/{id}/sports/analytics/equipment-trend/` | JWT (G3) | Equipment request volume chart |
 | GET | `/api/v1/group/{id}/sports/analytics/coach-coverage/` | JWT (G3) | Coach coverage by branch chart |
 
+### Query Parameters for List Endpoints
+
+**Equipment requests list** (`/sports/equipment/`):
+
+| Parameter | Type | Description |
+|---|---|---|
+| `status` | str | Filter by status: `pending`, `approved`, `ordered`, `delivered` |
+| `sport` | str | Filter by sport slug |
+| `branch` | int | Filter by branch ID |
+| `q` | str | Search by item name or request ID |
+| `page` | int | Page number (default 1) |
+
+**Coach coverage gaps** (`/sports/coaches/gaps/`):
+
+| Parameter | Type | Description |
+|---|---|---|
+| `sport` | str | Filter by sport slug |
+| `branch` | int | Filter by branch ID |
+| `gap_days` | int | Minimum days vacant (e.g., `7`, `14`, `30`) |
+| `q` | str | Search by branch name or sport |
+| `page` | int | Page number (default 1) |
+
 ---
 
 ## 13. HTMX Patterns
 
-| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
-|---|---|---|---|---|
-| Coach gap table search | `input delay:300ms` | GET `.../coaches/gaps/?q=` | `#gap-table-body` | `innerHTML` |
-| Equipment queue filter | `click` | GET `.../equipment/?status=pending&filters=` | `#equipment-table-section` | `innerHTML` |
-| Approve equipment | `click` | POST `.../equipment/{id}/approve/` | `#eq-row-{id}` | `outerHTML` |
-| Logistics checklist toggle | `change` | PATCH `.../tournaments/{tid}/logistics/{item}/` | `#checklist-item-{item}` | `outerHTML` |
-| KPI auto-refresh | `every 5m` | GET `.../coordinator/kpi/` | `#kpi-bar` | `innerHTML` |
-| Open coach assign drawer | `click` | GET `.../coaches/?sport={s}&available=true` | `#drawer-body` | `innerHTML` |
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load | Page container on load | GET `.../coordinator/kpi/` | `#kpi-bar` | `innerHTML` | Fires on `hx-trigger="load"`; shows skeleton cards until resolved |
+| Chart 7.1 load | Chart container on load | GET `.../analytics/equipment-trend/` | `#chart-equipment-trend` | `innerHTML` | Fires on `hx-trigger="load"`; shows spinner in chart area |
+| Chart 7.2 load | Chart container on load | GET `.../analytics/coach-coverage/` | `#chart-coach-coverage` | `innerHTML` | Fires on `hx-trigger="load"`; shows spinner in chart area |
+| Coach gap table search | Search input | GET `.../coaches/gaps/?q=` | `#gap-table-body` | `innerHTML` | `hx-trigger="input delay:300ms"` |
+| Coach gap table pagination | Pagination controls | GET `.../coaches/gaps/?page=` | `#gap-table-body` | `innerHTML` | `hx-trigger="click"` |
+| Equipment queue filter | Filter controls | GET `.../equipment/?status=pending&filters=` | `#equipment-table-section` | `innerHTML` | `hx-trigger="click"` |
+| Approve equipment | [Approve] button per row | POST `.../equipment/{id}/approve/` | `#eq-row-{id}` | `outerHTML` | Spinner in button while pending |
+| Logistics checklist toggle | Checklist checkbox | PATCH `.../tournaments/{tid}/logistics/{item}/` | `#checklist-item-{item}` | `outerHTML` | `hx-trigger="change"` |
+| KPI auto-refresh | KPI bar element | GET `.../coordinator/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="every 5m"` |
+| Open coach assign drawer | [Assign Coach] button | GET `.../coaches/?sport={s}&available=true` | `#drawer-body` | `innerHTML` | `hx-trigger="click"` |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-21*

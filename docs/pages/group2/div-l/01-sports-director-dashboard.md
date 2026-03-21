@@ -18,15 +18,17 @@ Scale: 20–50 branches · 8–20 teams per branch per sport type · 5–15 inte
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Group Sports Director | G3 | Full — all sections, all actions | Exclusive dashboard |
-| Group Sports Coordinator | G3 | — | Has own dashboard `/group/sports/coordinator/` |
-| Group Cultural Activities Head | G3 | — | Separate domain |
-| Group Chairman / CEO | G5 / G4 | View sports analytics via Governance Reports | Not this URL |
-| All other roles | — | — | Redirected to own dashboard |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Group Sports Director | 97 | G3 | Full — all sections, all actions | Exclusive dashboard |
+| Group Sports Coordinator | 98 | G3 | — | Has own dashboard `/group/sports/coordinator/` |
+| Group Cultural Activities Head | 99 | G3 | — | Separate domain |
+| Group NSS/NCC Coordinator | 100 | G3 | — | Separate domain |
+| Group Library Head | 101 | G2 | — | Separate domain |
+| Group Chairman / CEO | — | G5 / G4 | View sports analytics via Governance Reports | Not this URL |
+| All other roles | — | — | — | Redirected to own dashboard |
 
-> **Access enforcement:** Django view decorator `@require_role('sports_director')`.
+> **Access enforcement:** `@require_role('sports_director')` on all views and API endpoints.
 
 ---
 
@@ -57,17 +59,19 @@ AY [current academic year]  ·  [N] Branches  ·  [N] Active Tournaments  ·  [N
 
 ## 4. KPI Summary Bar (7 cards)
 
-| Card | Metric | Colour Rule | Drill-down |
-|---|---|---|---|
-| Branches with Active Sports | Branches with ≥1 registered team this term / total | Green = all · Yellow = 1–3 missing · Red = 4+ missing | → Sports Team Registry page 08 |
-| Active Tournaments | Count of tournaments in Upcoming / Ongoing status | Blue always | → Tournament Manager page 07 |
-| Total Registered Athletes | Students enrolled in at least one sport group-wide | Blue always | → Sports Team Registry page 08 |
-| Tournaments Pending Approval | Tournament proposals submitted from branches awaiting Director approval | Red if > 0 | → Section 5.1 |
-| State / National Nominations | Students nominated for state/national team this AY | Blue always | → Achievement Register page 19 |
-| Coach Vacancies | Branches with unfilled coaching positions | Green = 0 · Yellow 1–3 · Red > 3 | → Coach Registry page 09 |
-| Upcoming Events (30d) | Sports events across all branches in next 30 days | Blue always | → Sports Calendar page 06 |
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Branches with Active Sports | Branches with ≥1 registered team this term / total | `Branch.objects.filter(ay=current_ay, teams__isnull=False).distinct().count()` | Green = all · Yellow = 1–3 missing · Red = 4+ missing | `#kpi-branches-active` |
+| 2 | Active Tournaments | Count of tournaments in Upcoming / Ongoing status | `Tournament.objects.filter(ay=current_ay, status__in=['upcoming','ongoing']).count()` | Blue always | `#kpi-tournaments-active` |
+| 3 | Total Registered Athletes | Students enrolled in at least one sport group-wide | `Athlete.objects.filter(ay=current_ay, active=True).values('student').distinct().count()` | Blue always | `#kpi-athletes-total` |
+| 4 | Tournaments Pending Approval | Tournament proposals submitted from branches awaiting Director approval | `Tournament.objects.filter(ay=current_ay, status='pending_approval').count()` | Red if > 0 · Green = 0 | `#kpi-tournaments-pending` |
+| 5 | State / National Nominations | Students nominated for state/national team this AY | `Nomination.objects.filter(ay=current_ay, level__in=['state','national','international']).count()` | Blue always | `#kpi-nominations` |
+| 6 | Coach Vacancies | Branches with unfilled coaching positions | `CoachVacancy.objects.filter(ay=current_ay, filled=False).values('branch').distinct().count()` | Green = 0 · Yellow 1–3 · Red > 3 | `#kpi-coach-vacancies` |
+| 7 | Upcoming Events (30d) | Sports events across all branches in next 30 days | `SportsEvent.objects.filter(date__range=[today, today+30d]).count()` | Blue always | `#kpi-events-upcoming` |
 
-**HTMX:** `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/sports/director/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
+**HTMX:** Each card loads independently via `hx-get` with `hx-trigger="load"` and shows skeleton while loading. AY change triggers all 7 cards to refresh via `hx-swap-oob="true"`.
+
+Auto-refresh: `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/sports/director/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
 
 ---
 
@@ -183,21 +187,36 @@ AY [current academic year]  ·  [N] Branches  ·  [N] Active Tournaments  ·  [N
 
 ## 7. Charts
 
+All charts use Chart.js 4.x, are fully responsive, use a colorblind-safe palette, and each has a PNG export button (top-right corner of the chart card).
+
 ### 7.1 Sports Participation Trend (last 3 Academic Years)
-- **Type:** Grouped bar chart
-- **Data:** Total registered athletes per AY (Day Scholars vs Hostelers)
-- **X-axis:** Academic years
-- **Y-axis:** Student count
-- **Tooltip:** AY · Day Scholar athletes: N · Hosteler athletes: N · Total: N
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Grouped bar chart |
+| Title | "Sports Participation Trend — Last 3 Academic Years" |
+| Data | Total registered athletes per AY (Day Scholars vs Hostelers) |
+| X-axis | Academic years |
+| Y-axis | Student count |
+| Tooltip | "AY [year] · Day Scholar athletes: [N] · Hosteler athletes: [N] · Total: [N]" |
+| API endpoint | `GET /api/v1/group/{id}/sports/analytics/participation-trend/` |
+| HTMX | `hx-get` on load → `hx-target="#chart-participation-trend"` → `hx-swap="innerHTML"` |
+| Export | PNG |
 
 ### 7.2 Sport-wise Team Distribution (current AY)
-- **Type:** Horizontal bar chart
-- **Data:** Number of teams registered per sport across all branches
-- **X-axis:** Team count
-- **Y-axis:** Sport names
-- **Colour:** Single colour, sorted descending
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Horizontal bar chart |
+| Title | "Sport-wise Team Distribution — [Current AY]" |
+| Data | Number of teams registered per sport across all branches |
+| X-axis | Team count |
+| Y-axis | Sport names |
+| Colour | Single colour, sorted descending |
+| Tooltip | "[Sport]: [N] teams across [B] branches" |
+| API endpoint | `GET /api/v1/group/{id}/sports/analytics/sport-distribution/` |
+| HTMX | `hx-get` on load → `hx-target="#chart-sport-distribution"` → `hx-swap="innerHTML"` |
+| Export | PNG |
 
 ---
 
@@ -209,16 +228,18 @@ AY [current academic year]  ·  [N] Branches  ·  [N] Active Tournaments  ·  [N
 | Tournament rejected | "Tournament proposal rejected. Reason sent to branch." | Success | 4s |
 | Export started | "Sports report generating… download will start shortly" | Info | 4s |
 | KPI load error | "Failed to refresh KPI data." | Error | Manual |
+| Validation error | "Please correct the highlighted fields before saving." | Error | 5s |
+| API / network error | "Something went wrong. Please try again." | Error | Manual dismiss |
 
 ---
 
 ## 9. Empty States
 
-| Condition | Heading | Description | CTA |
-|---|---|---|---|
-| No tournament proposals | "No tournament proposals pending" | "Branches haven't submitted any tournament proposals yet" | — |
-| No branches with teams (new group) | "No sports teams registered" | "Start by adding teams in the Sports Team Registry" | [Go to Team Registry] |
-| No nominations this year | "No state nominations yet" | "Student nominations for state/national teams will appear here" | — |
+| Condition | Icon | Heading | Description | CTA |
+|---|---|---|---|---|
+| No tournament proposals | `calendar` | "No tournament proposals pending" | "Branches haven't submitted any tournament proposals yet" | — |
+| No branches with teams (new group) | `users` | "No sports teams registered" | "Start by adding teams in the Sports Team Registry" | [Go to Team Registry] |
+| No nominations this year | `alert-circle` | "No state nominations yet" | "Student nominations for state/national teams will appear here" | — |
 
 ---
 
@@ -263,19 +284,45 @@ AY [current academic year]  ·  [N] Branches  ·  [N] Active Tournaments  ·  [N
 | GET | `/api/v1/group/{id}/sports/analytics/participation-trend/` | JWT (G3) | Participation trend chart |
 | GET | `/api/v1/group/{id}/sports/analytics/sport-distribution/` | JWT (G3) | Sport-wise team distribution |
 
+### Query Parameters for List Endpoints
+
+**Tournaments list** (`/sports/tournaments/`):
+
+| Parameter | Type | Description |
+|---|---|---|
+| `status` | str | Filter by status: `pending_approval`, `upcoming`, `ongoing`, `completed` |
+| `sport` | str | Filter by sport slug (e.g., `football`, `cricket`) |
+| `branch` | int | Filter by branch ID |
+| `q` | str | Search by tournament name |
+| `page` | int | Page number (default 1) |
+
+**Branch sports program status** (`/sports/branches/status/`):
+
+| Parameter | Type | Description |
+|---|---|---|
+| `state` | str | Filter by state/region |
+| `type` | str | Filter by branch type: `day`, `hostel` |
+| `q` | str | Search by branch name or city |
+| `page` | int | Page number (default 1) |
+
 ---
 
 ## 13. HTMX Patterns
 
-| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
-|---|---|---|---|---|
-| Approval queue search | `input delay:300ms` | GET `.../tournaments/?status=pending&q=` | `#approval-table-body` | `innerHTML` |
-| Branch table filter | `click` | GET `.../sports/branches/status/?filters=` | `#branch-table-section` | `innerHTML` |
-| Approve tournament | `click` | POST `.../tournaments/{id}/approve/` | `#approval-row-{id}` | `outerHTML` |
-| Open tournament detail drawer | `click` | GET `.../tournaments/{id}/` | `#drawer-body` | `innerHTML` |
-| KPI auto-refresh | `every 5m` | GET `.../sports/director/kpi/` | `#kpi-bar` | `innerHTML` |
-| Branch table pagination | `click` | GET `.../sports/branches/status/?page=` | `#branch-table-section` | `innerHTML` |
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load | Page container on load | GET `.../sports/director/kpi/` | `#kpi-bar` | `innerHTML` | Fires on `hx-trigger="load"`; shows skeleton cards until resolved |
+| Chart 7.1 load | Chart container on load | GET `.../analytics/participation-trend/` | `#chart-participation-trend` | `innerHTML` | Fires on `hx-trigger="load"`; shows spinner in chart area |
+| Chart 7.2 load | Chart container on load | GET `.../analytics/sport-distribution/` | `#chart-sport-distribution` | `innerHTML` | Fires on `hx-trigger="load"`; shows spinner in chart area |
+| Approval queue search | Search input | GET `.../tournaments/?status=pending&q=` | `#approval-table-body` | `innerHTML` | `hx-trigger="input delay:300ms"` |
+| Branch table filter | Filter controls | GET `.../sports/branches/status/?filters=` | `#branch-table-section` | `innerHTML` | `hx-trigger="click"` |
+| Approve tournament | [Approve] button per row | POST `.../tournaments/{id}/approve/` | `#approval-row-{id}` | `outerHTML` | Spinner in button while pending |
+| Reject modal open | [Reject] button per row | GET `.../tournaments/{id}/reject-form/` | `#modal-body` | `innerHTML` | `hx-trigger="click"` opens 420px modal |
+| Reject submit | Reject form in modal | POST `.../tournaments/{id}/reject/` | `#approval-row-{id}` | `outerHTML` | `hx-trigger="submit"`; closes modal on success |
+| Open tournament detail drawer | [View Details] button | GET `.../tournaments/{id}/` | `#drawer-body` | `innerHTML` | `hx-trigger="click"` |
+| KPI auto-refresh | KPI bar element | GET `.../sports/director/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="every 5m"` |
+| Branch table pagination | Pagination controls | GET `.../sports/branches/status/?page=` | `#branch-table-section` | `innerHTML` | `hx-trigger="click"` |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-21*

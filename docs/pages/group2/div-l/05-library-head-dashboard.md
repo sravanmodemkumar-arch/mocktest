@@ -20,15 +20,15 @@ Scale: 500–10,000 digital resources in catalogue · 20–50 branches · 50–5
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Group Library & Learning Resources Head | G2 | Full — catalogue management, distribution, analytics | Exclusive dashboard |
-| Group Academic Director (Div B) | G3 | View catalogue and usage analytics | Read-only |
-| Branch Librarian | Branch G2 | View resources assigned to their branch only | Branch-scoped |
-| Group Chairman / CEO | G5 / G4 | View via Governance Reports | Not this URL |
-| All others | — | — | Redirected |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Group Library & Learning Resources Head | 101 | G2 | Full — catalogue management, distribution, analytics | Exclusive dashboard |
+| Group Academic Director (Div B) | — | G3 | View catalogue and usage analytics | Read-only |
+| Branch Librarian | — | Branch G2 | View resources assigned to their branch only | Branch-scoped |
+| Group Chairman / CEO | — | G5 / G4 | View via Governance Reports | Not this URL |
+| All others | — | — | — | Redirected |
 
-> **Access enforcement:** `@require_role('library_learning_head')`.
+> **Access enforcement:** `@require_role('library_learning_head')` with server-side action gating. View-only roles see no create, edit, distribute, archive, or fulfil controls.
 
 ---
 
@@ -59,16 +59,20 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 
 ## 4. KPI Summary Bar (6 cards)
 
-| Card | Metric | Colour Rule | Drill-down |
-|---|---|---|---|
-| Total Resources | Active resources in central catalogue | Blue always | → E-Library Catalogue page 17 |
-| Branches with Active Access | Branches with at least 1 resource distributed | Green = all · Yellow = 1–3 without access · Red = 4+ | → Content Distribution page 18 |
-| Downloads This Month | Total resource download/access events this month | Blue always | → Analytics page 20 |
-| Pending Resource Requests | Requests from branch librarians for new resources | Green = 0 · Yellow 1–5 · Red > 5 | → Section 5.3 |
-| Resources Added This Month | New resources added to catalogue in current month | Blue always | → E-Library Catalogue page 17 |
-| Expiring Assignments (7d) | Distribution assignments expiring within 7 days | Green = 0 · Yellow > 0 | → Content Distribution page 18 |
+Six KPI cards in a responsive row. All metrics reflect the currently selected Academic Year (default: current AY). Each card is HTMX-loaded independently; OOB swap occurs when the AY selector changes.
 
-**HTMX:** `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/library/head/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Total Resources | Active resources in central catalogue | COUNT of resources where status = Active | Blue always | `#kpi-card-1` |
+| 2 | Branches with Active Access | Branches with at least 1 resource distributed | COUNT of branches with ≥ 1 non-expired distribution assignment | Green = all · Yellow = 1–3 without access · Red = 4+ | `#kpi-card-2` |
+| 3 | Downloads This Month | Total resource download/access events this month | SUM of access_event records where month = current calendar month | Blue always | `#kpi-card-3` |
+| 4 | Pending Resource Requests | Requests from branch librarians for new resources | COUNT of resource_requests where status = Pending | Green = 0 · Yellow 1–5 · Red > 5 | `#kpi-card-4` |
+| 5 | Resources Added This Month | New resources added to catalogue in current month | COUNT of resources where created_at month = current calendar month | Blue always | `#kpi-card-5` |
+| 6 | Expiring Assignments (7d) | Distribution assignments expiring within 7 days | COUNT of distribution_assignments where expiry_date ≤ today + 7 days | Green = 0 · Yellow > 0 | `#kpi-card-6` |
+
+**HTMX:** Each card uses `hx-trigger="load"` `hx-get="/api/v1/group/{id}/library/head/kpi/"` targeting its own `hx-target` (per card above) with `hx-swap="outerHTML"`. Auto-refresh: `hx-trigger="every 5m"` on `#kpi-bar`. On AY selector change, custom JS fires `htmx.trigger('#kpi-bar', 'ayChanged')` which triggers an OOB swap refreshing all 6 cards simultaneously.
+
+**Drill-down:** Card 1 → E-Library Catalogue page 17 · Card 2 → Content Distribution page 18 · Card 3 → Analytics page 20 · Card 4 → Section 5.3 · Card 5 → E-Library Catalogue page 17 · Card 6 → Content Distribution page 18.
 
 ---
 
@@ -91,7 +95,9 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 | Added On | Date | ✅ | |
 | Distributed To | Number | ✅ | Count of branches with access |
 | Downloads | Number | ✅ | Total accesses since added |
-| Actions | — | ❌ | Edit · Distribute · Archive |
+| Actions | — | ❌ | [Edit] · [Distribute] · [Archive] |
+
+**[Distribute] action:** Opens the `resource-distribute` modal (480px, centred). See Section 6.5.
 
 ---
 
@@ -140,9 +146,13 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 | Days Pending | Number | ✅ | Red if > 14 |
 | Actions | — | ❌ | [Fulfil] [Decline] [View] |
 
-**[Fulfil]:** Opens `resource-create` drawer pre-filled with request details — Library Head can upload matching resource and distribute to requesting branch in one flow.
+**[Fulfil] flow:**
+1. Clicking [Fulfil] opens the `resource-create` drawer (680px) with request details pre-filled: Title, Type, Subject/Class are populated from the request record.
+2. A blue informational banner appears at the top of the drawer: **"Fulfilling request [RR-XXXX] from [Branch Name] — resource will be auto-distributed to this branch on save."**
+3. The Access tab is pre-set to "Selected Branches Only" with the requesting branch pre-selected. The Library Head may add additional branches but cannot remove the requesting branch.
+4. On successful drawer submit: the resource is added to the catalogue, access is automatically granted to the requesting branch (and any additionally selected branches), the request status changes from Pending to Fulfilled, and a success toast fires.
 
-**[Decline]:** Modal — reason field (min 20 chars) + alternative suggestion (optional).
+**[Decline]:** Opens `request-decline` modal — reason field (min 20 chars) + alternative suggestion (optional).
 
 ---
 
@@ -159,9 +169,12 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 ## 6. Drawers & Modals
 
 ### 6.1 Drawer: `resource-create` — Add New Resource
-- **Trigger:** [+ Add Resource] header button or [Fulfil] in request queue
+- **Trigger:** [+ Add Resource] header button · [Fulfil] in request queue
 - **Width:** 680px
 - **Tabs:** Metadata · File · Classification · Access
+
+When opened via [Fulfil], a banner at the top of the drawer (above the tab bar) reads:
+> **"Fulfilling request [RR-XXXX] from [Branch Name] — resource will be auto-distributed to this branch on save."**
 
 #### Tab: Metadata
 | Field | Type | Required | Validation |
@@ -205,16 +218,22 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 | Staff Only | Toggle | ❌ | Only teachers / faculty can access |
 
 **Submit:** "Add to Catalogue" — disabled until Metadata + File + Classification tabs valid.
-**On success:** Resource added to catalogue, access assigned per Tab settings, toast.
+**On success:** Resource added to catalogue, access assigned per Tab settings, auto-distribution to requesting branch (if via Fulfil flow), toast fires.
+
+---
 
 ### 6.2 Drawer: `resource-edit`
 - **Width:** 680px — same 4 tabs, pre-filled
 - **Version note in Metadata tab:** "Editing this resource creates a new version. Previous version retained."
 
+---
+
 ### 6.3 Modal: `request-decline`
 - **Width:** 420px
 - **Fields:** Decline reason (required, min 20 chars) · Alternative resource suggestion (optional, links to catalogue search)
 - **Buttons:** [Decline Request] (danger) + [Cancel]
+
+---
 
 ### 6.4 Modal: `resource-archive`
 - **Width:** 380px
@@ -223,23 +242,54 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 
 ---
 
+### 6.5 Modal: `resource-distribute`
+- **Width:** 480px
+- **Trigger:** [Distribute] action in Section 5.1 recently-added table
+- **Title:** "Distribute [Resource Title]"
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| Select Branches | Multi-select | ✅ | All active branches; searchable; shows current distribution status per branch |
+| Access Type | Radio | ✅ | Full Access · View Only · Download Disabled |
+| Expiry Date | Date picker | ❌ | Leave blank = permanent access |
+
+- **Submit button:** "Distribute to [N] Branch(es)" — disabled until at least one branch selected.
+- **On success:** Distribution assignments created for selected branches; toast fires; "Distributed To" count in Section 5.1 table updates via OOB swap.
+
+---
+
 ## 7. Charts
 
+All charts use Chart.js 4.x, are fully responsive, use a colorblind-safe palette, include legend and tooltip with exact numbers, and each has a PNG export button (top-right corner of each chart card).
+
 ### 7.1 Monthly Download Trend (last 6 months)
-- **Type:** Line chart
-- **Data:** Total resource download/access events per month
-- **X-axis:** Last 6 months
-- **Y-axis:** Access count
-- **Tooltip:** Month · Total accesses: N · Unique resources: N · Unique branches: N
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Line |
+| Title | "Monthly Resource Downloads — Last 6 Months" |
+| X-axis | Last 6 months (MMM YYYY) |
+| Y-axis | Access count |
+| Line colour | Blue with filled area below line |
+| Tooltip | "[Month]: Total accesses: [N] · Unique resources: [N] · Unique branches: [N]" |
+| Empty state | "No download data available for the selected period." |
+| API endpoint | `GET /api/v1/group/{id}/library/analytics/monthly-downloads/` |
+| HTMX trigger | `hx-trigger="load"` `hx-get="…/library/analytics/monthly-downloads/"` `hx-target="#chart-monthly-downloads"` `hx-swap="innerHTML"` |
+| Export | PNG |
 
 ### 7.2 Resource Distribution by Type
-- **Type:** Donut chart
-- **Data:** Resource count by type in catalogue
-- **Segments:** E-Book · Video Lecture · Question Bank · Past Paper · Reference · Revision Notes · Other
-- **Tooltip:** Type · Resources: N · Downloads this month: N
-- **Centre text:** Total resources
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Doughnut |
+| Title | "Resources by Type — Catalogue" |
+| Segments | E-Book · Video Lecture · Question Bank · Past Paper · Reference · Revision Notes · Other |
+| Centre label | Total resources |
+| Tooltip | "[Type]: [N] resources ([X]%)" |
+| Empty state | "No resources in catalogue yet." |
+| API endpoint | `GET /api/v1/group/{id}/library/analytics/type-distribution/` |
+| HTMX trigger | `hx-trigger="load"` `hx-get="…/library/analytics/type-distribution/"` `hx-target="#chart-type-distribution"` `hx-swap="innerHTML"` |
+| Export | PNG |
 
 ---
 
@@ -250,20 +300,24 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 | Resource added | "Resource [Title] added to catalogue. Access assigned to [N] branches." | Success | 4s |
 | Resource updated | "Resource [Title] updated. Version [N] saved." | Success | 4s |
 | Resource archived | "[Title] archived and removed from branch access." | Warning | 6s |
-| Request fulfilled | "Resource request fulfilled. [Branch] notified." | Success | 4s |
+| Request fulfilled | "Resource request [RR-XXXX] fulfilled. [Branch] notified and access granted." | Success | 4s |
 | Request declined | "Request declined. Branch notified with reason." | Success | 4s |
+| Distribution saved | "[Title] distributed to [N] branch(es)." | Success | 4s |
 | File too large | "File exceeds 500MB limit. Compress or use an external URL." | Warning | 6s |
 | Export started | "Usage report generating…" | Info | 4s |
+| Validation error — required fields | "Please complete all required fields before saving." | Error | 6s |
+| API error | "Something went wrong. Please try again or contact support." | Error | 8s |
 
 ---
 
 ## 9. Empty States
 
-| Condition | Heading | Description | CTA |
-|---|---|---|---|
-| No resources in catalogue | "Catalogue is empty" | "Add your first digital resource to the central library" | [+ Add Resource] |
-| No pending requests | "No resource requests pending" | "Branch requests for new resources will appear here" | — |
-| No downloads this month | "No access activity this month" | "Resource download data will appear once branches start accessing the library" | — |
+| Condition | Icon | Heading | Description | CTA |
+|---|---|---|---|---|
+| No resources in catalogue | `library-empty` | "Catalogue is empty" | "Add your first digital resource to the central library" | [+ Add Resource] |
+| No pending requests | `inbox-check` | "No resource requests pending" | "Branch requests for new resources will appear here" | — |
+| No downloads this month | `chart-empty` | "No access activity this month" | "Resource download data will appear once branches start accessing the library" | — |
+| No recently added resources | `upload-empty` | "No resources added recently" | "Resources added in the last 30 days will appear here" | [+ Add Resource] |
 
 ---
 
@@ -271,22 +325,25 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 
 | Trigger | Loader Type |
 |---|---|
-| Page initial load | Skeleton: 6 KPI cards + resources table (5 rows) + branch table (5 rows) + request table + charts |
+| Page initial load | Skeleton: 6 KPI cards + resources table (5 rows) + branch table (5 rows) + request table (5 rows) + 2 chart placeholders |
 | Table filter/search | Inline skeleton rows |
 | Resource create drawer open | Spinner in drawer |
 | File upload (in drawer) | Progress bar in file upload field |
 | Submit resource | Spinner in submit button |
 | KPI auto-refresh | Shimmer on card values |
+| Distribute modal open | Spinner in modal |
+| Chart load | Per-chart skeleton (grey rounded rectangle with spinner) |
 
 ---
 
 ## 11. Role-Based UI Visibility
 
-| Element | Library Head G2 | Academic Dir G3 (read) | Others |
+| Element | Library Head G2 (101) | Academic Dir G3 (read) | Others |
 |---|---|---|---|
 | Page | ✅ | ✅ read-only via own dashboard | ❌ redirect |
 | [+ Add Resource] header button | ✅ | ❌ | ❌ |
 | [Fulfil] / [Decline] requests | ✅ | ❌ | ❌ |
+| [Distribute] on resources | ✅ | ❌ | ❌ |
 | [Edit] on catalogue resources | ✅ | ❌ | ❌ |
 | [Archive] on resources | ✅ | ❌ | ❌ |
 | [Export Usage Report] | ✅ | ✅ | ❌ |
@@ -308,26 +365,44 @@ Welcome back, [Head Name]                        [+ Add Resource]  [Export Usage
 | POST | `/api/v1/group/{id}/library/resources/` | JWT (G2) | Add resource to catalogue |
 | PUT | `/api/v1/group/{id}/library/resources/{rid}/` | JWT (G2) | Update resource |
 | POST | `/api/v1/group/{id}/library/resources/{rid}/archive/` | JWT (G2) | Archive resource |
-| POST | `/api/v1/group/{id}/library/requests/{reqid}/fulfil/` | JWT (G2) | Fulfil resource request |
+| POST | `/api/v1/group/{id}/library/resources/{rid}/distribute/` | JWT (G2) | Distribute resource to branches |
+| POST | `/api/v1/group/{id}/library/requests/{reqid}/fulfil/` | JWT (G2) | Fulfil resource request (creates resource + auto-distributes) |
 | POST | `/api/v1/group/{id}/library/requests/{reqid}/decline/` | JWT (G2) | Decline request with reason |
 | GET | `/api/v1/group/{id}/library/resources/top-usage/?month=current` | JWT (G2) | Top 8 resources this month |
-| GET | `/api/v1/group/{id}/library/analytics/monthly-downloads/` | JWT (G2) | Download trend chart |
-| GET | `/api/v1/group/{id}/library/analytics/type-distribution/` | JWT (G2) | Catalogue type distribution |
+| GET | `/api/v1/group/{id}/library/analytics/monthly-downloads/` | JWT (G2) | Download trend chart data |
+| GET | `/api/v1/group/{id}/library/analytics/type-distribution/` | JWT (G2) | Catalogue type distribution chart data |
+
+**`POST /api/v1/group/{id}/library/resources/{rid}/distribute/` — request body:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `branch_ids` | int[] | ✅ | IDs of branches to distribute to |
+| `access_type` | str | ✅ | `full` · `view_only` · `no_download` |
+| `expiry_date` | date | ❌ | ISO 8601 date string; null = permanent |
+
+**Response:** `{ "created": N, "updated": N, "branches": [...] }` — number of new and updated distribution assignments.
 
 ---
 
 ## 13. HTMX Patterns
 
-| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
-|---|---|---|---|---|
-| Branch access table search | `input delay:300ms` | GET `.../library/branches/access/?q=` | `#branch-table-body` | `innerHTML` |
-| Request queue filter | `click` | GET `.../library/requests/?status=pending&filters=` | `#request-table-section` | `innerHTML` |
-| Open resource create drawer | `click` | GET `.../library/resources/create-form/` | `#drawer-body` | `innerHTML` |
-| Submit resource form | `submit` | POST `.../library/resources/` | `#drawer-body` | `innerHTML` |
-| Fulfil request (opens create) | `click` | GET `.../library/requests/{id}/fulfil-form/` | `#drawer-body` | `innerHTML` |
-| KPI auto-refresh | `every 5m` | GET `.../library/head/kpi/` | `#kpi-bar` | `innerHTML` |
-| Pagination | `click` | GET `.../library/branches/access/?page=` | `#branch-table-section` | `innerHTML` |
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load | `load` | GET `.../library/head/kpi/` | `#kpi-bar` | `innerHTML` | Fires on page load |
+| KPI auto-refresh | `every 5m` | GET `.../library/head/kpi/` | `#kpi-bar` | `innerHTML` | Keeps metrics live |
+| KPI OOB on AY change | `ayChanged from:body` | GET `.../library/head/kpi/?ay={ay}` | `#kpi-bar` | `outerHTML` | OOB swap — all 6 cards |
+| Branch access table search | `input delay:300ms` | GET `.../library/branches/access/?q=` | `#branch-table-body` | `innerHTML` | Debounced search |
+| Branch table pagination | `click` | GET `.../library/branches/access/?page={n}` | `#branch-table-section` | `innerHTML` | Server-side pagination |
+| Request queue filter | `click` | GET `.../library/requests/?status=pending&filters=` | `#request-table-section` | `innerHTML` | Filter chip apply |
+| Open resource create drawer | `click` | GET `.../library/resources/create-form/` | `#drawer-body` | `innerHTML` | Via [+ Add Resource] |
+| Open resource-create (Fulfil) | `click` | GET `.../library/requests/{id}/fulfil-form/` | `#drawer-body` | `innerHTML` | Pre-fills from request; shows banner |
+| Submit resource form | `submit` | POST `.../library/resources/` | `#drawer-body` | `innerHTML` | Validates tabs before enable |
+| Archive confirm submit | `click` | POST `.../library/resources/{rid}/archive/` | `#resource-row-{rid}` | `outerHTML` | Removes row; fires toast |
+| Open distribute modal | `click` | GET `.../library/resources/{rid}/distribute-form/` | `#modal-body` | `innerHTML` | Via [Distribute] in table |
+| Submit distribute modal | `submit` | POST `.../library/resources/{rid}/distribute/` | `#modal-body` | `innerHTML` | On success: OOB swap updates distributed-to count |
+| Chart 7.1 load | `load` | GET `.../library/analytics/monthly-downloads/` | `#chart-monthly-downloads` | `innerHTML` | Per-chart independent load |
+| Chart 7.2 load | `load` | GET `.../library/analytics/type-distribution/` | `#chart-type-distribution` | `innerHTML` | Per-chart independent load |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-21*

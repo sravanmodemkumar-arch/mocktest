@@ -24,14 +24,14 @@ Scale: 20–50 branches · NSS units in 60–80% of branches · NCC units in 30�
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Group NSS/NCC Coordinator | G3 | Full — all sections, all actions | Exclusive dashboard |
-| Group Cultural Activities Head | G3 | View civic events calendar only | No NSS/NCC data |
-| Group Chairman / CEO | G5 / G4 | View via Governance Reports | Not this URL |
-| All others | — | — | Redirected |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Group NSS/NCC Coordinator | 100 | G3 | Full — all sections, all actions | Exclusive dashboard |
+| Group Cultural Activities Head | 99 | G3 | View civic events calendar only | No NSS/NCC data |
+| Group Chairman / CEO | — | G5 / G4 | View via Governance Reports | Not this URL |
+| All others | — | — | — | Redirected |
 
-> **Access enforcement:** `@require_role('nss_ncc_coordinator')`.
+> **Access enforcement:** `@require_role('nss_ncc_coordinator')` on all views and API endpoints.
 
 ---
 
@@ -62,18 +62,22 @@ AY [current academic year]  ·  [N] NSS Units  ·  [N] NCC Units  ·  [N] Specia
 
 ## 4. KPI Summary Bar (8 cards)
 
-| Card | Metric | Colour Rule | Drill-down |
-|---|---|---|---|
-| NSS Units Active | Branches with a registered, active NSS unit this AY | Blue always | → NSS Programme Tracker page 14 |
-| Total NSS Students | Students enrolled in NSS across all branches | Blue always | → NSS Programme Tracker page 14 |
-| NSS Hours Completed (Avg) | Average hours per enrolled NSS student this AY | Green ≥ 180hrs · Yellow 120–180 · Red < 120 | → NSS Programme Tracker page 14 |
-| Annual Special Camps Done | NSS units with mandatory special camp completed | Green = all units · Red if any missing | → NSS Programme Tracker page 14 |
-| NCC Units Active | Branches with an active NCC unit | Blue always | → NCC Camp Register page 15 |
-| Total NCC Cadets | Cadets enrolled in NCC across all branches | Blue always | → NCC Camp Register page 15 |
-| Upcoming Camps (30d) | NSS special camps + NCC annual camps within 30 days | Blue always | → Section 5.3 |
-| Civic Programmes (AY) | Total civic activity programmes conducted this year | Blue always | → Civic Programme Register page 16 |
+All metrics reflect the currently selected Academic Year filter (default: current AY). Each card is HTMX-loaded independently on page load using `hx-trigger="load"`.
 
-**HTMX:** `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/nss/coordinator/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | NSS Units Active | Branches with a registered, active NSS unit this AY | `NSSUnit.objects.filter(ay=current_ay, active=True).count()` | Blue always | `#kpi-nss-units` |
+| 2 | Total NSS Students | Students enrolled in NSS across all branches | `NSSEnrolment.objects.filter(ay=current_ay).values('student').distinct().count()` | Blue always | `#kpi-nss-students` |
+| 3 | NSS Hours Completed (Avg) | Average hours per enrolled NSS student this AY | `NSSActivityLog.objects.filter(ay=current_ay).aggregate(avg=Avg('hours_credited'))['avg']` | Green ≥ 180hrs · Yellow 120–180 · Red < 120 | `#kpi-nss-avg-hours` |
+| 4 | Annual Special Camps Done | NSS units with mandatory special camp completed | `NSSUnit.objects.filter(ay=current_ay, special_camp_completed=True).count()` | Green = all units · Red if any missing | `#kpi-special-camps` |
+| 5 | NCC Units Active | Branches with an active NCC unit | `NCCUnit.objects.filter(ay=current_ay, active=True).count()` | Blue always | `#kpi-ncc-units` |
+| 6 | Total NCC Cadets | Cadets enrolled in NCC across all branches | `NCCEnrolment.objects.filter(ay=current_ay).values('student').distinct().count()` | Blue always | `#kpi-ncc-cadets` |
+| 7 | Upcoming Camps (30d) | NSS special camps + NCC annual camps within 30 days | `Camp.objects.filter(start_date__range=[today, today+30d]).count()` | Blue always | `#kpi-upcoming-camps` |
+| 8 | Civic Programmes (AY) | Total civic activity programmes conducted this year | `CivicActivity.objects.filter(ay=current_ay).count()` | Blue always | `#kpi-civic-programmes` |
+
+**HTMX:** Each card uses `hx-get` to a dedicated sub-endpoint with `hx-trigger="load"` and shows a skeleton while loading. AY selector change triggers all KPI cards to refresh via `hx-swap-oob="true"`.
+
+Auto-refresh: `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/nss/coordinator/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
 
 ---
 
@@ -157,18 +161,20 @@ AY [current academic year]  ·  [N] NSS Units  ·  [N] NCC Units  ·  [N] Specia
 - **Trigger:** [+ Log Activity] header button or NSS table → Log Activity
 - **Width:** 480px
 - **Tabs:** Activity · Date · Hours · Students
-- **Fields:**
-  | Field | Type | Required | Validation |
-  |---|---|---|---|
-  | Branch | Select | ✅ | |
-  | NSS Unit | Auto-filled | — | Based on branch |
-  | Activity Type | Select | ✅ | Regular Activity · Special Camp Day · Community Service · Awareness Drive · Blood Donation · Environmental · Literary |
-  | Activity Date | Date | ✅ | Cannot be future |
-  | Duration (hours) | Number | ✅ | 1–8 hours per day |
-  | Students Present | Number | ✅ | ≤ enrolled count |
-  | Activity Description | Textarea | ✅ | Min 20 chars, 500 max |
-  | Attendance Sheet | File upload | ❌ | PDF/JPG, max 5MB |
-  | Programme Officer Signature | Toggle | ✅ | Checkbox confirming PO verified |
+
+#### Fields
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| Branch | Select | ✅ | Lists all branches with registered NSS units |
+| NSS Unit | Auto-filled | — | Populated automatically based on selected Branch |
+| Activity Type | Select | ✅ | Regular Activity · Special Camp Day · Community Service · Awareness Drive · Blood Donation · Environmental · Literary |
+| Activity Date | Date | ✅ | Cannot be a future date |
+| Duration (hours) | Number | ✅ | 1–8 hours per day; maximum value enforced at 8 with inline error "Duration cannot exceed 8 hours per day" |
+| Students Present | Number | ✅ | Must be ≤ enrolled count for the selected NSS unit; inline validation message: "Students present cannot exceed [N] enrolled in this unit" shown immediately on field blur |
+| Activity Description | Textarea | ✅ | Min 20 chars, max 500 chars |
+| Attendance Sheet | File upload | ❌ | PDF/JPG only; max 5 MB |
+| Programme Officer Signature | Toggle | ✅ | Checkbox confirming Programme Officer has verified the activity |
 
 - **On submit:** Hours credited to participating students; activity appears in branch NSS log.
 
@@ -184,27 +190,46 @@ AY [current academic year]  ·  [N] NSS Units  ·  [N] NCC Units  ·  [N] Specia
 - **Width:** 480px
 - **Fields:** Branch (pre-filled), Proposed dates (date range), Location (text), Estimated students (number), Programme Officer (select from branch staff)
 - **Buttons:** [Schedule Camp] + [Cancel]
+- **Submit:** POST to `/api/v1/group/{id}/nss/units/{uid}/camps/`; fires "Camp scheduled" toast on success.
 
 ---
 
 ## 7. Charts
 
+All charts use Chart.js 4.x, are fully responsive, use a colorblind-safe palette, include legend and tooltip with exact numbers, and each has a PNG export button (top-right corner of each chart card).
+
 ### 7.1 NSS Hours Completion Distribution (current AY)
-- **Type:** Histogram / bar chart
-- **Data:** Count of NSS students grouped by hours-completed buckets (0–60, 61–120, 121–180, 181–240, 240+)
-- **X-axis:** Hours bucket
-- **Y-axis:** Student count
-- **Benchmark line:** 240 (target)
-- **Colours:** Red (0–60) · Orange (61–120) · Yellow (121–180) · Green (181–240) · Dark green (240+)
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Histogram / bar chart |
+| Title | "NSS Hours Completion Distribution — [Selected AY]" |
+| Data | Count of NSS students grouped by hours-completed buckets (0–60, 61–120, 121–180, 181–240, 240+) |
+| X-axis | Hours bucket labels |
+| Y-axis | Student count |
+| Benchmark line | 240 (annual target) |
+| Colours | Red (0–60) · Orange (61–120) · Yellow (121–180) · Green (181–240) · Dark green (240+) |
+| Tooltip | "[Bucket]: [N] students" |
+| Empty state | "No NSS hours data for the selected period." |
+| API endpoint | `GET /api/v1/group/{id}/nss/analytics/hours-distribution/` |
+| HTMX | `hx-get="/api/v1/group/{id}/nss/analytics/hours-distribution/"` `hx-trigger="load"` `hx-target="#chart-nss-hours"` `hx-swap="innerHTML"` |
+| Export | PNG button top-right of chart card |
 
 ### 7.2 NCC Certificate Progress by Branch (current AY)
-- **Type:** Stacked horizontal bar chart
-- **Data:** Per branch — cadets at A / B / C certificate levels
-- **X-axis:** Cadet count
-- **Y-axis:** Branch names (NCC branches only)
-- **Colours:** A=Blue · B=Green · C=Gold
-- **Export:** PNG
+
+| Property | Value |
+|---|---|
+| Chart type | Stacked horizontal bar chart |
+| Title | "NCC Certificate Progress by Branch — [Selected AY]" |
+| Data | Per branch — cadets at A / B / C certificate levels |
+| X-axis | Cadet count |
+| Y-axis | Branch names (NCC branches only) |
+| Colours | A=Blue · B=Green · C=Gold |
+| Tooltip | "[Branch] · [Certificate Level]: [N] cadets" |
+| Empty state | "No NCC certificate data for the selected period." |
+| API endpoint | `GET /api/v1/group/{id}/nss/analytics/ncc-certificates/` |
+| HTMX | `hx-get="/api/v1/group/{id}/nss/analytics/ncc-certificates/"` `hx-trigger="load"` `hx-target="#chart-ncc-certs"` `hx-swap="innerHTML"` |
+| Export | PNG button top-right of chart card |
 
 ---
 
@@ -215,19 +240,22 @@ AY [current academic year]  ·  [N] NSS Units  ·  [N] NCC Units  ·  [N] Specia
 | Activity logged | "NSS activity logged. Hours credited to [N] students." | Success | 4s |
 | Camp scheduled | "NSS Special Camp scheduled for [Branch] on [date]." | Success | 4s |
 | NCC camp created | "NCC camp [Name] created." | Success | 4s |
+| Camp attendance saved | "Attendance for [Camp Name] saved. [N] students updated." | Success | 4s |
 | Export started | "NSS/NCC report generating…" | Info | 4s |
+| Validation error | "Please complete all required fields before saving." | Error | Manual |
+| Activity verification failed | "Activity verification failed. Ensure Programme Officer confirmation is checked." | Error | Manual |
 | API error | "Failed to load data." | Error | Manual |
 
 ---
 
 ## 9. Empty States
 
-| Condition | Heading | Description | CTA |
-|---|---|---|---|
-| No NSS units registered | "No NSS units found" | "No branches have registered NSS units for this academic year" | — |
-| No NCC units registered | "No NCC units found" | "No branches have active NCC units this year" | — |
-| No upcoming camps | "No camps in next 60 days" | "No NSS or NCC camps are scheduled in the next 60 days" | [Schedule Camp] |
-| No civic activities | "No civic activities logged" | "Log your first civic programme activity" | [+ Log Activity] |
+| Condition | Icon | Heading | Description | CTA |
+|---|---|---|---|---|
+| No NSS units registered | 📋 | "No NSS units found" | "No branches have registered NSS units for this academic year" | — |
+| No NCC units registered | 🎖 | "No NCC units found" | "No branches have active NCC units this year" | — |
+| No upcoming camps | 🏕 | "No camps in next 60 days" | "No NSS or NCC camps are scheduled in the next 60 days" | [Schedule Camp] |
+| No civic activities | 🌱 | "No civic activities logged" | "Log your first civic programme activity" | [+ Log Activity] |
 
 ---
 
@@ -237,7 +265,10 @@ AY [current academic year]  ·  [N] NSS Units  ·  [N] NCC Units  ·  [N] Specia
 |---|---|
 | Page initial load | Skeleton: 8 KPI cards + NSS table (5 rows) + NCC table (5 rows) + charts |
 | Table search/filter | Inline skeleton rows |
-| Activity log submit | Spinner in submit button |
+| NCC table pagination | Inline skeleton rows while new page loads |
+| Activity log submit | Spinner in submit button + drawer blocked until API responds |
+| NCC camp creation spinner | Full-drawer spinner overlay "Creating camp…" shown from submit until response |
+| Schedule camp modal submit | Spinner on [Schedule Camp] button + modal inputs disabled until API responds |
 | KPI auto-refresh | Shimmer on card values |
 
 ---
@@ -260,30 +291,38 @@ AY [current academic year]  ·  [N] NSS Units  ·  [N] NCC Units  ·  [N] Specia
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | GET | `/api/v1/group/{id}/nss/coordinator/dashboard/` | JWT (G3 NSS) | Full dashboard |
-| GET | `/api/v1/group/{id}/nss/coordinator/kpi/` | JWT (G3) | KPI auto-refresh |
+| GET | `/api/v1/group/{id}/nss/coordinator/kpi/` | JWT (G3) | KPI bar data (all 8 cards) |
+| GET | `/api/v1/group/{id}/nss/coordinator/kpi/{slug}/` | JWT (G3) | Individual KPI card data |
 | GET | `/api/v1/group/{id}/nss/units/` | JWT (G3) | NSS unit status table |
 | GET | `/api/v1/group/{id}/nss/ncc/units/` | JWT (G3) | NCC unit status table |
 | GET | `/api/v1/group/{id}/nss/camps/?days=60&upcoming=true` | JWT (G3) | Upcoming camps |
+| GET | `/api/v1/group/{id}/nss/activities/recent/` | JWT (G3) | Recent civic activities |
 | POST | `/api/v1/group/{id}/nss/activities/` | JWT (G3) | Log NSS activity |
 | POST | `/api/v1/group/{id}/nss/ncc/camps/` | JWT (G3) | Create NCC camp |
 | POST | `/api/v1/group/{id}/nss/units/{uid}/camps/` | JWT (G3) | Schedule NSS special camp |
-| GET | `/api/v1/group/{id}/nss/activities/recent/` | JWT (G3) | Recent civic activities |
-| GET | `/api/v1/group/{id}/nss/analytics/hours-distribution/` | JWT (G3) | Hours completion histogram |
-| GET | `/api/v1/group/{id}/nss/analytics/ncc-certificates/` | JWT (G3) | NCC certificate progress chart |
+| PATCH | `/api/v1/group/{id}/nss/camps/{cid}/attendance/` | JWT (G3) | Save camp attendance |
+| GET | `/api/v1/group/{id}/nss/analytics/hours-distribution/` | JWT (G3) | Chart 7.1 — hours completion histogram |
+| GET | `/api/v1/group/{id}/nss/analytics/ncc-certificates/` | JWT (G3) | Chart 7.2 — NCC certificate progress |
 
 ---
 
 ## 13. HTMX Patterns
 
-| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
-|---|---|---|---|---|
-| NSS table search | `input delay:300ms` | GET `.../nss/units/?q=` | `#nss-table-body` | `innerHTML` |
-| NCC table filter | `click` | GET `.../nss/ncc/units/?filters=` | `#ncc-table-section` | `innerHTML` |
-| Open activity log drawer | `click` | GET `.../nss/activities/new-form/` | `#drawer-body` | `innerHTML` |
-| Submit activity log | `submit` | POST `.../nss/activities/` | `#drawer-body` | `innerHTML` |
-| KPI auto-refresh | `every 5m` | GET `.../nss/coordinator/kpi/` | `#kpi-bar` | `innerHTML` |
-| NSS table pagination | `click` | GET `.../nss/units/?page=` | `#nss-table-section` | `innerHTML` |
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load | `#kpi-bar` container | GET `.../nss/coordinator/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="load"`; shows skeleton per card while loading |
+| KPI auto-refresh | `#kpi-bar` container | GET `.../nss/coordinator/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="every 5m"` |
+| Chart 7.1 load | `#chart-nss-hours` container | GET `.../nss/analytics/hours-distribution/` | `#chart-nss-hours` | `innerHTML` | `hx-trigger="load"`; AY selector change re-triggers via `hx-swap-oob` |
+| Chart 7.2 load | `#chart-ncc-certs` container | GET `.../nss/analytics/ncc-certificates/` | `#chart-ncc-certs` | `innerHTML` | `hx-trigger="load"` |
+| NSS table search | Search input | GET `.../nss/units/?q=` | `#nss-table-body` | `innerHTML` | `hx-trigger="input delay:300ms"` |
+| NSS table filter | Filter controls | GET `.../nss/units/?filters=` | `#nss-table-section` | `innerHTML` | `hx-trigger="click"` |
+| NSS table pagination | Pagination links | GET `.../nss/units/?page=` | `#nss-table-section` | `innerHTML` | `hx-trigger="click"` |
+| NCC table filter | Filter controls | GET `.../nss/ncc/units/?filters=` | `#ncc-table-section` | `innerHTML` | `hx-trigger="click"` |
+| NCC table pagination | Pagination links | GET `.../nss/ncc/units/?page=` | `#ncc-table-section` | `innerHTML` | `hx-trigger="click"`; inline skeleton rows shown during swap |
+| Open activity log drawer | [+ Log Activity] / row [Log Activity] | GET `.../nss/activities/new-form/` | `#drawer-body` | `innerHTML` | `hx-trigger="click"` |
+| Submit activity log | Activity log drawer form | POST `.../nss/activities/` | `#drawer-body` | `innerHTML` | `hx-trigger="submit"`; fires success toast on `hx-on::after-request` |
+| Schedule camp modal submit | [Schedule Camp] modal button | POST `.../nss/units/{uid}/camps/` | `#modal-body` | `innerHTML` | `hx-trigger="click"`; spinner on button; modal inputs disabled during request |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-21*
