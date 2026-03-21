@@ -27,11 +27,12 @@ Scale: 20–60 competitions per academic year; each competition has 5–50 branc
 
 | Role | Role ID | Level | Access | Notes |
 |---|---|---|---|---|
-| Group Cultural Activities Head | 99 | G3 | Full — create, edit, cancel, enter results, generate certificates | Primary owner |
-| Group Sports Director | 97 | G3 | View only — all competitions visible | Cross-reference joint competitions that involve sports; no edit capability |
-| Group Sports Coordinator | 98 | G3 | No access | — |
-| Group NSS/NCC Coordinator | 100 | G3 | No access | Cross-listed NSS events visible on Calendar (Page 11); competition detail not accessible |
-| Group Library Head | 101 | G2 | No access | — |
+| Cultural Activities Head | 99 | G3 | Full — create, edit, cancel, enter results, generate certificates | Primary owner |
+| Sports Director | 97 | G3 | View only — all competitions visible | Cross-reference joint competitions that involve sports; no edit capability |
+| Sports Coordinator | 98 | G3 | No access | — |
+| NSS/NCC Coordinator | 100 | G3 | No access | Cross-listed NSS events visible on Calendar (Page 11); competition detail not accessible |
+| Library Head | 101 | G2 | No access | — |
+| Branch Cultural Teacher | Branch staff | Branch | No access to this group page | Registers branches via branch portal |
 | All other roles | — | — | No access | Redirected to own dashboard |
 
 > **Access enforcement:** Django decorator `@require_role(['cultural_head'])` on all write, result-entry, and certificate endpoints. `@require_role(['cultural_head', 'sports_director'])` on read endpoints. Role 97 sees all data read-only; all action buttons (`[Enter Results]`, `[Issue Certificates]`, `[Edit]`, `[Cancel]`) are hidden server-side.
@@ -57,8 +58,13 @@ AY [academic year]  ·  [N] Competitions  ·  [N] Registration Open  ·  [N] Res
 
 ### 3.3 Alert Banners (conditional)
 
+Stacked above the KPI bar. Each banner is individually dismissible for the session.
+
 | Condition | Banner Text | Severity |
 |---|---|---|
+| Competitions with results pending > 7 days after competition date | "[N] completed competition(s) have results pending entry for more than 7 days." | Red |
+| Certificates ready but not generated for competitions with completed results | "[N] competition(s) have published results but certificates have not yet been generated." | Amber |
+| External registration deadline approaching (within 3 days) | "[N] external competition(s) have registration deadlines within 3 days." | Red |
 | Registration deadline within 7 days | "[N] competition(s) have registration deadlines within 7 days." | Amber |
 | Past competition(s) with no results entered | "[N] completed competition(s) are missing results. Enter results to proceed with certificates." | Amber |
 | Certificates generated but not downloaded in > 7 days | "[N] certificate batch(es) are ready and awaiting download." | Blue (Info) |
@@ -73,11 +79,11 @@ Five metric cards displayed horizontally. Refreshed on load and every 5 minutes 
 
 | # | Card | Metric | Calculation | Colour Rule | HTMX Target |
 |---|---|---|---|---|---|
-| 1 | Total Competitions This AY | Competition records for current AY excluding Cancelled | `CompetitionRecord.objects.filter(ay=current_ay).exclude(status='cancelled').count()` | Indigo (neutral) | `#kpi-total-competitions` |
-| 2 | Registration Open Now | Competitions where registration deadline ≥ today and status = Registration Open | `CompetitionRecord.objects.filter(registration_deadline__gte=today, status='registration_open').count()` | Green if > 0; Indigo if 0 | `#kpi-registration-open` |
-| 3 | Results Pending Entry | Competitions held but results not yet entered | `CompetitionRecord.objects.filter(date__lt=today, results_status__in=['pending','partially_entered']).count()` | Red if > 0; Green if 0 | `#kpi-results-pending` |
-| 4 | Certificates Issued This Month | Certificate batches generated in current calendar month | `CertificateBatch.objects.filter(generated_at__month=today.month).count()` | Indigo (neutral) | `#kpi-certs-month` |
-| 5 | Branches — Zero Participation | Branches with no competition registration this AY | `Branch.objects.exclude(competition_registrations__ay=current_ay).count()` | Red if > 20% of branches; Amber if > 0; Green if 0 | `#kpi-zero-participation` |
+| 1 | Total Competitions This AY | Count of competition records for current AY excluding Cancelled | `COUNT(*) WHERE academic_year = current AND status != 'cancelled'` | Indigo (neutral) | `#kpi-total-comp` |
+| 2 | Registration Open Now | Count where `registration_deadline` ≥ today and `status = Registration Open` | `COUNT(*) WHERE registration_deadline >= today AND status = 'registration_open'` | Green if > 0; Indigo if 0 | `#kpi-reg-open` |
+| 3 | Results Pending Entry | Count of competitions with `date` < today and `results_status = Pending` or `Partially Entered` | `COUNT(*) WHERE date < today AND results_status IN ('pending','partially_entered')` | Red if > 0; Green if 0 | `#kpi-results-pending` |
+| 4 | Certificates Issued This Month | Count of certificate batches generated in current calendar month | `COUNT(certificate_batches) WHERE MONTH(generated_at) = current_month` | Indigo (neutral) | `#kpi-certs-month` |
+| 5 | Branches with Zero Competition Participation This AY | Count of branches with no competition registration records for current AY | `COUNT(branches) WHERE competition_count_this_ay = 0` | Red if > 20% of total branches; Amber if > 0; Green if 0 | `#kpi-zero-branches` |
 
 ```
 ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐
@@ -87,7 +93,7 @@ Five metric cards displayed horizontally. Refreshed on load and every 5 minutes 
 └──────────────────────┘ └──────────────────────┘ └──────────────────────┘ └──────────────────────┘ └──────────────────────┘
 ```
 
-> **HTMX note:** `<div id="comp-kpi-bar" hx-get="/api/v1/cultural/competitions/kpi-summary/" hx-trigger="load, every 300s" hx-swap="innerHTML">`. Each card shimmers on first load.
+**KPI bar HTMX:** `<div id="comp-kpi-bar" hx-get="/api/v1/cultural/competitions/kpi-summary/" hx-trigger="load, every 300s" hx-swap="innerHTML" hx-indicator="#kpi-spinner">`. Each card shimmers on first load.
 
 ---
 
@@ -222,6 +228,8 @@ Dynamic row table. Minimum 1 category required; maximum 10.
 `[Save as Draft]` → `status = Upcoming` (not visible to branches).
 `[Publish — Open Registration]` → `status = Registration Open` (visible to branch teachers in branch portal).
 
+Both footer buttons show spinner and become disabled during submission.
+
 ---
 
 ### 6.2 `competition-detail` Drawer — 680 px, right-slide
@@ -277,8 +285,20 @@ For each category, a sub-section with heading "[Category Name]":
 | Score / Marks | Number input (optional) |
 | Notes | Text input (optional) |
 
-`[Save Draft Results]` — saves without publishing; visible to other roles as "Results Pending".
-`[Publish Results]` — Role 99 only; makes results visible group-wide; sets `results_status = Completed`; cannot be undone via UI (requires admin).
+**Save Draft vs Publish Results distinction:**
+
+- `[Save Draft Results]` — saves result entries without publishing; `results_status` remains `Partially Entered` or `Pending`; visible to other roles only as "Results Pending". Use this when results are incomplete or need internal review before official announcement. API body: `{ ..., "publish": false }`.
+- `[Publish Results]` — Role 99 only; makes results visible group-wide; sets `results_status = Completed`; all branches and registered students can view the outcome. Cannot be undone via UI (requires admin). Shows confirmation dialog before proceeding. API body: `{ ..., "publish": true }`.
+
+Both buttons show spinner and become disabled during submission.
+
+> **Auto-populate Achievement Register (triggered automatically on [Publish Results]):** When Cultural Head publishes results, the platform automatically creates achievement records in the Student Achievement Register (page 19) for all position winners per category:
+> - 1st / 2nd / 3rd place winners → Category: Cultural · Level: Branch (default) · Position: as recorded per category
+> - If "Certificate — Participation" was checked in competition setup, all registered participants get → Category: Cultural · Level: Branch · Position: Participation
+>
+> All auto-created records are tagged "Auto-imported from Competition: [Name]" and set to Pending Verification. Cultural Head updates Level to State/National in Achievement Register if the competition had state/national significance.
+>
+> **Flag for Marketing:** When a winner's Level is updated to State or National in Achievement Register, the Cultural Head receives a dashboard prompt: "Publish [Winner Name]'s achievement to Group Marketing?" with [Notify Marketing] and [Skip] — notifying Group Marketing Director and Topper Relations Manager (Division O, Roles 114, 120).
 
 **Tab 4 — Certificates**
 
@@ -330,7 +350,11 @@ Enter Results — [Competition Name]
 
 **Footer:** `[Cancel]`  `[Save Draft]`  `[Publish Results]`
 
-`[Publish Results]` shows a confirmation: "Publishing results will make them visible across the group. This cannot be easily reversed. Proceed?" `[Cancel]` / `[Confirm & Publish]`.
+`[Save Draft]` — saves results without publishing; `results_status` set to `Partially Entered`. No confirmation dialog; immediate save. Use when results are incomplete or pending review. API body: `{ ..., "publish": false }`.
+
+`[Publish Results]` — publishes results group-wide; `results_status` set to `Completed`. Shows confirmation dialog: "Publishing results will make them visible group-wide. This cannot be easily reversed. Proceed?" `[Cancel]` / `[Confirm & Publish]`. API body: `{ ..., "publish": true }`.
+
+Both buttons show spinner and become disabled during submission.
 
 ---
 
@@ -357,7 +381,11 @@ Generate Certificates
 After clicking `[Generate →]`:
 - Modal body transitions to progress state: progress bar with label "Generating [N] certificates…"
 - On completion: `[Download All as ZIP]` button replaces progress bar
-- Toast: "[N] certificates generated."
+- Toast: "[N] certificates generated for '[Competition Name]'."
+
+**API endpoint:** `POST /api/v1/cultural/competitions/{competition_id}/certificates/generate/`
+
+**PDF template parameter:** `pdf_template` field in request body. Value `"default"` uses the group's standard certificate layout. Future values may include `"formal"`, `"coloured"`, or custom templates configured by admin.
 
 ---
 
@@ -378,7 +406,7 @@ This cannot be undone. Branches will be notified if notification is enabled.
 
 **Footer:** `[Go Back]`  `[Confirm Cancellation]`
 
-On confirm: `status` → Cancelled; `cancel_reason` stored; notifications dispatched if checked.
+On confirm: `status` → Cancelled; `cancel_reason` stored; notifications dispatched if checked. [Confirm Cancellation] shows spinner and becomes disabled during submit.
 
 ---
 
@@ -391,24 +419,32 @@ Charts are placed in a two-column row below the KPI bar, above the alert section
 | Property | Value |
 |---|---|
 | Chart type | Horizontal bar (Chart.js 4.x) |
+| Title | "Participation Rate by Branch — [Current AY]" |
 | Data | For each branch: `(competitions participated / total competitions this AY) × 100` |
 | X-axis | Participation percentage (0–100%) |
 | Y-axis | Branch names; show top 15 most active (sorted descending); `[Show All]` button expands to full list |
 | Bar colours | Green if ≥ 70%; Amber if 40–69%; Red if < 40% |
 | Tooltip | "[Branch Name]: [N] competitions ([N]%)" |
-| HTMX load | `hx-get="/api/v1/cultural/competitions/charts/participation-by-branch/"` `hx-trigger="load"` |
+| Empty state | "No participation data available for the current academic year." |
+| Export | PNG export button in top-right corner of chart card |
+| API endpoint | `GET /api/v1/cultural/competitions/charts/participation-by-branch/` |
+| HTMX | `<div id="chart-participation" hx-get="/api/v1/cultural/competitions/charts/participation-by-branch/" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#chart-participation-spinner">` |
 
 ### 7.2 Activity Type Distribution — Donut Chart
 
 | Property | Value |
 |---|---|
 | Chart type | Donut (Chart.js 4.x) |
+| Title | "Competitions by Activity Type — [Current AY]" |
 | Data | Count of competitions per `activity_type` for current AY; excludes Cancelled |
 | Segment colours | Match activity type badge colours from §5.1 |
 | Legend | Right-side legend with type name + count |
 | Tooltip | "[Activity Type]: [N] competitions ([N]%)" |
 | Centre label | Total competitions count |
-| HTMX load | `hx-get="/api/v1/cultural/competitions/charts/by-type/"` `hx-trigger="load"` |
+| Empty state | "No competition data available for the current academic year." |
+| Export | PNG export button in top-right corner of chart card |
+| API endpoint | `GET /api/v1/cultural/competitions/charts/by-type/` |
+| HTMX | `<div id="chart-by-type" hx-get="/api/v1/cultural/competitions/charts/by-type/" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#chart-type-spinner">` |
 
 ---
 
@@ -420,6 +456,7 @@ Charts are placed in a two-column row below the KPI bar, above the alert section
 | Competition created — Registration Open | "Competition '[Name]' published. Registration is now open for branches." | Success |
 | Competition updated | "Changes to '[Name]' saved." | Success |
 | Competition cancelled | "Competition '[Name]' cancelled. [N] branch(es) notified." | Success |
+| Registration saved | "Branch registration for '[Branch]' saved for '[Competition]'." | Success |
 | Results saved as draft | "Draft results saved for '[Name]'." | Success |
 | Results published | "Results published for '[Name]'. All branches can now view the outcome." | Success |
 | Certificate generation started | "Generating [N] certificates for '[Name]'…" | Info |
@@ -434,15 +471,16 @@ Charts are placed in a two-column row below the KPI bar, above the alert section
 
 ## 9. Empty States
 
-| Context | Illustration | Heading | Sub-text | Action |
+| Context | Icon | Heading | Sub-text | Action |
 |---|---|---|---|---|
-| No competitions in current AY | Trophy icon | "No Competitions Recorded" | "Create your first inter-branch competition for this academic year." | `[+ New Competition]` (Role 99 only) |
-| No competitions match filters | Funnel icon | "No Competitions Match Filters" | "Try adjusting your filters or reset to see all competitions." | `[Reset Filters]` |
-| Registrations tab — no registrations | Clipboard icon | "No Branches Registered" | "Registration is open. Branches can register via the branch portal." | — |
-| Results tab — date not reached | Hourglass icon | "Competition Not Yet Held" | "Results can be entered after the competition date has passed." | — |
-| Results tab — date past, no results | Clipboard icon | "No Results Entered" | "Enter position results for each category to proceed with certificate generation." | `[Enter Results]` (Role 99 only) |
-| Certificates tab — results pending | Lock icon | "Results Not Yet Published" | "Publish competition results before generating certificates." | `[Publish Results]` (Role 99 only) |
-| §5.3 panel — no pending results | Checkmark icon | "All Results Up to Date" | "Every past competition has results recorded." | — |
+| No competitions in current AY | `trophy` | "No Competitions Recorded" | "Create your first inter-branch competition for this academic year." | `[+ New Competition]` (Role 99 only) |
+| No competitions match filters | `funnel` | "No Competitions Match Filters" | "Try adjusting your filters or reset to see all competitions." | `[Reset Filters]` |
+| Registrations tab — no registrations | `clipboard` | "No Branches Registered" | "Registration is open. Branches can register via the branch portal." | — |
+| Results tab — date not reached | `clock` | "Competition Not Yet Held" | "Results can be entered after the competition date has passed." | — |
+| Results tab — date past, no results | `clipboard-document` | "No Results Entered" | "Enter position results for each category to proceed with certificate generation." | `[Enter Results]` (Role 99 only) |
+| Certificates tab — results pending | `lock-closed` | "Results Not Yet Published" | "Publish competition results before generating certificates." | `[Publish Results]` (Role 99 only) |
+| §5.3 panel — no pending results | `check-circle` | "All Results Up to Date" | "Every past competition has results recorded." | — |
+| Charts — no data | `chart-bar` | "No data available" | "No competition data available for the selected period." | — |
 
 ---
 
@@ -457,10 +495,12 @@ Charts are placed in a two-column row below the KPI bar, above the alert section
 | Results tab (lazy load) | Shimmer form rows per category |
 | Certificates tab (lazy load) | Shimmer rows for history table |
 | `[Enter Results]` drawer | Drawer slides in; shimmer category rows; real content replaces |
-| `[Save Draft Results]` / `[Publish Results]` | Button disabled + "Saving…" + spinner; re-enables on response |
+| `[Save Draft]` / `[Publish Results]` | Button disabled + "Saving…" / "Publishing…" + spinner; re-enables on response |
 | `[Generate Certificates]` | Progress bar in modal: "Generating [N] certificates…"; replaces with `[Download All as ZIP]` on completion |
 | Export | `[Export ↓]` disabled + "Preparing…" + spinner |
 | KPI auto-refresh | Cards pulse; values update in place |
+| Chart initial load | Per-chart shimmer rectangle with centred spinner |
+| Pagination click | Table body replaced by shimmer rows while next page loads |
 
 ---
 
@@ -560,15 +600,37 @@ Returns all result entries per category.
 ```
 POST /api/v1/cultural/competitions/{competition_id}/results/
 ```
-Body: `{ "category_id": "...", "entries": [ { "position": 1, "branch_id": "...", "student_name": "...", "score": 95.5, "notes": "..." } ], "special_awards": [...], "publish": false }`.
-`publish: true` sets `results_status = completed` and makes results group-visible.
+Body:
+```json
+{
+  "category_id": "...",
+  "entries": [
+    { "position": 1, "branch_id": "...", "student_name": "...", "score": 95.5, "notes": "..." }
+  ],
+  "special_awards": [...],
+  "publish": false
+}
+```
+`publish: false` → saves as draft; `results_status` set to `partially_entered`.
+`publish: true` → publishes results group-wide; sets `results_status = completed`.
 Role 99 only. Response: 201 Created.
 
 ### 12.10 Certificates — Generate
 ```
 POST /api/v1/cultural/competitions/{competition_id}/certificates/generate/
 ```
-Body: `{ "recipients": "all|winners|custom", "custom_participant_ids": [...], "certificate_type": "winner|runner_up|participation|all", "signature_authority": "...", "certificate_date": "YYYY-MM-DD" }`.
+Body:
+```json
+{
+  "recipients": "all|winners|custom",
+  "custom_participant_ids": [...],
+  "certificate_type": "winner|runner_up|participation|all",
+  "signature_authority": "...",
+  "certificate_date": "YYYY-MM-DD",
+  "pdf_template": "default"
+}
+```
+`pdf_template` values: `"default"` (standard group layout). Future values: `"formal"`, `"coloured"`.
 Role 99 only. Response: 202 Accepted — `{ "job_id": "..." }`.
 Poll: `GET /api/v1/cultural/competitions/{competition_id}/certificates/status/{job_id}/` → `{ "status": "pending|processing|ready|failed", "count": N, "download_url": "..." }`.
 
@@ -604,127 +666,23 @@ Response: File download.
 
 ## 13. HTMX Patterns
 
-### 13.1 KPI Bar
-```html
-<div id="comp-kpi-bar"
-     hx-get="/api/v1/cultural/competitions/kpi-summary/"
-     hx-trigger="load, every 300s"
-     hx-swap="innerHTML"
-     hx-indicator="#kpi-spinner">
-</div>
-```
-
-### 13.2 Competition Table Initialisation
-```html
-<div id="competition-table"
-     hx-get="/api/v1/cultural/competitions/?page=1&page_size=25"
-     hx-trigger="load"
-     hx-swap="innerHTML"
-     hx-indicator="#table-spinner">
-</div>
-```
-
-### 13.3 Search (Debounced)
-```html
-<input type="text"
-       id="comp-search"
-       name="search"
-       placeholder="Search competitions…"
-       hx-get="/api/v1/cultural/competitions/"
-       hx-trigger="keyup changed delay:400ms"
-       hx-target="#competition-table"
-       hx-swap="innerHTML"
-       hx-include="#filter-activity-type, #filter-status, #filter-results-status, #filter-ay">
-```
-
-### 13.4 Filter Application
-```html
-<select name="status"
-        id="filter-status"
-        hx-get="/api/v1/cultural/competitions/"
-        hx-trigger="change"
-        hx-target="#competition-table"
-        hx-swap="innerHTML"
-        hx-include="#comp-search, #filter-activity-type, #filter-results-status, #filter-ay">
-</select>
-```
-
-### 13.5 Competition Detail Drawer Open
-```html
-<button hx-get="/htmx/cultural/competitions/{{ competition_id }}/detail/"
-        hx-target="#drawer-container"
-        hx-swap="innerHTML"
-        hx-trigger="click"
-        class="text-indigo-600 hover:underline text-sm font-medium">
-  View
-</button>
-```
-
-### 13.6 Result Entry Drawer Open
-```html
-<button hx-get="/htmx/cultural/competitions/{{ competition_id }}/result-entry/"
-        hx-target="#drawer-container"
-        hx-swap="innerHTML"
-        hx-trigger="click">
-  Enter Results
-</button>
-```
-
-### 13.7 Result Entry Form Submission
-```html
-<form id="result-entry-form"
-      hx-post="/api/v1/cultural/competitions/{{ competition_id }}/results/"
-      hx-encoding="application/json"
-      hx-target="#competition-table"
-      hx-swap="innerHTML"
-      hx-on::after-request="closeDrawer(); showToast(event); refreshKPI();">
-</form>
-```
-
-### 13.8 Publish Results Confirmation
-```html
-<button hx-post="/api/v1/cultural/competitions/{{ competition_id }}/results/"
-        hx-vals='{"publish": true}'
-        hx-encoding="application/json"
-        hx-target="#competition-table"
-        hx-swap="innerHTML"
-        hx-confirm="Publishing results will make them visible group-wide. This cannot be easily reversed. Proceed?"
-        hx-on::after-request="closeDrawer(); showToast(event); refreshKPI();">
-  Publish Results
-</button>
-```
-
-### 13.9 Certificate Generation Modal Submission
-```html
-<form hx-post="/api/v1/cultural/competitions/{{ competition_id }}/certificates/generate/"
-      hx-encoding="application/json"
-      hx-target="#cert-modal-body"
-      hx-swap="innerHTML"
-      hx-on::after-request="showToast(event); pollCertStatus('{{ competition_id }}', htmx.find('#job-id').value);">
-</form>
-```
-
-### 13.10 Detail Drawer Tab Switching (Lazy Load)
-```html
-<button hx-get="/htmx/cultural/competitions/{{ competition_id }}/tab/registrations/"
-        hx-target="#comp-drawer-tab-content"
-        hx-swap="innerHTML"
-        hx-trigger="click">
-  Registrations
-</button>
-```
-All five tabs lazy-load their content on first click. Overview is pre-fetched on drawer open. Certificates tab additionally fetches certificate history. Each tab shows a shimmer skeleton while loading.
-
-### 13.11 Deadline Alert Panel Load
-```html
-<div id="deadline-alert-panel"
-     hx-get="/api/v1/cultural/competitions/deadline-alerts/"
-     hx-trigger="load"
-     hx-swap="innerHTML"
-     hx-indicator="#deadline-spinner">
-</div>
-```
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load + auto-refresh | `<div id="comp-kpi-bar">` | GET `/api/v1/cultural/competitions/kpi-summary/` | `#comp-kpi-bar` | `innerHTML` | `hx-trigger="load, every 300s"`; shimmer on first load |
+| Chart 7.1 (participation by branch) load | `<div id="chart-participation">` | GET `/api/v1/cultural/competitions/charts/participation-by-branch/` | `#chart-participation` | `innerHTML` | `hx-trigger="load"`; shimmer until response |
+| Chart 7.2 (by type) load | `<div id="chart-by-type">` | GET `/api/v1/cultural/competitions/charts/by-type/` | `#chart-by-type` | `innerHTML` | `hx-trigger="load"`; shimmer until response |
+| Competition table initialisation | `<div id="competition-table">` | GET `/api/v1/cultural/competitions/?page=1&page_size=25` | `#competition-table` | `innerHTML` | `hx-trigger="load"` |
+| Deadline alert panel load | `<div id="deadline-alert-panel">` | GET `/api/v1/cultural/competitions/deadline-alerts/` | `#deadline-alert-panel` | `innerHTML` | `hx-trigger="load"` |
+| Search (debounced) | `<input id="comp-search">` | GET `/api/v1/cultural/competitions/` | `#competition-table` | `innerHTML` | `hx-trigger="keyup changed delay:400ms"`; includes active filters |
+| Filter application | Filter selects | GET `/api/v1/cultural/competitions/` | `#competition-table` | `innerHTML` | `hx-trigger="change"`; includes search + other filters |
+| Pagination | Pagination buttons | GET `/api/v1/cultural/competitions/?page={n}` | `#competition-table` | `innerHTML` | `hx-trigger="click"` |
+| Competition detail drawer open | Competition name / [View] button | GET `/htmx/cultural/competitions/{competition_id}/detail/` | `#drawer-container` | `innerHTML` | `hx-trigger="click"` |
+| Detail drawer tab switch (lazy load) | Tab buttons | GET `/htmx/cultural/competitions/{competition_id}/tab/{tab_slug}/` | `#comp-drawer-tab-content` | `innerHTML` | `hx-trigger="click"`; Overview pre-fetched on open; all 5 tabs lazy-load |
+| Result entry drawer open | `[Enter Results]` button | GET `/htmx/cultural/competitions/{competition_id}/result-entry/` | `#drawer-container` | `innerHTML` | `hx-trigger="click"` |
+| Result entry — save draft | `[Save Draft]` button | POST `/api/v1/cultural/competitions/{competition_id}/results/` | `#competition-table` | `innerHTML` | `hx-encoding="application/json"`; `hx-vals='{"publish": false}'`; `hx-on::after-request="closeDrawer(); showToast(event); refreshKPI();"` |
+| Result entry — publish results | `[Publish Results]` button | POST `/api/v1/cultural/competitions/{competition_id}/results/` | `#competition-table` | `innerHTML` | `hx-encoding="application/json"`; `hx-vals='{"publish": true}'`; `hx-confirm="..."` confirmation dialog before submit |
+| Certificate generation modal submit | `<form>` in certificate-generate modal | POST `/api/v1/cultural/competitions/{competition_id}/certificates/generate/` | `#cert-modal-body` | `innerHTML` | `hx-encoding="application/json"`; `hx-on::after-request="showToast(event); pollCertStatus(...);"` |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-21*

@@ -233,6 +233,16 @@ Entry form for final positions and individual awards.
 [Publish Awards] button — Role 97 only. Generates PDF certificates.
 [Download All Certificates (ZIP)] — available after awards published.
 
+> **Auto-populate Achievement Register (triggered automatically on [Publish Awards]):** When [Publish Awards] is clicked, the platform automatically creates achievement records in the Student Achievement Register (page 19) for all award positions:
+> - Gold (1st Place) team players → Category: Sports · Level: District (default) · Position: 1st Place · Event: [Tournament Name]
+> - Silver (2nd Place) team players → Category: Sports · Level: District (default) · Position: 2nd Place
+> - Bronze (3rd Place) team players → Category: Sports · Level: District (default) · Position: 3rd Place
+> - Best Player → Category: Sports · Level: District · Position: Best in Category
+>
+> Level defaults to District for group-internal tournaments. The Sports Coordinator can open the auto-created record in Achievement Register (page 19) and update Level to State/National/International if the tournament was a qualifying event. All auto-created records are set to Pending Verification and tagged "Auto-imported from Tournament: [Name]".
+
+**[Flag Topper for Marketing]** button (Role 97 only) — appears in the Awards tab after award entry is complete. Marks the Gold winner as a candidate for brand ambassador / topper showcase and triggers an in-platform notification to Group Marketing Director and Topper Relations Manager (Division O, Roles 114 and 120).
+
 ---
 
 ### Modal: `approve-tournament`

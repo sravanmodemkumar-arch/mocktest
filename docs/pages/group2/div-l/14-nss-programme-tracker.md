@@ -171,6 +171,55 @@ This table is not paginated (branch-level, typically ≤ 50 rows). Sortable on a
 
 ---
 
+### 5.4 NSS Certificate Readiness Tracker
+
+> Year-end critical section. The NSS Certificate (government-recognised credential) is issued to volunteers who complete 240 verified hours AND have attended at least 1 mandatory Special Camp. This section surfaces certificate-readiness at a glance and provides the bulk-generate workflow. For full certificate management, see **Page 22 — NSS Certificate Management** (`/group/nss/certificates/`).
+
+**Quick Stats (4 inline chips above table):**
+- Completed 240h + Special Camp → **Eligible** (green)
+- Completed 240h but no Special Camp → **Hours OK, Camp Missing** (amber)
+- 200–239h (reachable this AY) → **Close to Target** (yellow)
+- < 200h (at risk) → **At Risk** (red)
+
+**Table Columns:**
+
+| Column | Notes |
+|---|---|
+| Branch | Branch name |
+| Enrolled | Total volunteers |
+| Eligible (240h + Camp) | Count meeting both criteria — green |
+| 240h Only (no camp) | Count with hours done but no special camp — amber |
+| Close (200–239h) | Count in 200–239h range — yellow |
+| At Risk (<200h) | Count below 200h — red |
+| Certificates Generated | Count with certificate already generated |
+| Actions | [View Eligible List] · [Generate Certificates] (opens Page 22 workflow) |
+
+**[Generate All Certificates →]** button (Coordinator only) — navigates to Page 22 (`/group/nss/certificates/`) for the full bulk certificate generation workflow, state directorate export, and download management.
+
+---
+
+### 5.5 NSS Programme Officer Directory
+
+> Cross-branch view of all NSS Programme Officers (POs). A large group with 50 branches has up to 50 Programme Officers. Monitoring their training status, term dates, and university affiliation from a single view is essential for programme quality. For full management, see **Page 22 — NSS Certificate Management** which includes the full Programme Officer registry with edit capability.
+
+**Display:** Compact table — all branches.
+
+| Column | Notes |
+|---|---|
+| Branch | Branch name (link) |
+| NSS Unit Code | Text; "Not Registered" (orange badge) if missing |
+| Programme Officer | Name; "—" if no unit |
+| University | Affiliated university |
+| Training Status | Badge: Trained (green) / Pending (amber) / Overdue (red) |
+| Term End Date | Date; red if expired or < 30 days remaining |
+| Actions | [Edit] (opens `nss-officer-edit` drawer 480px) · [Send Reminder] |
+
+`[Send Reminder]` — opens modal with WhatsApp/email reminder template pre-filled; sends to Programme Officer and CC: Branch Principal.
+
+**Filter:** Branch (multi-select), Training Status (multi-select).
+
+---
+
 ## 6. Drawers & Modals
 
 ### 6.1 Drawer: `nss-activity-log` (480px, slides from right)

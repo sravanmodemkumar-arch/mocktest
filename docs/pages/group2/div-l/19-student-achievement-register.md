@@ -237,6 +237,8 @@ Triggered by **+ Add Achievement** button.
 | Certificate Upload | File picker | Conditionally required: mandatory for Level = State / National / International; optional for District and below; accepted: PDF / JPG / PNG; max 10 MB; uploaded to Cloudflare R2 |
 | Media Coverage Link | URL input | Optional; news article, YouTube video, social media post |
 | Coach / Teacher Reference | Text input | Optional; name of accompanying teacher or coach |
+| Medical Fitness Certificate | File picker | Conditionally required: mandatory for Level = State / National / International AND Category = Sports (state sports authorities mandate this for all nominated athletes); accepted: PDF / JPG / PNG; max 5 MB; uploaded to Cloudflare R2. Banner shown: "Medical Fitness Certificate is required for state/national/international sports nominations." |
+| Flag for Marketing | Toggle | Optional; default OFF; only Sports Director (all categories) and Cultural Head (cultural/literary); shown only for Level = State / National / International; when ON — triggers in-platform notification to Group Marketing Director (Role 114) and Topper Relations Manager (Role 120) with student details for brand ambassador / topper showcase consideration |
 | Mark as Verified | Toggle | Default OFF; only Sports Director, Cultural Head, NSS/NCC Coordinator for their categories can toggle ON |
 
 > **Evidence requirement note:** If Level = State/National/International is selected in Tab 2, a banner appears at the top of Tab 3: `"Certificate upload is required for State, National, and International level achievements."`

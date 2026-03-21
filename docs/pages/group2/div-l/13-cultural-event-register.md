@@ -26,11 +26,12 @@ Scale: 200–600 event records per academic year across all branches. The regist
 
 | Role | Role ID | Level | Access | Notes |
 |---|---|---|---|---|
-| Group Cultural Activities Head | 99 | G3 | Full CRUD — create, edit, approve, reject, archive, export | Primary owner; approval authority |
-| Group Sports Director | 97 | G3 | View only — all records visible | Cross-reference awareness; no edit or approval capability |
-| Group NSS/NCC Coordinator | 100 | G3 | View only — cross-listed events (NSS/NCC Event type) visible | Filtered view; other event types not visible |
-| Group Sports Coordinator | 98 | G3 | No access | — |
-| Group Library Head | 101 | G2 | No access | — |
+| Cultural Activities Head | 99 | G3 | Full CRUD — create, edit, approve, reject, archive, export | Primary owner; approval authority |
+| Sports Director | 97 | G3 | View only — all records visible | Cross-reference awareness; no edit or approval capability |
+| NSS/NCC Coordinator | 100 | G3 | View only — cross-listed events (NSS/NCC Event type) visible | Filtered view; other event types not visible |
+| Sports Coordinator | 98 | G3 | No access | — |
+| Library Head | 101 | G2 | No access | — |
+| Branch Cultural Teacher | Branch staff | Branch | No access to this group page | Submits events via branch portal |
 | All other roles | — | — | No access | Redirected to own dashboard |
 
 > **Access enforcement:** Django decorator `@require_role(['cultural_head'])` on all write, approval, reject, and archive endpoints. `@require_role(['cultural_head', 'sports_director', 'nss_ncc_coordinator'])` on read; NSS/NCC Coordinator has an additional server-side queryset filter to return only records where `event_type = nss_ncc_event`. Role 97 sees all records read-only with no action buttons other than `[View]`.
@@ -56,10 +57,14 @@ AY [academic year]  ·  [N] Total Records  ·  [N] Pending Review  ·  [N] Appro
 
 ### 3.3 Alert Banners (conditional)
 
+Stacked above the KPI bar. Each banner is individually dismissible for the session.
+
 | Condition | Banner Text | Severity |
 |---|---|---|
+| Events with no post-event report (completed > 14 days ago) | "[N] completed event(s) finished more than 14 days ago with no post-event report submitted. Follow up with branches." | Red |
+| Events with planning checklist < 50% complete with event in < 7 days | "[N] upcoming event(s) in the next 7 days have less than 50% of their planning checklist completed." | Red |
 | Branch-submitted events pending review > 0 | "[N] branch-reported event(s) are awaiting your review and approval." | Amber |
-| Event records with missing evidence uploaded > 10% of AY total | "[N] approved event records have no evidence uploaded. Request uploads from branches." | Amber |
+| Event records with missing evidence > 10% of AY total | "[N] approved event records have no evidence uploaded. Request uploads from branches." | Amber |
 | Rejected records not resubmitted after 14 days | "[N] rejected record(s) have not been resubmitted by branches. Follow up if needed." | Blue (Info) |
 | No records for current AY | "No cultural event records have been added for this academic year." | Blue (Info) |
 | All pending reviews cleared | No banner shown | — |
@@ -72,10 +77,10 @@ Four metric cards displayed horizontally. Refreshed on load and every 5 minutes 
 
 | # | Card | Metric | Calculation | Colour Rule | HTMX Target |
 |---|---|---|---|---|---|
-| 1 | Total Events This AY | All non-Archived event records for current AY | `CulturalEventRecord.objects.filter(ay=current_ay).exclude(status='archived').count()` | Indigo (neutral) | `#kpi-total-events` |
-| 2 | Group-Initiated Events | Group-created events approved this AY | `CulturalEventRecord.objects.filter(ay=current_ay, record_source='group', approval_status='approved').count()` | Indigo (neutral) | `#kpi-group-initiated` |
-| 3 | Branch-Reported Pending Review | Branch submissions awaiting Cultural Head approval | `CulturalEventRecord.objects.filter(approval_status='pending_review').count()` | Red if > 0; Green if 0 | `#kpi-pending-review` |
-| 4 | External Events Participated | Approved external event participation records this AY | `CulturalEventRecord.objects.filter(ay=current_ay, external_event=True, approval_status='approved').count()` | Indigo (neutral) | `#kpi-external-events` |
+| 1 | Total Events This AY | Count of all non-Archived records for current AY | `COUNT(*) WHERE academic_year = current AND archived = false` | Indigo (neutral) | `#kpi-total-events` |
+| 2 | Group-Initiated Events | Count where `record_source = group` and `approval_status = approved` for current AY | `COUNT(*) WHERE record_source = 'group' AND approval_status = 'approved' AND academic_year = current` | Indigo (neutral) | `#kpi-group-initiated` |
+| 3 | Branch-Reported Pending Review | Count where `approval_status = pending_review` | `COUNT(*) WHERE approval_status = 'pending_review'` | Red if > 0; Green if 0 | `#kpi-pending-review` |
+| 4 | External Events Students Participated | Count where `external_event = true` and `approval_status = approved` for current AY | `COUNT(*) WHERE external_event = true AND approval_status = 'approved' AND academic_year = current` | Indigo (neutral) | `#kpi-external-events` |
 
 ```
 ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐
@@ -85,7 +90,7 @@ Four metric cards displayed horizontally. Refreshed on load and every 5 minutes 
 └──────────────────────┘ └──────────────────────┘ └──────────────────────┘ └──────────────────────┘
 ```
 
-> **HTMX note:** `<div id="register-kpi-bar" hx-get="/api/v1/cultural/events/kpi-summary/" hx-trigger="load, every 300s" hx-swap="innerHTML">`. Cards shimmer on first load.
+**KPI bar HTMX:** `<div id="register-kpi-bar" hx-get="/api/v1/cultural/events/kpi-summary/" hx-trigger="load, every 300s" hx-swap="innerHTML" hx-indicator="#kpi-spinner">`. Cards shimmer on first load.
 
 ---
 
@@ -229,7 +234,7 @@ Evidence status is automatically set to "Uploaded" if at least one file or link 
 
 **Footer:** `[Cancel]`  `[Save Record]`
 
-On save: `approval_status = approved` (auto-approved for Cultural Head); `record_source = group`.
+[Save Record] shows spinner and becomes disabled during submission. On save: `approval_status = approved` (auto-approved for Cultural Head); `record_source = group`.
 
 ---
 
@@ -322,7 +327,7 @@ The branch will be informed of the rejection reason.
 
 **Footer:** `[Go Back]`  `[Confirm Rejection]`
 
-On confirm: `approval_status` → Rejected; `rejection_reason` and `rejected_by` stored; notification dispatched to branch if Return to Branch is checked.
+On confirm: `approval_status` → Rejected; `rejection_reason` and `rejected_by` stored; notification dispatched to branch if Return to Branch is checked. [Confirm Rejection] shows spinner and becomes disabled during submit.
 
 ---
 
@@ -335,25 +340,33 @@ Charts appear in a two-column row below the KPI bar and above the pending review
 | Property | Value |
 |---|---|
 | Chart type | Vertical bar (Chart.js 4.x) |
+| Title | "Events by Branch — Top 10 Most Active (Current AY)" |
 | Data | Count of approved event records per branch for current AY; top 10 branches by count |
 | X-axis | Branch name (abbreviated) |
 | Y-axis | Event count |
 | Bar colour | Indigo; bars for the top 3 rendered in a slightly darker shade |
 | Tooltip | "[Branch Name]: [N] events" |
 | Footer note | "Showing top 10 of [N] total branches. [View Full Report]" link opens a modal with the full bar chart across all branches |
-| HTMX load | `hx-get="/api/v1/cultural/events/charts/by-branch/"` `hx-trigger="load"` |
+| Empty state | "No approved event records available for the current academic year." |
+| Export | PNG export button in top-right corner of chart card |
+| API endpoint | `GET /api/v1/cultural/events/charts/by-branch/` |
+| HTMX | `<div id="chart-by-branch" hx-get="/api/v1/cultural/events/charts/by-branch/" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#chart-branch-spinner">` |
 
 ### 7.2 Events by Type Distribution — Donut Chart
 
 | Property | Value |
 |---|---|
 | Chart type | Donut (Chart.js 4.x) |
+| Title | "Events by Type — Current AY" |
 | Data | Count of approved records per `event_type` for current AY |
 | Segment colours | Match event type badge colours from §5.3 |
 | Legend | Right-side legend with type name + count |
 | Tooltip | "[Event Type]: [N] events ([N]%)" |
 | Centre label | Total approved events count |
-| HTMX load | `hx-get="/api/v1/cultural/events/charts/by-type/"` `hx-trigger="load"` |
+| Empty state | "No approved event records available for the current academic year." |
+| Export | PNG export button in top-right corner of chart card |
+| API endpoint | `GET /api/v1/cultural/events/charts/by-type/` |
+| HTMX | `<div id="chart-by-type" hx-get="/api/v1/cultural/events/charts/by-type/" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#chart-type-spinner">` |
 
 ---
 
@@ -367,6 +380,8 @@ Charts appear in a two-column row below the KPI bar and above the pending review
 | Record rejected | "Event '[Name]' from [Branch] has been rejected. Branch notified." | Success |
 | Record archived | "Event '[Name]' has been archived." | Info |
 | Evidence uploaded | "Evidence added to '[Name]'." | Success |
+| Checklist item toggled | "Checklist updated for '[Name]'." | Info |
+| Participants added / updated | "Participant details updated for '[Name]'." | Success |
 | Export complete | "Event register exported to [format]." | Success |
 | Approve — network error | "Could not approve record. Please try again." | Error |
 | Reject — missing reason | "Please provide a rejection reason of at least 20 characters." | Error |
@@ -377,15 +392,16 @@ Charts appear in a two-column row below the KPI bar and above the pending review
 
 ## 9. Empty States
 
-| Context | Illustration | Heading | Sub-text | Action |
+| Context | Icon | Heading | Sub-text | Action |
 |---|---|---|---|---|
-| No records in current AY (full register) | Folder icon | "No Event Records This Year" | "No cultural events have been recorded for this academic year. Create the first record or wait for branch submissions." | `[+ New Record]` (Role 99 only) |
-| No records match filters | Funnel icon | "No Records Match Filters" | "Try adjusting your filters or reset to see all records." | `[Reset Filters]` |
-| Pending review panel — no pending records | Checkmark icon | "No Records Pending Review" | "All branch-submitted events have been reviewed. Great work." | — |
-| Evidence tab — no evidence | Document icon | "No Evidence Uploaded" | "No photos, videos, or documents have been attached to this record." | `[Upload Additional Evidence]` (Role 99 only) |
-| Budget tab — no budget data | Wallet icon | "No Budget Data" | "Budget details have not been recorded for this event." | `[Edit]` (Role 99 only) |
-| Participants tab — no participant count | People icon | "No Participant Data" | "Attendance and participant counts have not been recorded." | `[Edit]` (Role 99 only) |
-| Role 100 — filtered view with no NSS/NCC events | Flag icon | "No NSS/NCC Events Found" | "No NSS or NCC events are recorded in the register for this period." | — |
+| No records in current AY (full register) | `folder` | "No Event Records This Year" | "No cultural events have been recorded for this academic year. Create the first record or wait for branch submissions." | `[+ New Record]` (Role 99 only) |
+| No records match filters | `funnel` | "No Records Match Filters" | "Try adjusting your filters or reset to see all records." | `[Reset Filters]` |
+| Pending review panel — no pending records | `check-circle` | "No Records Pending Review" | "All branch-submitted events have been reviewed. Great work." | — |
+| Evidence tab — no evidence | `document` | "No Evidence Uploaded" | "No photos, videos, or documents have been attached to this record." | `[Upload Additional Evidence]` (Role 99 only) |
+| Budget tab — no budget data | `wallet` | "No Budget Data" | "Budget details have not been recorded for this event." | `[Edit]` (Role 99 only) |
+| Participants tab — no participant count | `users` | "No Participant Data" | "Attendance and participant counts have not been recorded." | `[Edit]` (Role 99 only) |
+| Role 100 — filtered view with no NSS/NCC events | `flag` | "No NSS/NCC Events Found" | "No NSS or NCC events are recorded in the register for this period." | — |
+| Charts — no data | `chart-bar` | "No data available" | "No approved event data is available for the current academic year." | — |
 
 ---
 
@@ -401,8 +417,11 @@ Charts appear in a two-column row below the KPI bar and above the pending review
 | `[Upload Additional Evidence]` — file upload | Per-file progress bar: "Uploading [filename]… [N]%" |
 | `[Approve]` button click | Button → disabled + "Approving…" + spinner; re-enables on response |
 | `[Confirm Rejection]` in modal | Modal button → disabled + "Rejecting…" + spinner; modal closes on success |
+| `[Save Record]` form submission | Button disabled + "Saving…" + spinner |
 | Export | `[Export ↓]` disabled + "Preparing…" + spinner; file triggers download on ready |
 | KPI auto-refresh | Cards pulse; values update in place without full shimmer |
+| Chart initial load | Per-chart shimmer rectangle with centred spinner |
+| Pagination click | Table body replaced by shimmer rows while next page loads |
 
 ---
 
@@ -538,129 +557,22 @@ Response: File download (`Content-Disposition: attachment`).
 
 ## 13. HTMX Patterns
 
-### 13.1 KPI Bar Initialisation and Auto-Refresh
-```html
-<div id="register-kpi-bar"
-     hx-get="/api/v1/cultural/events/kpi-summary/"
-     hx-trigger="load, every 300s"
-     hx-swap="innerHTML"
-     hx-indicator="#kpi-spinner">
-</div>
-```
-
-### 13.2 Event Table Initialisation
-```html
-<div id="cultural-event-register-table"
-     hx-get="/api/v1/cultural/events/?page=1&page_size=25"
-     hx-trigger="load"
-     hx-swap="innerHTML"
-     hx-indicator="#table-spinner">
-</div>
-```
-
-### 13.3 Search (Debounced)
-```html
-<input type="text"
-       id="register-search"
-       name="search"
-       placeholder="Search events, branches, submitters…"
-       hx-get="/api/v1/cultural/events/"
-       hx-trigger="keyup changed delay:400ms"
-       hx-target="#cultural-event-register-table"
-       hx-swap="innerHTML"
-       hx-include="#filter-branch, #filter-type, #filter-approval-status,
-                   #filter-evidence, #filter-date-from, #filter-date-to, #filter-ay">
-```
-
-### 13.4 Filter Application
-```html
-<select name="approval_status"
-        id="filter-approval-status"
-        hx-get="/api/v1/cultural/events/"
-        hx-trigger="change"
-        hx-target="#cultural-event-register-table"
-        hx-swap="innerHTML"
-        hx-include="#register-search, #filter-branch, #filter-type,
-                    #filter-evidence, #filter-date-from, #filter-date-to, #filter-ay">
-</select>
-```
-
-### 13.5 Event Record Detail Drawer Open
-```html
-<button hx-get="/htmx/cultural/events/{{ event_id }}/detail/"
-        hx-target="#drawer-container"
-        hx-swap="innerHTML"
-        hx-trigger="click"
-        class="text-indigo-600 hover:underline text-sm font-medium">
-  View
-</button>
-```
-
-### 13.6 Approve Record (Inline)
-```html
-<button hx-post="/api/v1/cultural/events/{{ event_id }}/approve/"
-        hx-encoding="application/json"
-        hx-target="#register-row-{{ event_id }}"
-        hx-swap="outerHTML"
-        hx-on::after-request="showToast(event); refreshKPI(); refreshPendingPanel();"
-        class="text-green-600 hover:underline text-sm font-medium">
-  Approve
-</button>
-```
-Swapping `outerHTML` of the individual row allows the approval to update that row's status badge and actions in place without a full table reload.
-
-### 13.7 Reject Record — Opens Modal, Then Submits
-```html
-<!-- Trigger button opens reject modal -->
-<button hx-get="/htmx/cultural/events/{{ event_id }}/reject-modal/"
-        hx-target="#modal-container"
-        hx-swap="innerHTML"
-        hx-trigger="click">
-  Reject
-</button>
-
-<!-- Inside the modal, form submits the rejection -->
-<form hx-post="/api/v1/cultural/events/{{ event_id }}/reject/"
-      hx-encoding="application/json"
-      hx-target="#register-row-{{ event_id }}"
-      hx-swap="outerHTML"
-      hx-on::after-request="closeModal(); showToast(event); refreshKPI(); refreshPendingPanel();">
-</form>
-```
-
-### 13.8 Pending Review Panel Independent Refresh
-```html
-<div id="pending-review-panel"
-     hx-get="/api/v1/cultural/events/pending-review/"
-     hx-trigger="load, refreshPendingPanel from:body"
-     hx-swap="innerHTML"
-     hx-indicator="#pending-panel-spinner">
-</div>
-```
-The `refreshPendingPanel` custom event is dispatched from the approve/reject HTMX after-request handlers, causing this panel to independently reload without affecting the main table.
-
-### 13.9 Detail Drawer Tab Switching (Lazy Load)
-```html
-<button hx-get="/htmx/cultural/events/{{ event_id }}/tab/budget/"
-        hx-target="#event-drawer-tab-content"
-        hx-swap="innerHTML"
-        hx-trigger="click">
-  Budget
-</button>
-```
-All four tabs (Overview / Participants / Budget / Evidence) load lazily on first click. Overview is pre-fetched when the drawer opens. The Evidence tab additionally shimmers thumbnail cells until image URL reachability is confirmed.
-
-### 13.10 Evidence Upload (in Detail Drawer)
-```html
-<form hx-post="/api/v1/cultural/events/{{ event_id }}/evidence/"
-      hx-encoding="multipart/form-data"
-      hx-target="#evidence-tab-content"
-      hx-swap="innerHTML"
-      hx-indicator="#evidence-upload-progress"
-      hx-on::after-request="showToast(event);">
-</form>
-```
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load + auto-refresh | `<div id="register-kpi-bar">` | GET `/api/v1/cultural/events/kpi-summary/` | `#register-kpi-bar` | `innerHTML` | `hx-trigger="load, every 300s"`; shimmer on first load |
+| Chart 7.1 (by branch) load | `<div id="chart-by-branch">` | GET `/api/v1/cultural/events/charts/by-branch/` | `#chart-by-branch` | `innerHTML` | `hx-trigger="load"`; shimmer until response |
+| Chart 7.2 (by type) load | `<div id="chart-by-type">` | GET `/api/v1/cultural/events/charts/by-type/` | `#chart-by-type` | `innerHTML` | `hx-trigger="load"`; shimmer until response |
+| Event table initialisation | `<div id="cultural-event-register-table">` | GET `/api/v1/cultural/events/?page=1&page_size=25` | `#cultural-event-register-table` | `innerHTML` | `hx-trigger="load"` |
+| Pending review panel load + refresh | `<div id="pending-review-panel">` | GET `/api/v1/cultural/events/pending-review/` | `#pending-review-panel` | `innerHTML` | `hx-trigger="load, refreshPendingPanel from:body"`; independently refreshed after approve/reject |
+| Search (debounced) | `<input id="register-search">` | GET `/api/v1/cultural/events/` | `#cultural-event-register-table` | `innerHTML` | `hx-trigger="keyup changed delay:400ms"`; includes all active filters |
+| Filter application | Filter selects | GET `/api/v1/cultural/events/` | `#cultural-event-register-table` | `innerHTML` | `hx-trigger="change"`; includes search + other filters |
+| Pagination | Pagination buttons | GET `/api/v1/cultural/events/?page={n}` | `#cultural-event-register-table` | `innerHTML` | `hx-trigger="click"` |
+| Event record detail drawer open | Event name / [View] button | GET `/htmx/cultural/events/{event_id}/detail/` | `#drawer-container` | `innerHTML` | `hx-trigger="click"` |
+| Detail drawer tab switch (lazy load) | Tab buttons | GET `/htmx/cultural/events/{event_id}/tab/{tab_slug}/` | `#event-drawer-tab-content` | `innerHTML` | `hx-trigger="click"`; Overview pre-fetched on drawer open; Evidence tab additionally shimmers thumbnail cells |
+| Approve record (inline) | `[Approve]` button | POST `/api/v1/cultural/events/{event_id}/approve/` | `#register-row-{event_id}` | `outerHTML` | `hx-encoding="application/json"`; `hx-on::after-request="showToast(event); refreshKPI(); refreshPendingPanel();"` — swaps only the individual row |
+| Reject record — opens modal, then submits | `[Reject]` button | GET `/htmx/cultural/events/{event_id}/reject-modal/` → then POST `/api/v1/cultural/events/{event_id}/reject/` | Modal: `#modal-container`; Reject: `#register-row-{event_id}` | `innerHTML` / `outerHTML` | Two-step: modal opens on click; form in modal submits rejection; `hx-on::after-request="closeModal(); showToast(event); refreshKPI(); refreshPendingPanel();"` |
+| Evidence upload (in detail drawer) | `<form>` in evidence tab | POST `/api/v1/cultural/events/{event_id}/evidence/` | `#evidence-tab-content` | `innerHTML` | `hx-encoding="multipart/form-data"`; `hx-indicator="#evidence-upload-progress"`; `hx-on::after-request="showToast(event);"` |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-21*

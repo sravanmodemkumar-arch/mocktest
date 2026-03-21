@@ -31,9 +31,11 @@ All sections are role-filtered — each role sees sections relevant to their dom
 | Group NSS/NCC Coordinator | 100 | G3 | Full view — all sections and all charts | Sees NSS/NCC + cross-division data in full; can export all sections |
 | Group Library Head | 101 | G2 | View — Library section (charts 7.9–7.10) + KPI cards 6–7 + Achievements charts only | Cannot see Sports / Cultural / NSS/NCC detail sections or heatmap |
 | Group Chairman / CEO | G4/G5 | G4/G5 | View only — all sections; no export | Executive read-only; all KPI cards and all charts visible; no export button |
+| Group Analytics Director (Div M) | 102 | G1 | View only — all sections and all charts; full cross-division visibility | Cannot export; primary data consumer for cross-division intelligence reports submitted to Chairman/Board |
+| Group MIS Officer (Div M) | 103 | G1 | View only — KPI cards + Overview table + Achievement charts (7.11–7.12) only | Monthly MIS report data consumer; domain-detail sections (sports/cultural/NSS/library) not shown |
 | All other roles | — | — | No access | — |
 
-> **Access enforcement:** `@require_role('sports_director', 'sports_coordinator', 'cultural_head', 'nss_ncc_coordinator', 'library_head', 'chairman', 'ceo')` with section-level visibility gating per role.
+> **Access enforcement:** `@require_role('sports_director', 'sports_coordinator', 'cultural_head', 'nss_ncc_coordinator', 'library_head', 'chairman', 'ceo', 'analytics_director', 'mis_officer')` with section-level visibility gating per role.
 
 ---
 

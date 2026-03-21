@@ -98,6 +98,30 @@
 
 ---
 
+## Section 7 — Sports Configuration
+
+| # | Page | URL | File | Priority | Status |
+|---|---|---|---|---|---|
+| 21 | Sport Master Configuration | `/group/sports/master/` | `21-sport-master-configuration.md` | P2 | ✅ |
+
+---
+
+## Section 8 — NSS Certificate & Officers
+
+| # | Page | URL | File | Priority | Status |
+|---|---|---|---|---|---|
+| 22 | NSS Certificate Management | `/group/nss/certificates/` | `22-nss-certificate-management.md` | P1 | ✅ |
+
+---
+
+## Section 9 — NCC Cadet Registry
+
+| # | Page | URL | File | Priority | Status |
+|---|---|---|---|---|---|
+| 23 | NCC Cadet Registry | `/group/nss/ncc-cadets/` | `23-ncc-cadet-registry.md` | P1 | ✅ |
+
+---
+
 ## Shared Drawers & Overlays (all div-l pages)
 
 | Drawer | Trigger | Width | Tabs | Description |
@@ -118,6 +142,12 @@
 | `resource-edit` | Catalogue → row | 680px | Metadata · File · Classification · Access | Resource edit form |
 | `distribution-assign` | Distribution → Assign | 480px | Resource · Branches · Expiry | Assign resource to branches |
 | `achievement-create` | Achievement Register → + Add | 480px | Student · Event · Award · Evidence | Achievement record |
+| `sport-create` | Sport Master → + New Sport | 480px | Basic · Rules · Advanced | Sport catalog entry |
+| `cadet-create` | NCC Cadet Registry → + Add Cadet | 560px | Profile · NCC Details · Records | Cadet record creation |
+| `cadet-detail` | Cadet table → row | 560px | Profile · Certificates · Camp History · Nominations | Individual cadet profile |
+| `nomination-create` | NCC Cadets → Nominate for Camp | 480px | Camp · Cadets | RDC/IDC nomination workflow |
+| `certificate-generate-bulk` | NSS Certificates → Generate All | 560px | Selection · Preview | Bulk NSS cert generation |
+| `nss-officer-edit` | Programme Officer → Edit | 480px | Officer Details | Programme Officer management |
 
 ---
 
@@ -162,8 +192,11 @@
 | 16 Civic Programme Register | — | — | ✅ View | ✅ Full | — |
 | 17 E-Library Catalogue | — | — | — | — | ✅ Full |
 | 18 Content Distribution | — | — | — | — | ✅ Full |
-| 19 Student Achievement Register | ✅ Full | ✅ Full | ✅ Full | ✅ Full | — |
+| 19 Student Achievement Register | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ View |
 | 20 Extra-Curricular Analytics | ✅ Full | ✅ View | ✅ Full | ✅ Full | ✅ View |
+| 21 Sport Master Configuration | ✅ Full | ✅ View | — | — | — |
+| 22 NSS Certificate Management | — | — | ✅ View | ✅ Full | — |
+| 23 NCC Cadet Registry | — | — | — | ✅ Full | — |
 
 ---
 
