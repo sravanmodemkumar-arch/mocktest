@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 90 roles across 15 divisions.
+> Total: 91 roles across 15 divisions.
 
 ---
 
@@ -190,16 +190,17 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division I — Customer Support (6 roles)
+## Division I — Customer Support (7 roles)
 
 | # | Role | Level | Handles | Response Time |
 |---|---|---|---|---|
-| 47 | Support Manager | 3 | Team management, SLA tracking, escalation rules | — |
-| 48 | L1 Support Executive | 3 | Login, OTP, basic navigation, student queries | < 2 hours |
+| 47 | Support Manager | 3 | Team management, SLA tracking, escalation rules, cross-division coordination | — |
+| 48 | L1 Support Executive | 3 | Login, OTP, basic navigation, student and institution admin queries | < 2 hours |
 | 49 | L2 Support Engineer | 3 | Bug investigation, log analysis, DB read queries | < 8 hours |
 | 50 | L3 Support Engineer | 4 | Code-level fixes, DB writes, hotfixes, rollbacks | < 24 hours |
-| 51 | Onboarding Specialist | 3 | Train new institution admins, first-time portal setup | Per onboarding |
-| 52 | Training Coordinator | 2 | Create training docs, conduct sessions for institution staff | Scheduled |
+| 51 | Onboarding Specialist | 3 | New institution onboarding pipeline, portal setup, admin training coordination | Per onboarding |
+| 52 | Training Coordinator | 2 | Create training docs, KB articles (needs approval), conduct training sessions | Scheduled |
+| 90 | Support Quality Lead | 3 | Random-sample ticket quality audits, CSAT trend monitoring, L1 agent coaching, KB gap identification, weekly quality report | Ongoing |
 
 ---
 
@@ -292,14 +293,14 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | F — Exam Day Operations | 5 |
 | G — Background Verification | 4 |
 | H — Data & Analytics | 5 |
-| I — Customer Support | 6 |
+| I — Customer Support | 7 |
 | J — Customer Success | 4 |
 | K — Sales & Business Development | 7 |
 | L — Marketing & Growth | 5 |
 | M — Finance & Billing | 6 |
 | N — Legal & Compliance | 4 |
 | O — HR & Administration | 3 |
-| **Total** | **90** |
+| **Total** | **91** |
 
 ---
 
