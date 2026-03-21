@@ -217,7 +217,7 @@
 | 18 Exam Schedule Approval | ✅ Override | ✅ View | ✅ View | ✅ Approve | — | — | — | — |
 | 19 Policy Management | ✅ Full | ✅ Full | ✅ Full | ✅ Acad | ✅ Ops | ✅ Read | — | ✅ Read |
 | 20 Principal Comms Hub | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ Read | ✅ Full | — |
-| 21 Group Announcements | ✅ Approve | — | ✅ Approve | — | — | — | ✅ Full | — |
+| 21 Group Announcements | ✅ Approve | ✅ Approve | ✅ Approve | — | — | — | ✅ Full | — |
 | 22 Comm Calendar | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | — | ✅ Full | — |
 | 23 User Provisioning | ✅ Full | ✅ Full | ✅ View | — | — | — | — | — |
 | 24 Role & Permission Mgr | ✅ Full | ✅ Full | ✅ View | — | — | — | — | — |
@@ -313,6 +313,7 @@
 | Branch Deactivation missing as approval type | Page 17 — added Branch Deactivation to approval workflow |
 | Exam Result Publication had no approval gate | Page 17 — added Exam Result Publication approval type |
 | 13 pages missing HTMX interaction patterns | All 33 spec pages now have complete HTMX Patterns section |
+| MD (G5) missing from announcement approvers despite outranking CEO (G4) | Page 21 — MD added as approver in Role Access, UI Visibility, and API auth |
 
 ---
 
@@ -334,4 +335,4 @@ P2 — Sprint 3
 
 ---
 
-*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 20 · Audit passes: 2 — zero gaps remaining*
+*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 21 · Audit passes: 3 — zero gaps remaining*

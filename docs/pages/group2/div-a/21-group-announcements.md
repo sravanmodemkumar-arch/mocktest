@@ -4,7 +4,7 @@
 > **File:** `21-group-announcements.md`
 > **Template:** `portal_base.html` (light theme)
 > **Priority:** P2
-> **Roles:** Exec Secretary G3 (compose) · Chairman G5 (approve) · CEO G4 (approve) · Others view published only
+> **Roles:** Exec Secretary G3 (compose) · Chairman G5 (approve) · MD G5 (approve) · CEO G4 (approve) · Others view published only
 
 ---
 
@@ -28,8 +28,9 @@ Targeting: By branch · by class · by student type · by role.
 |---|---|---|---|
 | Exec Secretary | ✅ | ❌ | ✅ |
 | Chairman | ❌ | ✅ | ✅ |
+| MD | ❌ | ✅ | ✅ |
 | CEO | ❌ | ✅ | ✅ |
-| MD/President/VP | ❌ | ❌ | ✅ |
+| President/VP | ❌ | ❌ | ✅ |
 | Trustee/Advisor | ❌ | ❌ | Titles only |
 
 ---
@@ -189,7 +190,7 @@ Character limit indicator: If SMS selected and message >160 chars → warning ba
 
 ## 9. Role-Based UI Visibility
 
-| Element | Exec Secretary | Chairman/CEO | MD/Pres/VP | Trustee |
+| Element | Exec Secretary | Chairman/MD/CEO | President/VP | Trustee |
 |---|---|---|---|---|
 | [+ New Announcement] | ✅ | ❌ | ❌ | ❌ |
 | [Approve/Reject] in Pending tab | ❌ | ✅ | ❌ | ❌ |
@@ -210,7 +211,7 @@ Character limit indicator: If SMS selected and message >160 chars → warning ba
 | GET | `/api/v1/group/{id}/announcements/{aid}/` | JWT | Announcement detail |
 | PUT | `/api/v1/group/{id}/announcements/{aid}/` | JWT (G3 Sec) | Update draft |
 | POST | `/api/v1/group/{id}/announcements/{aid}/submit/` | JWT (G3 Sec) | Submit for approval |
-| POST | `/api/v1/group/{id}/announcements/{aid}/approve/` | JWT (G4 CEO/G5 Chair) | Approve |
+| POST | `/api/v1/group/{id}/announcements/{aid}/approve/` | JWT (G4 CEO/G5) | Approve |
 | POST | `/api/v1/group/{id}/announcements/{aid}/reject/` | JWT (G4/G5) | Reject with reason |
 | DELETE | `/api/v1/group/{id}/announcements/{aid}/` | JWT (G3 Sec) | Delete draft |
 | GET | `/api/v1/group/{id}/announcements/{aid}/analytics/` | JWT | Delivery analytics |
