@@ -345,3 +345,107 @@ Route guard: `@login_required` — no Division O membership required.
 | [Export LOP Report] | HR Manager + Payroll Exec (#105) |
 | Analytics — Top Leave Consumers | HR Manager (#79) only |
 | All employees attendance grid | HR Manager + HRBP (#106) |
+
+---
+
+## WFH Self-Mark Workflow
+
+EduForge operates a hybrid work policy. Employees self-mark WFH days via `/hr/my-leave/` — no manager approval required.
+
+### Self-Mark Flow
+
+```
+  Employee action (via /hr/my-leave/):
+  ────────────────────────────────────────────────────────────
+  [Mark Today as WFH]  →  creates hr_attendance_record row:
+                          date = today, employee = self,
+                          mode = 'WFH', source = 'SELF_MARK'
+                          (allowed until 11:59 PM same day)
+
+  Retroactive self-mark allowed for D-1 only (yesterday):
+  [Mark Yesterday as WFH]  →  available until 10:00 AM next day
+```
+
+### Rules
+
+| Rule | Detail |
+|---|---|
+| No approval required | WFH self-mark is automatic — no HR Manager action |
+| Retroactive window | D-1 only, closes at 10:00 AM of the following day |
+| Cannot WFH on leave days | If approved leave exists for the date → WFH mark blocked with: "You have approved leave on this date." |
+| Cannot WFH on public holidays | `hr_holiday` check — WFH mark on a declared holiday blocked |
+| HR Manager override | HR Manager can override `mode` on any attendance record (via attendance grid [Edit] cell). Override recorded with `source='HR_OVERRIDE'` and reason required |
+| WFH limit (optional policy) | HR Manager can configure max WFH days/month per grade in `hr_policy_config`. If employee exceeds limit → self-mark rejected with: "WFH limit of [N] days/month reached." |
+
+### Attendance Grid Display
+
+- WFH day cell shows **W** (blue badge) vs **O** (office, green) vs **L** (leave, amber) vs **A** (absent/LOP, red)
+- Monthly WFH count shown in attendance summary column
+- HR Manager can filter attendance grid: `Mode = WFH` to review WFH patterns
+
+---
+
+## Half-Day LOP Clarification
+
+Half-day leave deductions feed directly into payroll (O-05). Rules:
+
+| Scenario | Deduction Formula |
+|---|---|
+| Full-day LOP | `gross_monthly / 26` per day |
+| Half-day LOP (morning or afternoon) | `(gross_monthly / 26) × 0.5` |
+| Same-day morning + afternoon half-day leave | Treated as 1 full-day LOP — `gross_monthly / 26` |
+| Multiple half-day LOPs in month | Accumulated: `N × (gross_monthly / 26 × 0.5)` — rounded to 2 decimal places at payroll run |
+
+**Half-day leave types:** CL, SL, and EL support half-day applications. ML, PL, COMP_OFF — full-day only.
+
+**LOP Report to payroll:** The monthly LOP report (exported from Attendance tab) includes a `lop_days` column with fractional values (e.g., 1.5 for 3 half-days) — O-05 payroll run reads this as `lop_days` directly for deduction computation.
+
+**26-day divisor rationale:** EduForge uses 26 (not calendar days) for monthly salary calculation — standard industry practice for monthly-rated employees. Sundays not counted as working days; second Saturdays are non-working (no "second Saturday working" variant).
+
+---
+
+## Role-Based UI Visibility Summary
+
+| UI Element | HR Manager (#79) | HRBP (#106) | Payroll Exec (#105) | Recruiter (#80) | L&D Coord (#107) | Office Admin (#81) |
+|---|---|---|---|---|---|---|
+| Leave Requests tab (all employees) | Full (approve/reject) | Read-only | — (own only) | — (own only) | — (own only) | — (own only) |
+| Balances tab (all employees) | Full | Read-only | — | — | — | — |
+| Attendance tab (all employees) | Full | Read-only | Read-only (LOP only) | — | — | — |
+| [Export LOP Report] | ✓ | — | ✓ | — | — | — |
+| Calendar tab (all employees) | Full | Read-only | — | — | — | — |
+| Analytics tab — all charts | ✓ | ✓ | — | — | — | — |
+| Analytics — Top Leave Consumers | ✓ | — | — | — | — | — |
+| [Manage Holidays] | ✓ | — | — | — | — | — |
+| [Approve] / [Reject] leave | ✓ | — | — | — | — | — |
+| Attendance grid [Edit] cell | ✓ | — | — | — | — | — |
+| WFH override | ✓ | — | — | — | — | — |
+| `/hr/my-leave/` (self-serve) | ✓ (own) | ✓ (own) | ✓ (own) | ✓ (own) | ✓ (own) | ✓ (own) |
+
+---
+
+## Performance Requirements
+
+| Operation | Target | Notes |
+|---|---|---|
+| Leave requests list load | < 800ms P95 | With pagination (50/page) + Memcached 2 min TTL |
+| Attendance grid render (monthly) | < 1.2s P95 | 150 employees × 31 days = 4,650 cells; Memcached 5 min TTL |
+| Leave approve/reject HTMX | < 300ms P95 | Single row update via `?part=requests` |
+| LOP report CSV export | < 5s | 150 employees × 1 month aggregate |
+| Holiday master load | < 200ms P95 | Memcached 60 min TTL |
+| Analytics charts | < 1.5s P95 | 12-month aggregates; Memcached 30 min TTL |
+| `/hr/my-leave/` self-serve | < 500ms P95 | Employee's own records only; no role-scoping overhead |
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `g v` | Go to Leave & Attendance page (`/hr/leave/`) |
+| `t r` | Switch to Requests tab |
+| `t b` | Switch to Balances tab |
+| `t a` | Switch to Attendance tab |
+| `t c` | Switch to Calendar tab |
+| `a` | Approve selected leave request (HR Manager only) |
+| `r` | Reject selected leave request (HR Manager only) |
+| `/` | Focus search / filter input |

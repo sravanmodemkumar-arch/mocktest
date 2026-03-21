@@ -290,3 +290,151 @@ KT tasks assigned to the exiting employee (self-marked) + verified by their mana
 | [Mark Done] for IT tasks | HR Manager (#79) or task owner via token link |
 | F&F lock and approval | Lock: Payroll Exec (#105) via token; Approve: HR Manager (#79) |
 | BGV initiation | HR Manager (#79) only |
+
+---
+
+## Tokenised Task Completion: `/hr/tasks/{task_token}/complete/`
+
+Tasks assigned to DevOps, BGV team, or Payroll Exec are completed via one-time tokenised links — these roles do not have `/hr/onboarding/` portal access.
+
+**Token generation:** When a task is assigned (on checklist creation or reassignment), a token (`secrets.token_urlsafe(32)`) is stored in `hr_onboarding_checklist.completion_token` (or `hr_offboarding_checklist.completion_token`). Expiry: 30 days from creation (sufficient to cover notice periods).
+
+**Flow for external task owner:**
+1. Email received: "You have an onboarding task for [Employee Name] — [Task title]. Due: [date]. [Complete Task →]"
+2. Clicking link opens `/hr/tasks/{token}/complete/`
+3. Form shows: task description, instructions, and optional note field
+4. [Mark Complete] → records `completed_at`, `completed_by_user_id` (from session, validated against `assigned_to_role`), optional `completion_note`
+5. Shows confirmation page: "Task '[name]' marked complete. [Employee Name]'s onboarding checklist has been updated."
+6. Token invalidated after first use
+
+**Token validation errors:**
+- Expired token (>30 days): "This task link has expired. Please ask HR to resend."
+- Already completed: "This task has already been marked complete by [user] on [date]."
+- Invalid token: 404
+
+**BGV completion update:** BGV Manager (#39) or BGV Operations Supervisor (#92) uses the task completion link to mark the BGV task. On task completion, they must select one of: BGV_CLEAR / BGV_FLAGGED / BGV_INCONCLUSIVE. If FLAGGED: HR Manager notified immediately with alert; employee onboarding paused (all subsequent tasks blocked) pending HR Manager decision.
+
+---
+
+## Exit Interview Workflow
+
+Exit interview is scheduled as a Day 0 offboarding checklist task (HRBP-assigned). It is not a system form — it is a structured conversation documented in the system.
+
+**Scheduling:** HRBP (#106) or HR Manager (#79) uses Google Calendar / internal scheduling tool (out of scope) to schedule the call. In O-04, they record the meeting time in the checklist task note field.
+
+**Exit Interview Form** (filled by HRBP after the call — embedded in O-04 offboarding checklist as an expanded task form):
+
+```
+  Exit Interview — [Employee Name] — Last Working Day: [Date]
+  ─────────────────────────────────────────────────────────────
+  Interviewed by:       [HRBP name] (auto-filled)
+  Interview date:       [2026-05-18]
+  Exit reason category: [RESIGNATION ▼]
+
+  Primary reason for leaving*:
+  [Better compensation offer from competitor              ]
+
+  What did you enjoy most at EduForge?:
+  [Exam day operations work — high stakes and rewarding   ]
+
+  What could EduForge have done differently?:
+  [Faster career growth opportunities                     ]
+
+  Manager feedback (1–5)*:  ○1 ○2 ●3 ○4 ○5
+  Manager feedback notes:   [Average feedback, not enough 1:1 time]
+
+  Would you recommend EduForge to others?:  ●Yes ○No ○Maybe
+
+  Would you consider returning to EduForge?:  ○Yes ●Maybe ○No
+
+  [Save Exit Interview]   [Mark task as Complete]
+```
+
+**Data storage:** `hr_employee.exit_interview` (JSONB) storing the structured responses. HR Manager + HRBP can view. Division managers cannot see exit interview feedback — it is sensitive and used for organisation-level analysis only.
+
+**Exit interview analytics:** HRBP can view aggregated exit interview data in O-07?tab=analytics: top reasons for attrition (categorised), NPS of departing employees, manager ratings from exit interviews (anonymous per manager, >5 responses before showing).
+
+---
+
+## POSH ICC (Internal Complaints Committee)
+
+**HR Manager (#79) is the POSH committee chair** (Roles file, line 309). While a full complaint management system is beyond the core HR portal scope, the following minimal tracking is maintained:
+
+**ICC Roster** (managed via O-02 Employee Directory — employees with `is_posh_member=true` in `hr_employee`):
+- Chairperson: HR Manager (#79)
+- 2 internal members (at least one woman per POSH Act §4)
+- 1 external independent member (NGO / lawyer)
+
+**Complaint intake:** POSH complaints are received by the HR Manager directly (email/in-person). They are logged in a separate restricted section accessible only to HR Manager. This is a legal compliance capability managed outside the HR portal at this phase — typically via a dedicated POSH compliance form or trusted third party (IC partner platform). This spec notes it as a known gap to be addressed in Phase 4 tooling.
+
+**POSH training tracking:** Fully covered in O-08 (mandatory POSH awareness training for all employees, tracked annually).
+
+---
+
+## Knowledge Transfer Templates
+
+Auto-populated KT checklist from `hr_knowledge_transfer_task` templates (per division):
+
+| Division | Key KT Tasks Generated |
+|---|---|
+| C (Engineering) | Document owned microservices/Lambdas; update Confluence runbooks; hand over API keys to DevOps; merge pending PRs; introduce replacement to external contacts |
+| D (Content) | Hand over unpublished question drafts to Question Approver; document curriculum mapping; complete in-progress reviews |
+| E (Video) | Hand over production pipeline to Content Producer; document in-progress scripts/animations; transfer vendor contacts |
+| F (Exam Ops) | Document exam day runbooks; hand over active exam configurations; update incident response procedures |
+| G (BGV) | Hand over active BGV case queue; document vendor contacts and API credentials to BGV Manager |
+| H (Data) | Document active Celery task configurations; hand over SQL explorer queries; document pipeline ownership |
+| I (Support) | Reassign open tickets; document known-issues playbook; update KB articles |
+| J (CS) | Transfer account portfolio to assigned successor CSM/AM; document health score overrides for at-risk accounts |
+| K (Sales) | Transfer open pipeline deals; introduce lead contacts; update CRM deal notes |
+| L (Marketing) | Hand over active campaign accounts; document ad credentials; transfer social account access |
+| M (Finance) | Complete current-month pending reconciliations; hand over open vendor disputes; document GST filing notes |
+| N (Legal) | Transfer open DSR and contract renewal queues; document ongoing litigation context |
+| O (HR) | Complete current payroll run if applicable; hand over pending leave approvals; document vendor contracts |
+
+Templates are editable by HR Manager. New division-specific templates can be added.
+
+---
+
+## Role-Based UI Visibility Summary
+
+| Element | 79 HR Mgr | 81 Office Admin | 106 HRBP |
+|---|---|---|---|
+| Onboarding list (all employees) | Yes | Yes (full) | No |
+| Offboarding list (all employees) | Yes | Yes (asset return focus) | Yes (exit interview focus) |
+| Onboarding task — mark done (all) | Yes | Own asset tasks only | Own HRBP tasks only |
+| Offboarding task — mark done (all) | Yes | Own asset return tasks | Own HRBP tasks |
+| [Initiate Exit] modal | Yes | No | No |
+| BGV initiation | Yes | No | No |
+| BGV result — view (FLAGGED alert) | Yes | No | No |
+| F&F computation (view) | Yes | No | No |
+| F&F approval | Yes | No | No |
+| Exit interview form (fill + view) | Yes | No | Yes (fill) |
+| Exit interview results (view all) | Yes | No | Yes (aggregate only) |
+| KT checklist (manage templates) | Yes | No | No |
+| POSH ICC roster (view) | Yes | No | No |
+| [+ Add Checklist Task] (custom) | Yes | No | No |
+| Token task completion links | Via portal | Via portal | Via portal (HRBP tasks) |
+
+---
+
+## Performance Requirements
+
+| Metric | Target | Notes |
+|---|---|---|
+| Onboarding/offboarding list load | < 1s P95 (cache: 5 min) | Typically < 20 active records at a time |
+| Checklist drawer (full task list) | < 500ms P95 (no cache) | 18–22 task rows per employee |
+| F&F computation render | < 800ms P95 | Proration + EL encashment arithmetic |
+| Token task completion page | < 300ms P95 | Minimal page — just form + task update |
+| KT template population | < 400ms P95 | Simple template lookup by division |
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `g` `o` | Go to Onboarding & Offboarding (O-04) |
+| `t` `n` | Switch to Onboarding tab |
+| `t` `x` | Switch to Offboarding tab |
+| `Esc` | Close open drawer or modal |
+| `?` | Show keyboard shortcut help overlay |
