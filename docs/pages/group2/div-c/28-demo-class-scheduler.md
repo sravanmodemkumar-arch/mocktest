@@ -1,4 +1,4 @@
-# Page 28: Demo Class Scheduler
+# 28 — Demo Class Scheduler
 
 **URL:** `/group/adm/demo/scheduler/`
 **Template:** `portal_base.html` (light theme)
@@ -25,9 +25,9 @@ Beyond scheduling logistics, the page feeds data downstream into the conversion 
 | Group Admission Coordinator (24) | G3 | View all + create demos; cannot cancel or bulk-override | Operational support role |
 | Group Admissions Director (23) | G3 | View all + override cancellations; approve high-capacity demos | Strategic oversight |
 | Branch Academic Head | Branch | Read-only scoped to own branch demos | Cannot see other branches |
-| Group Scholarship Exam Manager (26) | G3 | View-only (for joint demo-scholarship events) | No edit permissions |
+| Group Scholarship Exam Manager (Role 26) | G3 | Read — Section 5.1 (Demo Schedule) and Section 5.2 (Calendar) only | Relevant for joint demo-scholarship events coordination |
 
-Access enforcement: All views are protected with `@login_required` and `@role_required(['demo_coordinator', 'admission_coordinator', 'admissions_director', 'branch_academic_head'])` Django view decorators. Branch Academic Head scope is enforced via `request.user.branch_id` queryset filter applied in the view before any data is returned to the template.
+Access enforcement: All views are protected with `@login_required` and `@role_required(['demo_coordinator', 'admission_coordinator', 'admissions_director', 'branch_academic_head', 'scholarship_exam_manager'])` Django view decorators. Branch Academic Head scope is enforced via `request.user.branch_id` queryset filter applied in the view before any data is returned to the template.
 
 ---
 
@@ -194,7 +194,7 @@ Displayed conditionally above KPI bar. Triggers:
 
 ### 6.1 `demo-create-form` Drawer
 **Width:** 640px
-**Trigger:** `[+ Schedule New Demo]` button or `[Schedule Demo for Branch →]` CTA
+**Trigger:** `[+ Schedule New Demo]` button or `[Schedule Demo for Branch →]` CTA. `[Edit →]` table action opens the same `demo-create-form` drawer (6.1) pre-populated with the existing demo's data via `hx-get=".../demo/scheduler/exam-form/{id}/"`.
 **HTMX endpoint:** `hx-get="/group/adm/demo/scheduler/create/"` on open; `hx-post="/group/adm/demo/scheduler/create/"` on submit
 **Tabs:**
 1. **Basic Info** — Demo title, Subject, Stream (MPC/BiPC/MEC/CEC), Demo type (Trial / Full Demo / Webinar)
@@ -229,6 +229,20 @@ Displayed conditionally above KPI bar. Triggers:
 - Reason for reassignment (dropdown: Unavailable / Better fit / Teacher request / Other)
 - Notify teacher? (Yes/No toggle)
 - `[Confirm Reassignment]` button — `hx-post`
+
+---
+
+### 6.4 Modal: `cancel-demo-confirm`
+- **Width:** 400px
+- **Trigger:** `[Cancel]` action in Section 5.1 table
+- **Content:** "Cancel demo '[Demo Name]' at [Branch] on [Date]? All [N] registered attendees will be notified."
+- **Fields:**
+  - Cancellation reason (select dropdown, required): Venue unavailable / Teacher absent / Low registrations / Rescheduled / Other
+  - Notify registered attendees via WhatsApp (checkbox, default checked)
+  - Notes (textarea, optional)
+- **Buttons:** `[Confirm Cancellation]` (danger red) + `[Keep Demo]`
+- **On confirm:** `hx-delete="/api/v1/group/{group_id}/adm/demo/scheduler/exams/{demo_id}/"` → `hx-target="#demo-schedule-table"` `hx-swap="innerHTML"` → toast "Demo cancelled. [N] attendees notified."
+- **HTMX:** `hx-get="/api/v1/group/{group_id}/adm/demo/scheduler/exams/{demo_id}/cancel-form/"` `hx-target="#modal-body"` `hx-swap="innerHTML"`
 
 ---
 
@@ -279,17 +293,20 @@ Displayed conditionally above KPI bar. Triggers:
 
 All UI visibility decisions made server-side in Django template. No client-side JS role checks.
 
-| UI Element | Demo Coordinator (29) | Admission Coordinator (24) | Admissions Director (23) | Branch Academic Head |
-|---|---|---|---|---|
-| `[+ Schedule New Demo]` button | Visible | Visible | Visible | Hidden |
-| `[Cancel]` action in table | Visible | Hidden | Visible (override) | Hidden |
-| `[Edit →]` action in table | Visible | Visible | Visible | Hidden |
-| Bulk action bar | Visible | Hidden | Visible | Hidden |
-| `[Reassign →]` teacher button | Visible | Hidden | Visible | Hidden |
-| `[Export Schedule CSV]` | Visible | Visible | Visible | Visible (branch-scoped) |
-| Branch Demo Coverage — all branches | Visible | Visible | Visible | Own branch only |
-| Branches with No Demo Alert | Visible | Visible | Visible | Own branch only |
-| Demo Calendar — all branches | Visible | Visible | Visible | Own branch only |
+| UI Element | Demo Coordinator (29) | Admission Coordinator (24) | Admissions Director (23) | Branch Academic Head | SchExam Mgr (26) |
+|---|---|---|---|---|---|
+| `[+ Schedule New Demo]` button | Visible | Visible | Visible | Hidden | Hidden |
+| `[Cancel]` action in table | Visible | Hidden | Visible (override) | Hidden | Hidden |
+| `[Edit →]` action in table | Visible | Visible | Visible | Hidden | Hidden |
+| Bulk action bar | Visible | Hidden | Visible | Hidden | Hidden |
+| `[Reassign →]` teacher button | Visible | Hidden | Visible | Hidden | Hidden |
+| `[Export Schedule CSV]` | Visible | Visible | Visible | Visible (branch-scoped) | Hidden |
+| Branch Demo Coverage — all branches | Visible | Visible | Visible | Own branch only | Hidden |
+| Branches with No Demo Alert | Visible | Visible | Visible | Own branch only | Hidden |
+| Demo Calendar — all branches | Visible | Visible | Visible | Own branch only | R (read-only) |
+| Demo Schedule Table (5.1) | Visible | Visible | Visible | Own branch only | R (read-only, no actions) |
+| Teacher Assignment (5.6) | Visible | Visible | Visible | Hidden | Hidden |
+| Follow-up Queue (5.7) | Visible | Visible | Visible | Hidden | Hidden |
 
 ---
 
@@ -310,6 +327,9 @@ All UI visibility decisions made server-side in Django template. No client-side 
 | GET | `/api/v1/group/{group_id}/adm/demo/no-demo-branches/` | JWT G3+ | Branches with no demo in 30 days |
 | POST | `/api/v1/group/{group_id}/adm/demo/sessions/bulk-open-registration/` | JWT G3 write | Open registration for multiple sessions |
 | POST | `/api/v1/group/{group_id}/adm/demo/sessions/bulk-remind/` | JWT G3 write | Send reminders for selected sessions |
+| POST | `/api/v1/group/{group_id}/adm/demo/scheduler/sessions/{id}/notes/` | JWT G3 | Auto-save session notes from manage drawer |
+| GET | `/api/v1/group/{group_id}/adm/demo/scheduler/exams/{demo_id}/cancel-form/` | JWT G3 | Load cancel demo confirmation form |
+| DELETE | `/api/v1/group/{group_id}/adm/demo/scheduler/exams/{demo_id}/` | JWT G3 | Cancel a scheduled demo and optionally notify attendees |
 
 ---
 
@@ -332,6 +352,10 @@ All UI visibility decisions made server-side in Django template. No client-side 
 | Bulk open registration | `click` on bulk action button | POST `/group/adm/demo/scheduler/bulk-open-registration/` | `#demo-schedule-table` | `innerHTML` |
 | Branch coverage refresh | `click` on refresh icon | GET `/group/adm/demo/scheduler/branch-coverage/` | `#branch-coverage-table` | `innerHTML` |
 | No-demo alert panel load | `load` | GET `/group/adm/demo/scheduler/no-demo-alert/` | `#no-demo-alert-panel` | `innerHTML` |
+| Edit demo (open create form pre-filled) | `click from:.btn-edit-demo` | GET `.../demo/scheduler/exam-form/{id}/` | `#drawer-container` | `innerHTML` |
+| Auto-save session notes | `blur from:#session-notes-field` | POST `.../demo/scheduler/sessions/{id}/notes/` | `#notes-status` | `innerHTML` |
+| Open cancel demo modal | `click from:.btn-cancel-demo` | GET `.../demo/scheduler/exams/{id}/cancel-form/` | `#modal-body` | `innerHTML` |
+| Confirm demo cancellation | `click from:#btn-confirm-cancel` | DELETE `.../demo/scheduler/exams/{id}/` | `#demo-schedule-table` | `innerHTML` |
 
 ---
 

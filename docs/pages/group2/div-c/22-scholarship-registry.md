@@ -1,4 +1,4 @@
-# Page 22: Scholarship Registry
+# 22 — Scholarship Registry
 
 **URL:** `/group/adm/scholarship-registry/`
 **Template:** `portal_base.html` (light theme)
@@ -228,6 +228,7 @@ Triggers:
 | No renewals due | Calendar-check icon | "No Renewals Due" | "No scholarship schemes have renewals due in the next 60 days." | None |
 | No government schemes | Government-building icon | "No Government Schemes Configured" | "Add a government scheme to start tracking NSP, PMSS, or state scholarship enrollments." | `[+ Add Govt Scheme]` |
 | Filter returns no schemes | Search icon | "No Schemes Match Filters" | "Adjust type or status filters." | `[Clear Filters]` |
+| Scheme Performance Summary (5.5) is empty | Chart outline icon | "No Performance Data Available" | "Scheme performance data requires at least one completed cycle with disbursements. Data will appear automatically after the first disbursement." | — |
 
 ---
 
@@ -290,6 +291,7 @@ Triggers:
 | GET | `/api/v1/group/{group_id}/adm/scholarship-registry/renewals/upcoming/` | JWT G3 | Renewals due within 60 days |
 | POST | `/api/v1/group/{group_id}/adm/scholarship-registry/schemes/{scheme_id}/send-renewal-notices/` | JWT G3 write | Send renewal notifications |
 | GET | `/api/v1/group/{group_id}/adm/scholarship-registry/govt-schemes/tracker/` | JWT G3 | Govt scheme tracker table |
+| POST | `/api/v1/group/{group_id}/adm/scholarship-registry/govt-schemes/` | JWT G3 | Create a new government scheme tracking record |
 | GET | `/api/v1/group/{group_id}/adm/scholarship-registry/govt-schemes/{scheme_id}/detail/` | JWT G3 | Govt scheme detail drawer |
 | PUT | `/api/v1/group/{group_id}/adm/scholarship-registry/govt-schemes/{scheme_id}/` | JWT G3 write | Update govt scheme record |
 | GET | `/api/v1/group/{group_id}/adm/scholarship-registry/stats/scheme-performance/` | JWT G3 | Scheme performance summary |
@@ -318,6 +320,7 @@ Triggers:
 | Load govt scheme tracker | `load` on section | GET `.../scholarship-registry/govt-schemes/tracker/` | `#govt-tracker-table` | `innerHTML` |
 | Open govt scheme detail drawer | `click` on `[View Details →]` | GET `.../scholarship-registry/govt-schemes/{id}/detail/` | `#drawer-container` | `innerHTML` |
 | Load scheme performance | `load` on section | GET `.../scholarship-registry/stats/scheme-performance/` | `#performance-table` | `innerHTML` |
+| Bulk update scheme amounts | `click from:#btn-bulk-update-amounts` | POST `.../scholarship-registry/bulk-update-amounts/` | `#scheme-directory-table` | `innerHTML` |
 
 ---
 

@@ -463,6 +463,8 @@ Promote action: `hx-post="/api/v1/group/{group_id}/adm/enrollment-confirmation/p
 | `[Promote Waitlisted Student →]` click | `click` | POST `/api/v1/group/{group_id}/adm/enrollment-confirmation/promote-waitlist/` | `#withdrawn-seats-panel` | `innerHTML` |
 | Bulk reminder `[Send Reminder to All Pending]` | `click` | GET `/api/v1/group/{group_id}/adm/enrollment-confirmation/bulk-reminder-form/` | `#bulk-reminder-modal` | `innerHTML` |
 | Bulk reminder modal `[Confirm Send]` | `click` | POST `/api/v1/group/{group_id}/adm/enrollment-confirmation/bulk-reminder/` | `#bulk-reminder-modal` | `innerHTML` |
+| Extend deadline from alert strip | `click from:.btn-extend-deadline-strip` | PATCH `.../enrollment-confirmation/{id}/extend-deadline/` | `#deadline-expiry-strip` | `innerHTML` |
+| Confirm cancel offer (modal submit) | `click from:#btn-confirm-cancel-offer` | DELETE `.../enrollment-confirmation/{id}/cancel-offer/` | `#confirmation-table` | `innerHTML` |
 
 ---
 

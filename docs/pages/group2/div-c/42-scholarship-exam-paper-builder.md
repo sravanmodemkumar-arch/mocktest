@@ -189,7 +189,7 @@ Tab within the workspace (not a drawer). Renders a full read-through preview of 
 - Marks per question (right-aligned)
 - Section subtotals and grand total
 
-`[Print Preview]` opens a browser print dialog. `[Download Draft PDF]` available for Approved papers only.
+`[Print Preview]` opens a browser print dialog. `[Download Approved Paper PDF (available after Director approval)]` available for Approved papers only.
 
 **5.2e — Answer Key Panel**
 
@@ -524,6 +524,7 @@ Re-triggers on question add/remove via `hx-trigger="click from:.question-add-btn
 | Single `[Dispatch →]` click | `click` | POST `.../dispatch/{paper_id}/branch/{branch_id}/` | `#dispatch-row-{branch_id}` | `outerHTML` |
 | Version history reveal | `revealed` | GET `.../paper-builder/version-history/` | `#version-history-section` | `innerHTML` |
 | `[Compare →]` click | `click` | GET `.../papers/{paper_id}/compare/?v1={v}&v2={v}` | `#version-compare-drawer` | `innerHTML` |
+| Re-roll auto-selection | `click from:#btn-reroll-autoselect` | POST `.../scholarship-exam/paper-builder/{paper_id}/auto-select/` | `#auto-select-preview` | `innerHTML` |
 
 ---
 

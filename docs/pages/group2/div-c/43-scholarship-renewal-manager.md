@@ -498,6 +498,7 @@ Actions at drawer footer: `[Save Decision]` · `[Save and Notify Student]` · `[
 | `[Grant Grace Extension]` in borderline queue | `click` | GET `.../scholarship-renewals/{record_id}/grace-form/` | `#grace-extension-modal` | `innerHTML` |
 | Grace modal `[Confirm Grace Extension]` | `click` | POST `.../scholarship-renewals/{record_id}/grace-extension/` | `#renewal-batch-table-body` | `innerHTML` |
 | `[Send Notifications to All Decided →]` header | `click` | POST `.../scholarship-renewals/bulk-notify/` | `#notification-status-table` | `innerHTML` |
+| Resend individual notification | `click from:.btn-resend-notify` | POST `.../scholarship-renewals/records/{id}/notify/` | `#notify-status-cell-{id}` | `innerHTML` |
 
 ---
 

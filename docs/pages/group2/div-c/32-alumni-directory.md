@@ -1,4 +1,4 @@
-# Page 32: Alumni Directory
+# 32 — Alumni Directory
 
 **URL:** `/group/adm/alumni/directory/`
 **Template:** `portal_base.html` (light theme)
@@ -201,6 +201,22 @@ Access enforcement: All views protected with `@login_required` and `@role_requir
 
 ---
 
+### 6.4 Modal: `whatsapp-message-composer`
+- **Width:** 560px
+- **Trigger:** `[Send WhatsApp Message to Selected]` bulk action in Section 5.1
+- **Fields:**
+  - Selected alumni count (read-only info banner: "Sending to [N] alumni")
+  - Message template (select dropdown): Select a template or write custom
+  - Message body (textarea, max 1,024 chars — WhatsApp limit; char counter shown)
+  - Include opt-out link (checkbox, default checked)
+  - Schedule (radio: Send Now / Schedule for date+time)
+- **Tabs:** Compose | Preview (rendered message preview) | Delivery History
+- **Buttons:** `[Send Now]` / `[Schedule Send]` (primary) + `[Cancel]`
+- **On confirm:** `hx-post="/api/v1/group/{group_id}/adm/alumni/bulk-whatsapp/"` → `hx-target="#bulk-action-result"` `hx-swap="innerHTML"` → toast "WhatsApp message queued for [N] alumni."
+- **HTMX:** `hx-get="/api/v1/group/{group_id}/adm/alumni/whatsapp-composer-form/?ids={selected_ids}"` `hx-target="#modal-body"` `hx-swap="innerHTML"`
+
+---
+
 ## 7. Toast Messages
 
 | Action | Toast | Type | Duration |
@@ -224,6 +240,7 @@ Access enforcement: All views protected with `@login_required` and `@role_requir
 | No alumni matching search/filters | Search icon | "No alumni found" | "Try a different name, phone number, or adjust the year and branch filters." | `[Clear Filters]` |
 | By-year chart — insufficient data | Bar chart outline | "Not enough data for chart" | "Alumni by year chart will render once records span at least 2 years." | None |
 | College chart — no college data | Graduation cap outline | "No college data available" | "College information will appear as alumni records are updated." | None |
+| Branch-wise alumni count chart (5.4) empty | Building icon | "No Branch Data Available" | "Alumni records have not yet been assigned to branches. Import alumni records with branch data to populate this chart." | `[Import Alumni]` |
 
 ---
 
@@ -282,6 +299,7 @@ All UI visibility decisions made server-side in Django template. No client-side 
 | POST | `/api/v1/group/{group_id}/adm/alumni/import/commit/` | JWT G3 write | Commit validated import |
 | GET | `/api/v1/group/{group_id}/adm/alumni/export/` | JWT G3+ | Export alumni directory as CSV |
 | POST | `/api/v1/group/{group_id}/adm/alumni/bulk-whatsapp/` | JWT G3 write | Queue WhatsApp messages to selected alumni |
+| GET | `/api/v1/group/{group_id}/adm/alumni/whatsapp-composer-form/` | JWT G3 | Load WhatsApp message composer modal |
 
 ---
 
@@ -304,6 +322,8 @@ All UI visibility decisions made server-side in Django template. No client-side 
 | Import commit | `click` on `[Confirm Import]` | POST `/group/adm/alumni/directory/import/commit/` | `#import-status-panel` | `innerHTML` |
 | Open bulk import drawer | `click` on `[Bulk Import]` | GET `/group/adm/alumni/directory/import/` | `#drawer-container` | `innerHTML` |
 | Bulk mark inactive | `click` (after confirm) | POST `/group/adm/alumni/bulk-mark-inactive/` | `#alumni-table` | `innerHTML` |
+| Open WhatsApp message composer | `click from:#btn-bulk-whatsapp` | GET `.../alumni/whatsapp-composer-form/?ids={ids}` | `#modal-body` | `innerHTML` |
+| Send bulk WhatsApp messages | `click from:#btn-send-whatsapp` | POST `.../alumni/bulk-whatsapp/` | `#bulk-action-result` | `innerHTML` |
 
 ---
 

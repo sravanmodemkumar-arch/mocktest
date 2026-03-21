@@ -1,8 +1,10 @@
-# Page 17: Scholarship Exam Scheduler
+# 17 — Scholarship Exam Scheduler
 
-**URL:** `/group/adm/scholarship-exam/scheduler/`
-**Template:** `portal_base.html` (light theme)
-**Division:** C — Group Admissions · Scholarship Section
+> **URL:** `/group/adm/scholarship-exam/scheduler/`
+> **File:** `17-scholarship-exam-scheduler.md`
+> **Template:** `portal_base.html` (light theme)
+> **Priority:** P0
+> **Roles:** Group Scholarship Exam Manager (Role 26, G3) — primary
 
 ---
 
@@ -25,8 +27,9 @@ The page also acts as an operations dashboard in the days leading up to each exa
 | Group Admission Coordinator (24) | G3 | View only — all exams, all branches | No create/edit/cancel |
 | Chief Academic Officer | G2 | View only | Read-only cross-division access |
 | Branch Principal | Branch | View exams assigned to own branch | Scoped by branch |
+| Group Scholarship Manager (Role 27) | G3 | Read — Section 5.1 (Exam Schedule Table) and Section 5.3 (Registration Status) only | Needs exam visibility to coordinate scholarship awards |
 
-**Enforcement:** All access decisions are made server-side in Django using `request.user.role` checks in views and template conditionals. No client-side role logic is used. Write actions on the API require JWT claims with `role >= G3` and `function == scholarship_exam`. The Director's approval action uses a dedicated approval endpoint.
+**Enforcement:** All access decisions are made server-side in Django using `request.user.role` checks in views and template conditionals. No client-side role logic is used. Write actions on the API require JWT claims with `role >= G3` and `function == scholarship_exam`. The Director's approval action uses a dedicated approval endpoint. View decorator: `@role_required(['scholarship_exam_manager', 'admissions_director', 'admission_coordinator', 'scholarship_manager', 'cao', 'branch_principal'])`.
 
 ---
 
@@ -241,19 +244,21 @@ Triggers (dismissible, auto-reappear after 24 h if unresolved):
 
 ## 10. Role-Based UI Visibility
 
-| Element | Exam Manager (26) | Director (23) | Coordinator (24) | CAO | Branch Principal |
-|---|---|---|---|---|---|
-| `[+ Schedule New Exam]` button | Visible | Hidden | Hidden | Hidden | Hidden |
-| `[Edit →]` on table row | Visible | Hidden | Hidden | Hidden | Hidden |
-| `[Cancel]` on table row | Visible | Hidden | Hidden | Hidden | Hidden |
-| Bulk action bar | Visible | Hidden | Hidden | Hidden | Hidden |
-| `[Approve]` action (Director) | Hidden | Visible | Hidden | Hidden | Hidden |
-| `[Confirm →]` in venue table | Visible | Hidden | Hidden | Hidden | Hidden |
-| `[Reschedule One →]` on conflict | Visible | Hidden | Hidden | Hidden | Hidden |
-| Conflict Detector section | Visible | Visible | Visible (read) | Visible (read) | Hidden |
-| Section 5.5 registration windows | Visible | Visible | Visible | Hidden | Hidden |
-| Export button | Visible | Visible | Visible | Hidden | Hidden |
-| Branch Principal row scope | N/A | N/A | N/A | N/A | Own branches only |
+| Element | Exam Manager (26) | Director (23) | Coordinator (24) | CAO | Branch Principal | Sch Mgr (27) |
+|---|---|---|---|---|---|---|
+| `[+ Schedule New Exam]` button | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| `[Edit →]` on table row | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| `[Cancel]` on table row | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| Bulk action bar | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| `[Approve]` action (Director) | Hidden | Visible | Hidden | Hidden | Hidden | Hidden |
+| `[Confirm →]` in venue table | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| `[Reschedule One →]` on conflict | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| Conflict Detector section | Visible | Visible | Visible (read) | Visible (read) | Hidden | Hidden |
+| Section 5.1 Exam Schedule Table | Visible | Visible | Visible | Visible (read) | Own branches only | R (read-only, no edit/cancel actions) |
+| Section 5.3 Registration Status | Visible | Visible | Visible | Hidden | Hidden | R (read-only) |
+| Section 5.5 registration windows | Visible | Visible | Visible | Hidden | Hidden | Hidden |
+| Export button | Visible | Visible | Visible | Hidden | Hidden | Hidden |
+| Branch Principal row scope | N/A | N/A | N/A | N/A | Own branches only | N/A |
 
 *All UI visibility decisions made server-side in Django template. No client-side JS role checks.*
 
@@ -280,6 +285,8 @@ Triggers (dismissible, auto-reappear after 24 h if unresolved):
 | POST | `/api/v1/group/{group_id}/adm/scholarship-exam/scheduler/exams/{exam_id}/registration/close/` | JWT G3 write | Close registration |
 | GET | `/api/v1/group/{group_id}/adm/scholarship-exam/scheduler/registration-windows/` | JWT G3 read | Active registration window cards |
 | POST | `/api/v1/group/{group_id}/adm/scholarship-exam/scheduler/exams/{exam_id}/approve/` | JWT G3 Director | Director approves exam |
+| DELETE | `/api/v1/group/{group_id}/adm/scholarship-exam/scheduler/exams/{exam_id}/` | JWT G3 | Cancel (delete) a scheduled exam |
+| POST | `/api/v1/group/{group_id}/adm/scholarship-exam/scheduler/exams/bulk-close-registration/` | JWT G3 | Close registration for multiple exams simultaneously |
 
 ---
 
@@ -304,6 +311,8 @@ Triggers (dismissible, auto-reappear after 24 h if unresolved):
 | Registration window list refresh | `every 5m` | GET `.../scheduler/registration-windows/` | `#registration-window-list` | `innerHTML` |
 | Bulk open registration | `click` on `[Open Registration for Selected]` | POST `.../scheduler/exams/bulk-open-registration/` | `#exam-table-body` | `innerHTML` |
 | Open exam manage drawer | `click` on `[Manage →]` | GET `.../scheduler/exam-form/{exam_id}/` | `#drawer-container` | `innerHTML` |
+| Cancel exam | `click from:.btn-cancel-exam` | DELETE `.../adm/scholarship-exam/scheduler/exams/{id}/` | `#exam-schedule-table` | `innerHTML` |
+| Bulk close registration | `click from:#btn-bulk-close-reg` | POST `.../exams/bulk-close-registration/` | `#exam-schedule-table` | `innerHTML` |
 
 ---
 

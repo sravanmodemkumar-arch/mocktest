@@ -196,6 +196,19 @@ Group Portal → Admissions → Enquiry & Lead Tracker
 
 ---
 
+### 6.3 Modal: `mark-as-lost-confirm`
+- **Width:** 400px
+- **Trigger:** `[Mark as Lost]` row action from `[Take Action]` dropdown in Section 5.1
+- **Fields:**
+  - Reason (select dropdown, required): Not interested / Enrolled elsewhere / Budget constraint / Unreachable / Duplicate enquiry / Other
+  - Notes (textarea, optional, max 300 chars)
+  - Notify student (checkbox, default unchecked)
+- **Buttons:** `[Confirm — Mark as Lost]` (danger red) + `[Cancel]`
+- **On confirm:** `hx-post="/api/v1/group/{group_id}/adm/leads/{enquiry_id}/mark-lost/"` → `hx-target="#enquiry-table"` `hx-swap="innerHTML"` → toast "Enquiry marked as lost."
+- **HTMX:** `hx-get="/api/v1/group/{group_id}/adm/leads/{enquiry_id}/lost-form/"` `hx-target="#modal-body"` `hx-swap="innerHTML"`
+
+---
+
 ## 7. Toast Messages
 
 | Action | Toast | Type | Duration |
@@ -283,6 +296,9 @@ Group Portal → Admissions → Enquiry & Lead Tracker
 | POST | `/api/v1/group/{group_id}/adm/leads/bulk/mark-lost/` | JWT G3 | Bulk mark as lost |
 | GET | `/api/v1/group/{group_id}/adm/leads/export/` | JWT G3+ | Export filtered enquiries as CSV |
 | GET | `/api/v1/group/{group_id}/adm/leads/new/` | JWT G3 | New enquiry form (HTML fragment) |
+| POST | `/api/v1/group/{group_id}/adm/leads/{enquiry_id}/reschedule-followup/` | JWT G3 | Reschedule a follow-up task for a single enquiry |
+| GET | `/api/v1/group/{group_id}/adm/leads/{enquiry_id}/lost-form/` | JWT G3 | Load mark-as-lost modal form |
+| POST | `/api/v1/group/{group_id}/adm/leads/{enquiry_id}/mark-lost/` | JWT G3 | Mark single enquiry as lost with reason |
 
 ---
 
@@ -306,6 +322,9 @@ Group Portal → Admissions → Enquiry & Lead Tracker
 | [+ New Enquiry] button click | `click` | GET `/api/v1/group/{group_id}/adm/leads/new/` | `#new-enquiry-drawer` | `innerHTML` |
 | New enquiry form submit | `submit` | POST `/api/v1/group/{group_id}/adm/leads/` | `#leads-table-body` | `innerHTML` |
 | Bulk action submit | `click` | POST `/api/v1/group/{group_id}/adm/leads/bulk/{action}/` | `#leads-table-wrapper` | `innerHTML` |
+| Reschedule follow-up submit | `click from:#btn-reschedule-followup` | POST `.../leads/{id}/reschedule-followup/` | `#followup-due-section` | `outerHTML` |
+| Open mark-as-lost modal | `click` | GET `.../leads/{id}/lost-form/` | `#modal-body` | `innerHTML` |
+| Confirm mark as lost | `click from:#btn-confirm-lost` | POST `.../leads/{id}/mark-lost/` | `#enquiry-table` | `innerHTML` |
 
 ---
 

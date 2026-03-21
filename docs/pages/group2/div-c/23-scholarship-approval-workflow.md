@@ -1,4 +1,4 @@
-# Page 23: Scholarship Approval Workflow
+# 23 — Scholarship Approval Workflow
 
 **URL:** `/group/adm/scholarship-approvals/`
 **Template:** `portal_base.html` (light theme)
@@ -26,6 +26,7 @@ An SLA of 5 working days is enforced on all pending applications. Applications t
 | Branch Principal | Branch | View own branch nominations' status | Branch-scoped read only |
 | Chief Financial Officer | G1 | View approved + history (for disbursement) | Read-only |
 | Group Admission Coordinator (24) | G3 | No access to decisions | Excluded from approval function |
+| Group Admission Coordinator (Role 24) | G3 | Read — can view approval records for applications they referred | Cannot approve, reject, or request documents; can track status of their scholarship referrals |
 
 **Enforcement:** `@role_required(['scholarship_manager', 'admissions_director', 'counsellor', 'principal', 'cfo'])` at view level. Counsellor and Principal see only their own submissions via Django queryset filters (`submitted_by == request.user` or `branch == request.user.branch`). Approve/Reject/Request-Docs API endpoints require JWT with `role == scholarship_manager`. Director override uses a dedicated endpoint tagged as `action_type = override`.
 
@@ -230,6 +231,7 @@ Triggers:
 | No auto-recommendations | Automation icon | "No Auto-Recommendations" | "No exam-based auto-recommendations are pending approval." | None |
 | No approval history | Clock icon | "No History Yet" | "Approval decisions will appear here." | None |
 | Filter returns empty | Search-x icon | "No Applications Match Filters" | "Try adjusting filter criteria." | `[Clear Filters]` |
+| Rejection Reason Analysis (5.5) chart empty | Chart outline icon | "No Rejection Data Yet" | "Rejection reason analysis will appear once applications have been rejected in this cycle." | — |
 
 ---
 
@@ -254,20 +256,24 @@ Triggers:
 
 ## 10. Role-Based UI Visibility
 
-| Element | Scholarship Mgr (27) | Director (23) | Counsellor (25) | Principal | CFO |
-|---|---|---|---|---|---|
-| `[Approve ✓]` action | Visible | Visible (override) | Hidden | Hidden | Hidden |
-| `[Reject ✗]` action | Visible | Visible (override) | Hidden | Hidden | Hidden |
-| `[Request Docs]` action | Visible | Hidden | Hidden | Hidden | Hidden |
-| Bulk action bar | Visible | Hidden | Hidden | Hidden | Hidden |
-| `[Bulk Approve All Auto-Rec]` | Visible | Visible | Hidden | Hidden | Hidden |
-| Section 5.2 SLA Monitor | Visible (full + prioritise) | Visible (read) | Hidden | Hidden | Hidden |
-| Section 5.3 Auto-Rec Queue | Visible | Visible | Hidden | Hidden | Hidden |
-| Section 5.4 Approval History | Visible (all) | Visible (all) | Visible (own only) | Visible (own branch) | Visible (approved only) |
-| Section 5.5 Rejection Chart | Visible | Visible | Hidden | Hidden | Hidden |
-| Decision tab in drawer | Visible | Visible (override label) | Hidden | Hidden | Hidden |
-| Documents tab in drawer | Visible | Visible | Visible | Visible | Hidden |
-| Student Profile tab in drawer | Visible | Visible | Visible (own rec) | Visible (own branch) | Hidden |
+| Element | Scholarship Mgr (27) | Director (23) | Counsellor (25) | Principal | CFO | Coord (24) |
+|---|---|---|---|---|---|---|
+| `[Approve ✓]` action | Visible | Visible (override) | Hidden | Hidden | Hidden | Hidden |
+| `[Reject ✗]` action | Visible | Visible (override) | Hidden | Hidden | Hidden | Hidden |
+| `[Request Docs]` action | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| Bulk action bar | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| `[Bulk Approve All Merit]` button | Visible | Hidden | Hidden | Hidden | Hidden | Hidden |
+| `[Bulk Approve All Auto-Rec]` | Visible | Visible | Hidden | Hidden | Hidden | Hidden |
+| `[Bulk Approve All]` in 5.3 | Visible | Visible | Hidden | Hidden | Hidden | Hidden |
+| Section 5.1 Approval Queue table | Visible | Visible | Visible (own) | Visible (own branch) | Hidden | R (read-only rows, no action buttons) |
+| Section 5.2 SLA Monitor | Visible (full + prioritise) | Visible (read) | Hidden | Hidden | Hidden | R (read-only) |
+| `[Prioritise →]` button | Visible | Visible | Hidden | Hidden | Hidden | Hidden |
+| Section 5.3 Auto-Rec Queue | Visible | Visible | Hidden | Hidden | Hidden | R (read-only) |
+| Section 5.4 Approval History | Visible (all) | Visible (all) | Visible (own only) | Visible (own branch) | Visible (approved only) | R (read-only) |
+| Section 5.5 Rejection Chart | Visible | Visible | Hidden | Hidden | Hidden | Hidden |
+| Decision tab in drawer | Visible | Visible (override label) | Hidden | Hidden | Hidden | Hidden |
+| Documents tab in drawer | Visible | Visible | Visible | Visible | Hidden | Visible |
+| Student Profile tab in drawer | Visible | Visible | Visible (own rec) | Visible (own branch) | Hidden | Visible (referred applications) |
 
 *All UI visibility decisions made server-side in Django template. No client-side JS role checks.*
 
@@ -294,6 +300,7 @@ Triggers:
 | POST | `/api/v1/group/{group_id}/adm/scholarship-approvals/bulk-request-docs/` | JWT G3 write | Bulk request docs for incomplete |
 | GET | `/api/v1/group/{group_id}/adm/scholarship-approvals/stats/rejection-reasons/` | JWT G3 | Rejection reason chart data |
 | POST | `/api/v1/group/{group_id}/adm/scholarship-approvals/applications/{application_id}/override/` | JWT Director | Director override action |
+| GET | `/api/v1/group/{group_id}/adm/scholarship-approvals/export/?format=csv` | JWT G3 | Export current approval queue as CSV |
 
 ---
 
@@ -318,6 +325,8 @@ Triggers:
 | Filter approval history | `change` on history filters | GET `.../scholarship-approvals/history/?{filters}` | `#approval-history-body` | `innerHTML` |
 | Load rejection reasons chart | `load` on chart section | GET `.../scholarship-approvals/stats/rejection-reasons/` | `#rejection-chart-data` | `innerHTML` |
 | Refresh KPIs after decision | `htmx:afterRequest` from approve/reject calls | GET `.../scholarship-approvals/kpis/` | `#kpi-bar` | `innerHTML` |
+| Prioritise SLA-breached application | `click from:.btn-prioritise` | POST `.../scholarship-approvals/{id}/prioritise/` | `#sla-monitor-section` | `innerHTML` |
+| Export approval queue | `click from:#btn-export-queue` | GET `.../scholarship-approvals/export/?format=csv` | `#toast-container` | `afterbegin` |
 
 ---
 

@@ -283,6 +283,7 @@ If no promotions are available, the panel collapses to a single-line indicator: 
 | POST | `/api/v1/group/{group_id}/adm/waitlist/bulk-notify/` | JWT G3 | Send bulk notification to selected waitlisted students |
 | GET | `/api/v1/group/{group_id}/adm/waitlist/notification-templates/{template_id}/` | JWT G3 | Fetch notification template content |
 | GET | `/api/v1/group/{group_id}/adm/waitlist/export/` | JWT G3+ | Export waitlist as CSV |
+| POST | `/api/v1/group/{group_id}/adm/waitlist/{entry_id}/notify/` | JWT G3 | Send notification to a single waitlisted student |
 
 ---
 
@@ -307,6 +308,7 @@ If no promotions are available, the panel collapses to a single-line indicator: 
 | Chart bar click (filter table) | `click` | GET `/api/v1/group/{group_id}/adm/waitlist/?branch={id}&stream={id}` | `#waitlist-table-body` | `innerHTML` |
 | Notification template select | `change` | GET `/api/v1/group/{group_id}/adm/waitlist/notification-templates/{id}/` | `#notification-message-body` | `innerHTML` |
 | Bulk notify send | `click` | POST `/api/v1/group/{group_id}/adm/waitlist/bulk-notify/` | `#bulk-notify-status` | `innerHTML` |
+| Single-student notify | `click from:.btn-notify-single` | POST `.../waitlist/{id}/notify/` | `#toast-container` | `afterbegin` |
 
 ---
 

@@ -215,6 +215,18 @@ Displayed as a dismissible amber banner above KPI bar when triggered.
 
 ---
 
+### 6.4 Modal: `reject-application-confirm`
+- **Width:** 400px
+- **Trigger:** `[Reject Application]` action in Section 6.1 (Application Detail drawer, Actions tab)
+- **Fields:**
+  - Rejection reason (select, required): Below cut-off / Incomplete documents / Seat unavailable / Eligibility mismatch / Applicant withdrew / Other
+  - Notes (textarea, optional)
+  - Notify applicant via WhatsApp (checkbox, default checked)
+- **Buttons:** `[Confirm Rejection]` (danger red) + `[Cancel]`
+- **HTMX:** POST to `/api/v1/group/{group_id}/adm/pipeline/applications/{application_id}/reject/`
+
+---
+
 ## 7. Toast Messages
 
 | Action | Toast | Type | Duration |
@@ -299,6 +311,7 @@ Displayed as a dismissible amber banner above KPI bar when triggered.
 | GET | `/api/v1/group/{group_id}/adm/pipeline/export/` | JWT G3+ | Export filtered applications as CSV |
 | GET | `/api/v1/group/{group_id}/adm/pipeline/export/pdf-summary/` | JWT G3+ | Export pipeline summary as PDF |
 | POST | `/api/v1/group/{group_id}/adm/pipeline/bulk/offer-letters/` | JWT G3 | Batch generate offer letters for Offered-stage apps |
+| POST | `/api/v1/group/{group_id}/adm/pipeline/applications/{application_id}/request-documents/` | JWT G3 | Send document request notification to applicant |
 
 ---
 
@@ -320,6 +333,7 @@ Displayed as a dismissible amber banner above KPI bar when triggered.
 | Bottleneck panel refresh | `load, every 5m` | GET `/api/v1/group/{group_id}/adm/pipeline/bottlenecks/` | `#bottleneck-panel` | `innerHTML` |
 | Bulk action submit | `click` | POST `/api/v1/group/{group_id}/adm/pipeline/bulk/{action}/` | `#application-table-wrapper` | `innerHTML` |
 | Sort column header click | `click` | GET `/api/v1/group/{group_id}/adm/pipeline/?sort={col}&order={dir}&{filters}` | `#application-table-body` | `innerHTML` |
+| Request missing documents | `click from:#btn-request-docs` | POST `.../pipeline/applications/{id}/request-documents/` | `#document-status` | `innerHTML` |
 
 ---
 
