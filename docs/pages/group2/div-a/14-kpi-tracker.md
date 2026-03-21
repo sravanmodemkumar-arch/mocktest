@@ -273,4 +273,19 @@ Row action: [Drill-down] → `kpi-drill` drawer.
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Card / Table view toggle | `click` | GET `.../kpi-tracker/?view=cards\|table` | `#kpi-content-area` | `innerHTML` |
+| Category filter | `click` | GET `.../kpi-tracker/?category=` | `#kpi-content-area` | `innerHTML` |
+| Branch filter | `change` | GET `.../kpi-tracker/?branch=` | `#kpi-content-area` | `innerHTML` |
+| Period selector | `click` | GET `.../kpi-tracker/?period=` | `#kpi-content-area` | `innerHTML` |
+| Open KPI drill drawer | `click` | GET `.../kpi-tracker/{kpi_slug}/drill/` | `#drawer-body` | `innerHTML` |
+| Drill tab switch (Trend · By Branch · Variance) | `click` | GET `.../kpi-tracker/{kpi_slug}/drill/?tab=` | `#drill-tab-content` | `innerHTML` |
+| Save alert threshold | `submit` | PUT `.../kpi-tracker/{kpi_slug}/threshold/` | `#threshold-result-{kpi_slug}` | `innerHTML` |
+| KPI cards auto-refresh | `every 5m` | GET `.../kpi-tracker/?view=cards` | `#kpi-content-area` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

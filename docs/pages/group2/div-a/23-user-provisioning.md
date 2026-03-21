@@ -284,4 +284,23 @@ Tabs show red dot if incomplete.
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search users | `input delay:300ms` | GET `.../users/?q=` | `#users-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../users/?role=&branch=&status=&bgv=` | `#users-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../users/?sort=&dir=` | `#users-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../users/?page=` | `#users-table-section` | `innerHTML` |
+| Open user create drawer | `click` | GET `.../users/new/` | `#drawer-body` | `innerHTML` |
+| Open user edit drawer | `click` | GET `.../users/{uid}/edit/` | `#drawer-body` | `innerHTML` |
+| Edit drawer tab switch | `click` | GET `.../users/{uid}/edit/?tab=profile\|role\|branch\|history` | `#user-drawer-tab` | `innerHTML` |
+| Suspend user (confirm modal) | `click` | POST `.../users/{uid}/suspend/` | `#user-row-{uid}` | `outerHTML` |
+| Bulk suspend | `click` | POST `.../users/bulk-suspend/` | `#users-table-section` | `innerHTML` |
+| Bulk password reset | `click` | POST `.../users/bulk-reset-password/` | `#bulk-action-result` | `innerHTML` |
+| CSV import upload | `change` | POST `.../users/import/` | `#import-result` | `innerHTML` |
+| BGV reminder send | `click` | POST `.../users/{uid}/bgv-reminder/` | `#user-row-{uid}-bgv` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

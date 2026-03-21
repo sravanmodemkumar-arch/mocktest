@@ -284,6 +284,8 @@
 | 45 | Monitor BGV compliance rate across all staff | MD/Chairman | 32 |
 | 46 | Manage and track escalated incidents by severity | CEO/VP | 33 |
 | 47 | Assign escalation owner and enforce SLA | CEO/VP | 33 |
+| 48 | Approve cross-branch exam result publication | President/Chairman | 17 |
+| 49 | Approve branch deactivation with audit trail | Chairman/MD | 17 |
 
 ---
 
@@ -308,6 +310,9 @@
 | Fee monitoring insufficient (KPI row only) | Page 31 — Fee Revenue Dashboard with defaulter tracking and drill-down |
 | No staff headcount and BGV visibility for MD | Page 32 — Staff Strength & BGV Status across all branches |
 | No centralised escalation management | Page 33 — Escalation & Incident Centre with severity + SLA system |
+| Branch Deactivation missing as approval type | Page 17 — added Branch Deactivation to approval workflow |
+| Exam Result Publication had no approval gate | Page 17 — added Exam Result Publication approval type |
+| 13 pages missing HTMX interaction patterns | All 33 spec pages now have complete HTMX Patterns section |
 
 ---
 
@@ -329,4 +334,4 @@ P2 — Sprint 3
 
 ---
 
-*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 17 · Audit pass: complete — zero gaps*
+*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 20 · Audit passes: 2 — zero gaps remaining*

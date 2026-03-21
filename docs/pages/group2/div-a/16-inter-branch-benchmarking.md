@@ -274,4 +274,18 @@ Score = weighted average of metric achievement %. Range: 0–100.
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| View switch (Table · Heat Map · Radar) | `click` | GET `.../benchmarking/?view=table\|heatmap\|radar` | `#benchmarking-content` | `innerHTML` |
+| Branch filter (for radar comparison) | `change` | GET `.../benchmarking/?branches=&view=radar` | `#benchmarking-content` | `innerHTML` |
+| Metric group toggle (column visibility) | `click` | GET `.../benchmarking/?groups=` | `#benchmarking-content` | `innerHTML` |
+| Period selector | `click` | GET `.../benchmarking/?period=` | `#benchmarking-content` | `innerHTML` |
+| Sort column (table view) | `click` | GET `.../benchmarking/?sort=&dir=` | `#benchmarking-table-section` | `innerHTML` |
+| Correlation scatter axis change | `change` | GET `.../benchmarking/scatter/?x=&y=` | `#scatter-chart-area` | `innerHTML` |
+| Export trigger | `click` | GET `.../benchmarking/export/?format=pdf\|csv` | `#export-status` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

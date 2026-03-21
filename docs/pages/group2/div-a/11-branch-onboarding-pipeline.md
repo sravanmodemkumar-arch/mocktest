@@ -300,4 +300,19 @@ Each item: Checkbox (MD/CEO can check) · Updated by · Updated at · Notes fiel
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Filter by stage | `click` | GET `.../branches/onboarding/?stage=` | `#kanban-board` | `innerHTML` |
+| Filter by assigned | `change` | GET `.../branches/onboarding/?assigned=` | `#kanban-board` | `innerHTML` |
+| Open branch onboarding detail drawer | `click` | GET `.../branches/onboarding/{bid}/` | `#drawer-body` | `innerHTML` |
+| Advance stage (checklist complete) | `click` | POST `.../branches/onboarding/{bid}/advance/` | `#kanban-card-{bid}` | `outerHTML` |
+| Revert stage (with reason) | `click` | POST `.../branches/onboarding/{bid}/revert/` | `#kanban-card-{bid}` | `outerHTML` |
+| Checklist item toggle | `change` | PUT `.../branches/onboarding/{bid}/checklist/{item}/` | `#checklist-item-{item}` | `outerHTML` |
+| Document upload | `change` | POST `.../branches/onboarding/{bid}/documents/` | `#document-upload-status` | `innerHTML` |
+| Stats bar refresh | `every 5m` | GET `.../branches/onboarding/stats/` | `#onboarding-stats` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

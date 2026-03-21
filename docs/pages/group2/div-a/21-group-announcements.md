@@ -217,4 +217,19 @@ Character limit indicator: If SMS selected and message >160 chars → warning ba
 
 ---
 
+## 11. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Tab switch | `click` | GET `.../announcements/?tab=pending\|scheduled\|published\|drafts` | `#announcements-tab-content` | `innerHTML` |
+| Search | `input delay:300ms` | GET `.../announcements/?q=` | `#announcements-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../announcements/?channel=&status=&date=` | `#announcements-table-section` | `innerHTML` |
+| Open view drawer | `click` | GET `.../announcements/{aid}/` | `#drawer-body` | `innerHTML` |
+| Open compose drawer | `click` | GET `.../announcements/new/` | `#drawer-body` | `innerHTML` |
+| Approve (modal confirm) | `click` | POST `.../announcements/{aid}/approve/` | `#announcement-row-{aid}` | `outerHTML` |
+| Reject (modal confirm) | `click` | POST `.../announcements/{aid}/reject/` | `#announcement-row-{aid}` | `outerHTML` |
+| Estimated reach (targeting change) | `change` | GET `.../announcements/reach-estimate/?target=` | `#reach-estimate` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

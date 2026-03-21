@@ -265,4 +265,21 @@ Saved templates reduce compose time from 10+ minutes to 2 minutes for routine co
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search circulars | `input delay:300ms` | GET `.../communications/?q=` | `#communications-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../communications/?status=&date=&branch=` | `#communications-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../communications/?sort=&dir=` | `#communications-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../communications/?page=` | `#communications-table-section` | `innerHTML` |
+| Open compose drawer | `click` | GET `.../communications/new/` | `#drawer-body` | `innerHTML` |
+| Open circular detail drawer | `click` | GET `.../communications/{cid}/` | `#drawer-body` | `innerHTML` |
+| Detail drawer tab switch | `click` | GET `.../communications/{cid}/?tab=content\|delivery\|replies` | `#circular-drawer-tab` | `innerHTML` |
+| Delivery status refresh | `click` | GET `.../communications/{cid}/delivery/` | `#delivery-tab-content` | `innerHTML` |
+| Resend to not-opened | `click` | POST `.../communications/{cid}/resend-unopened/` | `#resend-result` | `innerHTML` |
+| Delivery stats auto-refresh | `every 5m` | GET `.../communications/stats/` | `#comms-stats-bar` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

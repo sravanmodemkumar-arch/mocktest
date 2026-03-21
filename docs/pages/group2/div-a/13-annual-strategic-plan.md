@@ -292,4 +292,22 @@ with 500ms debounce. Unsaved indicator if network error.
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Branch targets table search | `input delay:300ms` | GET `.../strategic-plan/?q=` | `#targets-table-body` | `innerHTML` |
+| Branch targets filter | `click` | GET `.../strategic-plan/?zone=&status=` | `#targets-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../strategic-plan/?sort=&dir=` | `#targets-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../strategic-plan/?page=` | `#targets-table-section` | `innerHTML` |
+| Open branch plan drawer | `click` | GET `.../strategic-plan/branch/{bid}/` | `#drawer-body` | `innerHTML` |
+| Inline cell edit (target value) | `dblclick` | GET `.../strategic-plan/branch/{bid}/edit-cell/?field=` | `#cell-{bid}-{field}` | `outerHTML` |
+| Save inline cell | `blur` | PUT `.../strategic-plan/branch/{bid}/` | `#cell-{bid}-{field}` | `outerHTML` |
+| Submit plan for approval | `click` | POST `.../strategic-plan/submit/` | `#plan-status-banner` | `innerHTML` |
+| Approve plan (Chairman) | `click` | POST `.../strategic-plan/approve/` | `#plan-status-banner` | `innerHTML` |
+| Reject plan (Chairman) | `click` | POST `.../strategic-plan/reject/` | `#plan-status-banner` | `innerHTML` |
+| Budget tab section switch | `click` | GET `.../strategic-plan/?section=targets\|budget` | `#plan-content-area` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

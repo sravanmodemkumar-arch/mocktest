@@ -267,4 +267,22 @@ Full exam details:
 
 ---
 
+## 13. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Tab switch | `click` | GET `.../exam-schedules/?tab=pending\|conflicting\|approved\|rejected` | `#exam-tab-content` | `innerHTML` |
+| Search | `input delay:300ms` | GET `.../exam-schedules/?q=` | `#exam-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../exam-schedules/?branch=&stream=&class=&conflict=` | `#exam-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../exam-schedules/?sort=&dir=` | `#exam-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../exam-schedules/?page=` | `#exam-table-section` | `innerHTML` |
+| Open exam approval drawer | `click` | GET `.../exam-schedules/{eid}/` | `#drawer-body` | `innerHTML` |
+| Approve inline | `click` | POST `.../exam-schedules/{eid}/approve/` | `#exam-row-{eid}` | `outerHTML` |
+| Reject (inline expand) | `click` | GET `.../exam-schedules/{eid}/reject-form/` | `#exam-row-{eid}-actions` | `innerHTML` |
+| Reject submit | `submit` | POST `.../exam-schedules/{eid}/reject/` | `#exam-table-section` | `innerHTML` |
+| Bulk approve confirm | `click` | POST `.../exam-schedules/bulk-approve/` | `#exam-table-section` | `innerHTML` |
+| Override (Chairman) | `click` | POST `.../exam-schedules/{eid}/override/` | `#exam-row-{eid}` | `outerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

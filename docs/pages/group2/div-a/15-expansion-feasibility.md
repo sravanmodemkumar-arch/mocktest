@@ -250,4 +250,20 @@ Competition summary:
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search studies | `input delay:300ms` | GET `.../expansion/?q=` | `#expansion-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../expansion/?status=&recommendation=&state=` | `#expansion-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../expansion/?sort=&dir=` | `#expansion-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../expansion/?page=` | `#expansion-table-section` | `innerHTML` |
+| Open study create drawer | `click` | GET `.../expansion/new/` | `#drawer-body` | `innerHTML` |
+| Open study detail / view drawer | `click` | GET `.../expansion/{sid}/` | `#drawer-body` | `innerHTML` |
+| Drawer tab switch | `click` | GET `.../expansion/{sid}/?tab=location\|demographics\|competition\|financials\|recommendation` | `#expansion-drawer-tab` | `innerHTML` |
+| Add competitor row | `click` | GET `.../expansion/competitor-row/` | `#competitors-table-body` | `beforeend` |
+| Financials auto-recalculate | `change` | GET `.../expansion/{sid}/financials/estimate/?inputs=` | `#financials-projections` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

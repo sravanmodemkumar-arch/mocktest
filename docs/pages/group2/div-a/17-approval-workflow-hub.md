@@ -17,7 +17,9 @@ Each role sees only the approvals routed to them. Chairman sees all.
 Approval types routed through this hub:
 - Annual Strategic Plan
 - New Branch Activation
+- Branch Deactivation
 - Exam Schedule (G4 President)
+- Exam Result Publication (cross-branch results release)
 - Fee Structure Change
 - Scholarship Waiver (large amounts)
 - Staff Transfer Between Branches
@@ -282,6 +284,23 @@ Same columns + "Decision" (Approved/Rejected) + "Decision By" + "Decision Date" 
 | POST | `/api/v1/group/{id}/approvals/bulk-approve/` | JWT (G5/G4) | Bulk approve list |
 | GET | `/api/v1/group/{id}/approvals/charts/volume/` | JWT | Volume by type chart |
 | GET | `/api/v1/group/{id}/approvals/charts/avg-days/` | JWT | Avg days chart |
+
+---
+
+## 15. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Tab switch | `click` | GET `.../approvals/?tab=queue\|sent\|all\|completed` | `#approvals-tab-content` | `innerHTML` |
+| Search | `input delay:300ms` | GET `.../approvals/?q=` | `#approvals-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../approvals/?type=&branch=&priority=&age=` | `#approvals-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../approvals/?sort=&dir=` | `#approvals-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../approvals/?page=` | `#approvals-table-section` | `innerHTML` |
+| Open approval detail drawer | `click` | GET `.../approvals/{aid}/` | `#drawer-body` | `innerHTML` |
+| Approve inline | `click` | POST `.../approvals/{aid}/approve/` | `#approval-row-{aid}` | `outerHTML` |
+| Bulk approve (confirm modal) | `click` | POST `.../approvals/bulk-approve/` | `#approvals-tab-content` | `innerHTML` |
+| Withdraw | `click` | POST `.../approvals/{aid}/withdraw/` | `#approval-row-{aid}` | `outerHTML` |
+| Override (Chairman) | `click` | POST `.../approvals/{aid}/override/` | `#approval-row-{aid}` | `outerHTML` |
 
 ---
 

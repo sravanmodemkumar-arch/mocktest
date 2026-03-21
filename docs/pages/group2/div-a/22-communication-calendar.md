@@ -232,4 +232,20 @@ overload warning — two reminders to parents on [date]."
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| View switch (Month · Week · List) | `click` | GET `.../comm-calendar/?view=month\|week\|list` | `#comm-calendar-area` | `innerHTML` |
+| Month navigation (← →) | `click` | GET `.../comm-calendar/?month=&year=&view=month` | `#comm-calendar-area` | `innerHTML` |
+| Week navigation | `click` | GET `.../comm-calendar/?week=&view=week` | `#comm-calendar-area` | `innerHTML` |
+| Event type filter toggle | `click` | GET `.../comm-calendar/?types=` | `#comm-calendar-area` | `innerHTML` |
+| [Today] jump | `click` | GET `.../comm-calendar/?today=1&view=month` | `#comm-calendar-area` | `innerHTML` |
+| Open event create drawer | `click` (day/slot) | GET `.../comm-calendar/new/?date=&time=` | `#drawer-body` | `innerHTML` |
+| Open event detail drawer | `click` (event chip) | GET `.../comm-calendar/{eid}/` | `#drawer-body` | `innerHTML` |
+| List view pagination | `click` | GET `.../comm-calendar/?view=list&page=` | `#comm-list-section` | `innerHTML` |
+| Conflict check (on date change) | `change` | GET `.../comm-calendar/conflict-check/?date=&type=` | `#conflict-warning` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

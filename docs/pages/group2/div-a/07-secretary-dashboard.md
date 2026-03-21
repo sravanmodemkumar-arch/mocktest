@@ -349,4 +349,19 @@ When clicked: Opens `communications-compose` drawer.
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Circular status table search | `input delay:300ms` | GET `.../communications/?q=` | `#circular-table-body` | `innerHTML` |
+| Circular filter apply | `click` | GET `.../communications/?status=&date=` | `#circular-table-section` | `innerHTML` |
+| Open compose drawer | `click` | GET `.../communications/new/` | `#drawer-body` | `innerHTML` |
+| Open circular detail drawer | `click` | GET `.../communications/{cid}/` | `#drawer-body` | `innerHTML` |
+| Announcement queue filter | `click` | GET `.../announcements/?status=pending` | `#announcement-queue` | `innerHTML` |
+| Calendar week navigation | `click` | GET `.../comm-calendar/?week=` | `#calendar-week-view` | `innerHTML` |
+| Board meeting checklist update | `change` | PUT `.../board-meetings/{mid}/checklist/` | `#meeting-checklist` | `innerHTML` |
+| Stats bar auto-refresh | `every 5m` | GET `.../secretary/dashboard/stats/` | `#stats-bar` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

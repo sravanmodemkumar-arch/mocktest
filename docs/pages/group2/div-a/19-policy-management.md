@@ -270,4 +270,22 @@ Group Policy Management                                [+ New Policy]  [Export A
 
 ---
 
+## HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Tab switch (Active · Draft · Archived) | `click` | GET `.../policies/?tab=active\|draft\|archived` | `#policies-tab-content` | `innerHTML` |
+| Search policies | `input delay:300ms` | GET `.../policies/?q=` | `#policies-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../policies/?category=&scope=&date=` | `#policies-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../policies/?sort=&dir=` | `#policies-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../policies/?page=` | `#policies-table-section` | `innerHTML` |
+| Open policy create drawer | `click` | GET `.../policies/new/` | `#drawer-body` | `innerHTML` |
+| Open policy view drawer | `click` | GET `.../policies/{pid}/` | `#drawer-body` | `innerHTML` |
+| Policy drawer tab switch | `click` | GET `.../policies/{pid}/?tab=content\|versions\|acknowledgements` | `#policy-drawer-tab` | `innerHTML` |
+| Send acknowledgement reminder | `click` | POST `.../policies/{pid}/reminders/` | `#reminder-result-{pid}` | `innerHTML` |
+| Publish policy | `click` | POST `.../policies/{pid}/publish/` | `#policy-row-{pid}` | `outerHTML` |
+| Archive policy | `click` | POST `.../policies/{pid}/archive/` | `#policy-row-{pid}` | `outerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*
