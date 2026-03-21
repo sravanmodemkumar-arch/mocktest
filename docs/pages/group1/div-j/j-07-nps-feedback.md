@@ -100,11 +100,11 @@ Cache key includes all filter params. `?nocache=true` for CSM (#53) and CS Analy
 └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
-- **NPS Score:** `(Promoters/Total × 100) - (Detractors/Total × 100)`. Scale: -100 to +100. Delta vs previous period. Green if ≥ 40, amber if 20–39, red if < 20.
+- **NPS Score:** `(Promoters/respondents × 100) - (Detractors/respondents × 100)`. "Respondents" = count of surveys where `responded_at IS NOT NULL` (unresponded surveys are excluded from NPS score calculation). Scale: -100 to +100. Delta vs previous period. Green if ≥ 40, amber if 20–39, red if < 20.
 - **Responses:** Count where `responded_at IS NOT NULL` in period. Sub-label: "of N sent".
 - **Detractor %:** Count(DETRACTOR) / Count(responded) × 100. Red if > 20%.
 - **Promoter %:** Count(PROMOTER) / Count(responded) × 100. Green if > 50%.
-- **Response Rate:** Count(responded) / Count(sent) × 100. Target ≥ 30%.
+- **Response Rate:** Count(responded) / Count(sent) × 100. "Sent" includes ALL surveys dispatched in the period — including pending and expired surveys (expired surveys are still counted as "sent" since the recipient received the link; they chose not to respond). Target ≥ 30%.
 
 Tiles shown in selected period. "last_quarter" = Q4 2025 (Oct–Dec 2025) if today is Q1 2026.
 

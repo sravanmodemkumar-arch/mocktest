@@ -120,6 +120,8 @@ Cache key includes all filter params. `?nocache=true` for CSM (#53) and Escalati
 | Days Open | Yes | Integer; red if P1 > 1d, P2 > 3d, P3 > 7d |
 | Actions | No | [View Details] [Resolve] (Escalation Manager only) |
 
+**Pagination:** 25 rows per page. Page size fixed (no per-page selector). Pagination controls re-render with the `?part=table` partial.
+
 **Row click:** Opens Escalation Detail Drawer (right-side panel, HTMX-loaded).
 
 **Status inline dropdown (Escalation Manager + CSM only):**
@@ -308,6 +310,18 @@ If no account_at_risk escalations: "No accounts are currently flagged as at-risk
 | Coordination note added | "Coordination note added." (blue) |
 | Escalation created | "P[N] escalation created and assigned to [Name]." (amber/red based on severity) |
 | CSM notified (Escalate to CSM) | "CSM [Name] notified of urgent escalation attention needed." (amber) |
+
+---
+
+## Export CSV
+
+Available to CSM (#53) and CS Analyst (#93) only via `GET /csm/escalations/?export=csv` (URL parameter triggers download).
+
+Filename: `eduforge_escalations_YYYY-MM-DD.csv`
+
+Columns: escalation_id, institution_id, institution_name, institution_type, severity, status, title, opened_by, assigned_to, opened_at, commit_date, resolved_at, closed_at, commit_sla_at, resolve_sla_at, commit_sla_breached, resolve_sla_breached, account_at_risk, arr_at_risk_paise, churn_reason, linked_ticket_count, days_open
+
+Export applies current `?severity`, `?status`, `?assigned_to`, and `?show_closed` filters. Async (email link) for > 500 rows; inline download for ≤ 500 rows.
 
 ---
 

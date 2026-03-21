@@ -112,6 +112,8 @@ Sort: [Next task due ▲]   Showing 38 active playbooks
 | Health | Current health score + tier badge (from `csm_institution_health`) |
 | Actions | [View Tasks] [Complete Task] [Abandon] |
 
+**Pagination:** 25 rows per page. Page size fixed (no per-page selector). Pagination controls re-render with the `?part=instances_table` partial.
+
 **Row click:** Expands inline accordion (same design as J-03 Playbooks tab) showing full task checklist.
 
 **[Complete Task]:** Quick-complete the next overdue task. Opens inline confirmation: "Mark '[Task Title]' as completed?". POST to `/csm/playbooks/instances/{id}/tasks/{step}/complete/`. Returns HTMX swap of the row.
@@ -320,8 +322,8 @@ Auto-refresh every 5 min. If 0 overdue: "No overdue tasks." with green check ico
 | Element | 53 CSM | 54 AM | 55 Escalation | 56 Renewal | 93 Analyst | 94 ISM |
 |---|---|---|---|---|---|---|
 | View instances | All | Own | Read | No access | Read | Own |
-| Start playbook | Yes | No | No | No | No | Yes (own accounts) |
-| Complete task | Yes + team | No | No | No | No | Yes (assigned) |
+| Start playbook | Yes | No | No | No | No | Yes (own accounts, within 90-day tenure) |
+| Complete task | Yes + team | No | No | No | No | Yes (assigned, within 90-day tenure) |
 | Abandon instance | Yes | No | No | No | No | No |
 | View templates | Yes | Yes | Yes | No | Yes | Yes |
 | Create template | Yes | No | No | No | No | No |
@@ -329,3 +331,5 @@ Auto-refresh every 5 min. If 0 overdue: "No overdue tasks." with green check ico
 | Deactivate template | Yes | No | No | No | No | No |
 | Overdue panel | Yes | Own | No | No | Read | Own |
 | Instance KPI strip | Yes | Yes | Yes | No | Yes | Yes |
+
+**ISM post-tenure note:** After `ism_tenure_end_date` passes (day 90), ISM (#94) access to playbook actions becomes read-only for the graduated account. Active playbook instances are transferred to the AM by Task J-6 (see div-j-pages-list Celery Tasks). The ISM's view of the instances page is filtered to `assigned_to_id = current_user`, so transferred instances (reassigned to AM) no longer appear in their Instances tab — only read-only via direct account profile navigation. ISM cannot start new playbooks or complete tasks on accounts outside their current active tenure.

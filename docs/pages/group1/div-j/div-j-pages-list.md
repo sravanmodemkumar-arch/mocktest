@@ -547,7 +547,7 @@ If new tier = CHURNED_RISK (score 0–24) AND previous tier was not CHURNED_RISK
 | J-1 | `csm_health_recompute` | Nightly 01:00 IST | (1) Applies grace period guard for institutions < 30 days old. (2) Recomputes health scores for all 2,050 institutions. (3) Upserts `csm_institution_health`. (4) Inserts today's row into `csm_health_history`; deletes history rows > 90 days old. (5) Auto-creates `csm_renewal` records for active subscriptions with no open renewal. (6) Updates `csm_escalation.commit_sla_breached` and `resolve_sla_breached` flags. (7) Sets `csm_config['last_health_compute_at']` on completion (used by Task J-4 to verify data freshness). Duration ~12–18 min. |
 | J-2 | `csm_renewal_alert` | Daily 09:00 IST | Checks renewals due in ≤30 days with no touchpoint in last 14 days and stage not in (COMMITTED, RENEWED, CHURNED). Sends in-app notification to assigned AM + Renewal Exec. For ≤7 days remaining: escalates to WhatsApp via F-06 **for all active stages** (IDENTIFIED, OUTREACH_SENT, QUOTE_SENT, NEGOTIATING) — not limited to IDENTIFIED only; urgency applies regardless of pipeline progress. Also sends ISM tenure-end warning: if `ism_tenure_end_date` is 10 days away, sends in-app + email to ISM (#94) and AM (#54). Also sends daily digest to platform CSM (#53) listing count of institutions with no CSM or AM assigned. |
 | J-3 | `csm_nps_dispatch` | 1st of each quarter at 10:00 IST | Sends `QUARTERLY_NPS` surveys to primary contacts of HEALTHY + ENGAGED institutions. Uses `@app.task(rate_limit='50/h')` Celery rate limiting; surveys spread via individual subtasks with ETA scheduling — no blocking sleep. Skips institutions surveyed in last 60 days. Queues 7-day reminder subtasks for non-respondents (sets `reminder_sent_at` on send). For COACHING-type institutions: dispatches via WhatsApp (F-06) instead of email, as coaching centres have higher WhatsApp engagement than email. |
-| J-4 | `csm_at_risk_alert` | Daily 08:00 IST | Checks `csm_config['last_health_compute_at']` first — if Task J-1 did not complete today, runs on yesterday's data and adds note to notification: "based on last available data [timestamp]". Scans for tier crossings: (a) health_score dropped below 65 → sends CSM notification + auto-creates AT_RISK_RECOVERY playbook (template from `csm_config['at_risk_default_playbook_template_id']`). (b) health_score dropped below 25 (CHURNED_RISK crossing) → sends CSM + Escalation Manager notification + auto-creates CHURN_SAVE playbook instead (`csm_config['churn_risk_default_playbook_template_id']`). Does not create duplicate playbooks if same-type instance is already ACTIVE. **Template null guard:** if the config key is null or the referenced template ID does not exist or `is_active = false`, skip playbook auto-creation and send an additional in-app notification to the platform CSM (#53): "Auto-playbook skipped for [Institution] — default template not configured. Update `at_risk_default_playbook_template_id` in CS config." |
+| J-4 | `csm_at_risk_alert` | Daily 08:00 IST | Checks `csm_config['last_health_compute_at']` first — if Task J-1 did not complete today, runs on yesterday's data and adds note to notification: "based on last available data [timestamp]". Scans for tier crossings: (a) health_score dropped below 65 → sends CSM notification + auto-creates AT_RISK_RECOVERY playbook (template from `csm_config['at_risk_default_playbook_template_id']`). (b) health_score dropped below 25 (CHURNED_RISK crossing) → sends CSM + Escalation Manager notification + auto-creates CHURN_SAVE playbook (`csm_config['churn_risk_default_playbook_template_id']`). **Duplicate playbook logic:** Does not create duplicate playbooks if same-type instance is already ACTIVE. Exception: if account transitions directly to CHURNED_RISK (previously AT_RISK or ENGAGED), and an AT_RISK_RECOVERY playbook is currently ACTIVE, Task J-4 does NOT auto-abandon it — the assigned CSM receives a notification "Account now in CHURNED_RISK — review active AT_RISK_RECOVERY playbook and consider switching to CHURN_SAVE." CSM manually abandons the AT_RISK_RECOVERY instance if needed; Task J-4 creates CHURN_SAVE alongside it if none exists. **Template null guard:** if the config key is null or the referenced template ID does not exist or `is_active = false`, skip playbook auto-creation and send an additional in-app notification to the platform CSM (#53): "Auto-playbook skipped for [Institution] — default template not configured. Update `at_risk_default_playbook_template_id` in CS config." |
 | J-5 | `csm_weekly_snapshot` | Monday 02:00 IST | Aggregates portfolio-wide metrics into `csm_weekly_snapshot`. Computes GRR = MIN(ARR_renewed_base, ARR_due) / ARR_due (capped at 100%; excludes expansion delta). Computes NRR = (ARR_renewed_base + expansion_arr) / ARR_due. **ARR_renewed_base** = `SUM(arr_value_paise WHERE stage='RENEWED' AND expansion_arr_paise IS NULL)` — base renewal ARR for institutions that renewed without expansion; **expansion_arr** = `SUM(expansion_arr_paise WHERE stage='EXPANSION')`; **ARR_due** = `SUM(arr_value_paise WHERE renewal_date in period)`. Uses rolling 13-week window for quarterly GRR/NRR. Also cleans up `csm_health_history` rows as a safety net (duplicate cleanup for rare retry-caused duplicates on the UNIQUE index). |
 | J-6 | `csm_ism_tenure_handoff` | Daily 07:00 IST | Scans `csm_account_assignment` where `ism_tenure_end_date = today`. For each: (1) Sends in-app + email to ISM and AM: "ISM tenure complete for [Institution]. AM takes ownership from today." (2) Checks if any `csm_playbook_instance` with `assigned_to_id = ism_id` and `status = ACTIVE` exists — if so, reassigns instance to `account_manager_id` and sends AM a notification: "Playbook '[name]' for [Institution] transferred to you." **AM null guard:** if `account_manager_id` is null, do NOT reassign; instead notify the assigned CSM (#53): "[Institution] ISM tenure ended but no AM is assigned — active playbooks remain with ISM until an AM is assigned." Log a WARNING to application logs for monitoring. (3) Does NOT nullify `ism_id` — keeps as reference; AM is now primary. |
 
@@ -633,6 +633,36 @@ All Division J routes under `/csm/` prefix. Django app name: `csm`.
 | `/csm/playbooks/instances/<int:pk>/` | PATCH | `playbook_instance_update` | `csm:instance_update` |
 | `/csm/renewals/export/` | GET | `renewal_export` | `csm:renewal_export` |
 | `/csm/escalations/<int:pk>/notify_csm/` | POST | `escalation_notify_csm` | `csm:escalation_notify_csm` |
+
+---
+
+## HTMX Conventions (Division J Standard Patterns)
+
+### Auto-refresh polling
+All "auto-refresh every X min/s" entries in Part-Load tables use HTMX's built-in polling trigger — no custom JavaScript interval needed:
+```html
+<div hx-get="/csm/?part=at_risk_feed"
+     hx-trigger="load, every 180s"
+     hx-target="#at_risk_feed"
+     hx-swap="innerHTML">
+```
+The `every Xs` trigger is `hx-trigger` polling (HTMX native). If the poll request fails (network error, 5xx), HTMX stops polling automatically — no retry backoff needed at the JS layer; Celery tasks regenerate cache on next run.
+
+### Tab / section navigation
+Tab changes that update the URL use `hx-push-url="true"` on the HTMX request (not a form GET). The response is the **partial content only** (just the tab body), not a full page reload. Browser back/forward restores the ?section= param, which the shell page reads to re-render the correct active tab.
+
+### hx-swap-oob (out-of-band swaps)
+Write endpoints (POST/PATCH) that change header counters or badges return two fragments in one response:
+1. Main swap: the updated record row or form result
+2. OOB fragment: `<div id="target-id" hx-swap-oob="true">…updated content…</div>`
+
+Both fragments are returned together in the same HTTP response body; HTMX processes them simultaneously — there is no sequential ordering or partial failure risk.
+
+### Modal / drawer pattern
+Drawers (Escalation Detail, Survey Detail, Account Assign, etc.) are opened via an HTMX `hx-get` on the trigger element with `hx-target="#drawer-container"` and `hx-swap="innerHTML"`. The `#drawer-container` is a persistent empty `<div>` in the base template that receives the drawer HTML. Closing via `[×]` dispatches a custom JS event that empties `#drawer-container` and removes the `is-open` CSS class from the overlay. Focus management: drawer open sets `focus()` to the first interactive element; close restores focus to the element that triggered the open.
+
+### Memcached key naming convention
+All Division J cache keys follow the pattern: `csm:{page}:{filter_hash}` where `{filter_hash}` is a deterministic hex digest of the sorted URL params dict. Example: `csm:portfolio:a3f4b2` for a specific filter combination on J-02. Keys are namespaced under `csm:` to allow bulk invalidation. TTL set per section as documented in each page's Data Sources table.
 
 ---
 

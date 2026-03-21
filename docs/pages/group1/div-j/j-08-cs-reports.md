@@ -106,7 +106,7 @@ All chart data pre-computed by Celery Task J-5 (weekly snapshot). Live queries u
 - **ARR_renewed_base** = `SUM(arr_value_paise WHERE stage='RENEWED' AND expansion_arr_paise IS NULL)` — base renewal ARR, excludes expansion-only contracts.
 - **expansion_arr** = `SUM(expansion_arr_paise WHERE stage='EXPANSION')` — net new ARR from expanded seats/plans.
 - **ARR_due** = `SUM(arr_value_paise WHERE renewal_date BETWEEN period_start AND period_end)` — total ARR up for renewal in the period.
-- **Logo Churn Rate:** Count(CHURNED institutions) / Count(total institutions at period start) × 100.
+- **Logo Churn Rate:** Count(institutions where `stage='CHURNED'` AND `lost_at BETWEEN period_start AND period_end`) / Count(institutions with an active subscription at `period_start`) × 100. "Institutions at period start" = institutions with `csm_renewal.stage NOT IN ('CHURNED')` as of `period_start` date — so institutions that joined mid-period are included in the denominator only for the next period. Example: 44 churned institutions in Q1 2026 / 2,040 institutions active at Jan 1 2026 = 2.16% logo churn.
 - **Expansion Rate:** Sum(expansion_arr) / ARR_due × 100.
 - **NPS Score:** From `csm_weekly_snapshot` most recent.
 - **Avg Health Score:** Platform-wide from `csm_weekly_snapshot`.
