@@ -424,4 +424,20 @@ Accessed via branch drill-down drawer. Shows per-staff BGV status.
 
 ---
 
+## 15. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Tab switch | `click` | GET `.../staff-strength/?tab=headcount\|bgv\|pocso\|vacancies` | `#staff-tab-content` | `innerHTML` |
+| Search (branch) | `input delay:300ms` | GET `.../staff-strength/{tab}/?q=` | `#staff-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../staff-strength/{tab}/?filters=` | `#staff-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../staff-strength/{tab}/?sort=&dir=` | `#staff-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../staff-strength/{tab}/?page=` | `#staff-table-section` | `innerHTML` |
+| Open branch drill-down drawer | `click` | GET `.../staff-strength/branch/{bid}/drill/` | `#drawer-body` | `innerHTML` |
+| BGV status update (modal confirm) | `click` | PUT `.../staff-strength/bgv/{staff_id}/` | `#bgv-row-{staff_id}` | `outerHTML` |
+| Alert strip auto-refresh | `every 5m` | GET `.../staff-strength/summary/` | `#alert-strip` | `innerHTML` |
+| Summary cards refresh | `every 5m` | GET `.../staff-strength/summary/` | `#summary-cards` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

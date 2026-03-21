@@ -259,4 +259,21 @@ Each card: Template name · Description · Sections count · [Build Report] butt
 
 ---
 
+## 14. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search reports | `input delay:300ms` | GET `.../reports/?q=` | `#reports-table-body` | `innerHTML` |
+| Tab switch | `click` | GET `.../reports/?tab=generated\|scheduled\|templates` | `#reports-tab-content` | `innerHTML` |
+| Filter apply | `click` | GET `.../reports/?type=&generated_by=&date=` | `#reports-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../reports/?page=` | `#reports-table-section` | `innerHTML` |
+| Open report builder drawer | `click` | GET `.../reports/builder/` | `#drawer-body` | `innerHTML` |
+| Open schedule drawer | `click` | GET `.../reports/schedule/` | `#drawer-body` | `innerHTML` |
+| Delete report (confirm modal) | `click` | DELETE `.../reports/{rid}/` | `#report-row-{rid}` | `outerHTML` |
+| Pause / Resume schedule | `click` | PUT `.../reports/scheduled/{sid}/` | `#schedule-row-{sid}` | `outerHTML` |
+| Run Now | `click` | POST `.../reports/generate/` | `#reports-tab-content` | `innerHTML` |
+| Report status poll (async) | `every 10s` (while "Generating") | GET `.../reports/{rid}/` | `#report-status-{rid}` | `outerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

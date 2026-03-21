@@ -304,4 +304,21 @@ Switched via view toggle. Shows one row per compliance area per branch.
 
 ---
 
+## 13. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| View toggle (Summary ↔ Detailed) | `click` | GET `.../compliance/?view=summary\|detailed` | `#compliance-matrix` | `innerHTML` |
+| Sort column | `click` | GET `.../compliance/?sort=&dir=` | `#compliance-matrix` | `innerHTML` |
+| Open compliance detail drawer | `click` | GET `.../compliance/{area}/` | `#drawer-body` | `innerHTML` |
+| Open add-action drawer | `click` | GET `.../compliance/actions/new/` | `#drawer-body` | `innerHTML` |
+| Action table search | `input delay:300ms` | GET `.../compliance/actions/?q=` | `#action-table-body` | `innerHTML` |
+| Action table filter | `click` | GET `.../compliance/actions/?filters=` | `#action-table-section` | `innerHTML` |
+| Action pagination | `click` | GET `.../compliance/actions/?page=` | `#action-table-section` | `innerHTML` |
+| Mark compliant (modal confirm) | `click` | POST `.../compliance/{area}/{bid}/mark-compliant/` | `#compliance-row-{area}` | `outerHTML` |
+| Upload evidence | `change` | POST `.../compliance/{area}/{bid}/evidence/` | `#evidence-upload-status` | `innerHTML` |
+| Mark action complete | `click` | POST `.../compliance/actions/{aid}/complete/` | `#action-row-{aid}` | `outerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

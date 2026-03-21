@@ -266,4 +266,20 @@ Role & Permission Manager                              [+ Create Custom Role]  [
 
 ---
 
+## 13. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Search roles | `input delay:300ms` | GET `.../roles/?q=` | `#roles-table-body` | `innerHTML` |
+| Filter apply | `click` | GET `.../roles/?division=&level=&type=` | `#roles-table-section` | `innerHTML` |
+| Sort column | `click` | GET `.../roles/?sort=&dir=` | `#roles-table-section` | `innerHTML` |
+| Pagination | `click` | GET `.../roles/?page=` | `#roles-table-section` | `innerHTML` |
+| Switch to matrix view | `click` | GET `.../roles/matrix/` | `#roles-content-area` | `innerHTML` |
+| Open role permissions drawer | `click` | GET `.../roles/{rid}/` | `#drawer-body` | `innerHTML` |
+| Save custom role permissions | `click` | PUT `.../roles/{rid}/permissions/` | `#permission-section` | `innerHTML` |
+| Create custom role (drawer open) | `click` | GET `.../roles/new/` | `#drawer-body` | `innerHTML` |
+| Clone role | `click` | POST `.../roles/{rid}/clone/` | `#roles-table-section` | `innerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

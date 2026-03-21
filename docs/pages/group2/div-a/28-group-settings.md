@@ -292,4 +292,22 @@ If a section is not configured: Shows a "Not configured" badge + prompt to confi
 
 ---
 
+## 11. HTMX Patterns
+
+| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
+|---|---|---|---|---|
+| Tab switch | `click` | GET `.../settings/?tab=profile\|branding\|academic-year\|features\|notifications\|subscription\|integrations` | `#settings-tab-content` | `innerHTML` |
+| Save profile tab | `submit` | PUT `.../settings/profile/` | `#settings-tab-content` | `innerHTML` |
+| Save branding tab | `submit` | PUT `.../settings/branding/` | `#settings-tab-content` | `innerHTML` |
+| Logo upload | `change` | POST `.../settings/branding/logo/` | `#logo-preview` | `innerHTML` |
+| Save academic year | `submit` | PUT `.../settings/academic-year/` | `#settings-tab-content` | `innerHTML` |
+| Feature toggle change | `change` | PUT `.../settings/features/` | `#feature-toggle-{name}` | `outerHTML` |
+| Save notification defaults | `submit` | PUT `.../settings/notifications/` | `#settings-tab-content` | `innerHTML` |
+| Save billing contact | `submit` | PUT `.../settings/billing-contact/` | `#billing-form-result` | `innerHTML` |
+| Open integration configure drawer | `click` | GET `.../settings/integrations/{name}/` | `#drawer-body` | `innerHTML` |
+| Integration test | `click` | POST `.../settings/integrations/{name}/test/` | `#test-result-{name}` | `innerHTML` |
+| Disconnect integration (confirm) | `click` | DELETE `.../settings/integrations/{name}/` | `#integration-row-{name}` | `outerHTML` |
+
+---
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

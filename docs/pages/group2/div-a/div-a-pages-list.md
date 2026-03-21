@@ -214,7 +214,7 @@
 | 15 Expansion Feasibility | ✅ Full | ✅ Full | ✅ Full | — | — | — | — | ✅ Full |
 | 16 Benchmarking | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Read | — | ✅ Read |
 | 17 Approval Workflow Hub | ✅ All | ✅ MD items | ✅ CEO items | ✅ Pres items | ✅ VP items | — | — | — |
-| 18 Exam Schedule Approval | ✅ Override | — | ✅ View | ✅ Approve | — | — | — | — |
+| 18 Exam Schedule Approval | ✅ Override | ✅ View | ✅ View | ✅ Approve | — | — | — | — |
 | 19 Policy Management | ✅ Full | ✅ Full | ✅ Full | ✅ Acad | ✅ Ops | ✅ Read | — | ✅ Read |
 | 20 Principal Comms Hub | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ Read | ✅ Full | — |
 | 21 Group Announcements | ✅ Approve | — | ✅ Approve | — | — | — | ✅ Full | — |
@@ -225,7 +225,7 @@
 | 26 Group Audit Log | ✅ Full | ✅ Full | ✅ Full | ✅ Acad | ✅ Ops | ✅ Read | — | — |
 | 27 Compliance Overview | ✅ Full | ✅ Full | ✅ Full | ✅ Acad | ✅ Ops | ✅ Read | — | ✅ Read |
 | 28 Group Settings | ✅ Full | ✅ Full | ✅ Full | — | — | — | — | — |
-| 29 Board Meeting Portal | ✅ Approve | ✅ View | ✅ View | ✅ View | ✅ View | ✅ Full | ✅ Full | ✅ Read |
+| 29 Board Meeting Portal | ✅ Approve | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ Full | ✅ Read |
 | 30 Group Master Calendar | ✅ Full | ✅ Full | ✅ Full | ✅ Acad | ✅ Ops | ✅ Read | ✅ Full | ✅ Read |
 | 31 Fee Revenue Dashboard | ✅ Full | ✅ Full | ✅ Full | — | ✅ Ops view | ✅ Read | — | — |
 | 32 Staff Strength & BGV | ✅ Full | ✅ Full | ✅ View | — | — | — | — | — |
@@ -329,4 +329,4 @@ P2 — Sprint 3
 
 ---
 
-*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 17*
+*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 17 · Audit pass: complete — zero gaps*
