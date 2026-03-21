@@ -195,6 +195,31 @@ On submit: `hx-delete="/group/it/security/devices/{device_id}/"`. Toast: `Device
 
 ---
 
+### E. How Devices Enter the Register — Auto-Detection and Manual Registration
+
+**Auto-detection (primary method):** Every time a staff or admin user logs in to EduForge, the platform captures the device fingerprint (browser user-agent, OS version, device type, and a persistent browser cookie). If this device fingerprint has not been seen before for this user, the platform automatically creates a new entry in the device register with status "Unregistered". The IT Admin sees this as an Unregistered device and must review it. Auto-detection requires no action from the end user.
+
+**Manual registration (supplementary):**
+
+The `+ Register Device` button (IT Admin only, top-right of Device Register table) opens a manual registration drawer:
+
+**Drawer: `device-register` — Register Device (440px)**
+- **Fields:**
+  - User (required, searchable dropdown — from User Directory)
+  - Device Name / Label (required, text — e.g., "John's iPhone", "Lab Desktop 3")
+  - Device Type (required, radio: Mobile / Desktop / Tablet)
+  - OS (required, dropdown: Android / iOS / Windows / macOS / Other)
+  - OS Version (required, text input)
+  - Device Serial / IMEI (optional, text — for corporate devices)
+  - Registration Source (radio: Corporate-issued / BYOD — personal)
+  - Branch (required, dropdown — defaults to user's branch)
+  - Compliance Status Initial Assessment (radio: Compliant — meets all policy requirements / Non-Compliant — flag immediately)
+  - Notes (optional, textarea)
+- **Footer:** Register Device / Cancel
+- **On submit:** Device record created with status based on Compliance Status field; audit log entry written; toast: "Device registered for [User Name]."
+
+---
+
 ## 7. Charts
 
 Two charts rendered below the main table in a 2-column grid.
@@ -223,6 +248,7 @@ Two charts rendered below the main table in a 2-column grid.
 |--------|-------|
 | Policy saved successfully | Success: `Device access policy updated and saved.` |
 | Policy save failed (validation) | Error: `Please complete all required policy fields.` |
+| Device registered (manual) | Success: `Device registered for [User Name]. Compliance status: [Compliant/Non-Compliant].` |
 | Device flagged | Success: `Device [ID] flagged. User notified via [channel].` |
 | Device deregistered | Success: `Device [ID] deregistered. Portal access blocked.` |
 | CSV export initiated | Info: `Exporting device register — please wait.` |

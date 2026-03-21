@@ -210,6 +210,22 @@ On submit: status → Assigned, assigned_to updated. Toast: `Ticket [#] assigned
 
 ---
 
+### E. Close Ticket — Resolved → Closed Lifecycle
+
+**Automatic closure:** Tickets with status = Resolved are automatically moved to Closed after 7 days if no re-open request is received. An auto-close warning is sent to the reporter via WhatsApp on Day 5: "Your ticket [#] will be automatically closed in 2 days unless you re-open it."
+
+**Manual closure (Role 54 only):** The IT Admin can manually close a resolved ticket at any time via the View/Update drawer footer: `Close Ticket` button (visible only when status = Resolved).
+- **Confirmation modal (380px):** "Close ticket [#]? Once closed, the ticket cannot be re-opened. A satisfaction survey will be sent to the reporter."
+- On confirm: status → Closed; satisfaction survey sent via WhatsApp to reporter (1–5 star rating + optional comment).
+
+**Re-open (before auto-close):** Reporter can re-open within 7-day window by responding to the WhatsApp notification. This sets status back to In Progress and notifies the assigned executive. Re-open count is tracked (displayed in ticket detail).
+
+**Closed ticket visibility:** Closed tickets appear in the table with a "Closed" grey badge. They are included in filter results when Status = Closed is selected. Closed tickets are read-only — no updates or re-opens possible.
+
+**API endpoint:** `POST /api/v1/it/support/tickets/{id}/close/` — JWT (G4 for manual; system for auto-close).
+
+---
+
 ## 7. Charts
 
 No dedicated chart section on this operational tickets page. Charts are on the SLA Dashboard (Page 46). A mini summary strip below the KPI bar shows:
@@ -230,6 +246,9 @@ No dedicated chart section on this operational tickets page. Charts are on the S
 | Ticket resolved | Success: `Ticket [#] resolved. Resolution logged.` |
 | Ticket assigned | Success: `Ticket [#] assigned to [Name].` |
 | Ticket escalated | Success: `Ticket [#] escalated to [target].` |
+| Ticket closed (manual) | Info: `Ticket [#] closed. Satisfaction survey sent to reporter.` |
+| Ticket auto-closed | Info: `Ticket [#] automatically closed after 7 days.` |
+| Ticket re-opened | Warning: `Ticket [#] re-opened by reporter. Assigned executive notified.` |
 | Attachment uploaded | Info: `Attachment uploaded.` |
 | Export complete | Info: `Ticket export ready.` |
 | Validation error | Error: `Please complete all required fields.` |
@@ -291,6 +310,8 @@ No dedicated chart section on this operational tickets page. Charts are on the S
 | POST | `/api/v1/it/support/tickets/{id}/assign/` | Assign ticket |
 | POST | `/api/v1/it/support/tickets/{id}/resolve/` | Mark resolved |
 | POST | `/api/v1/it/support/tickets/{id}/escalate/` | Escalate ticket |
+| POST | `/api/v1/it/support/tickets/{id}/close/` | Manually close a resolved ticket (G4) or auto-close (system) |
+| POST | `/api/v1/it/support/tickets/{id}/reopen/` | Re-open a resolved ticket (within 7-day window) |
 | POST | `/api/v1/it/support/tickets/{id}/attachments/` | Upload attachment to R2 |
 | GET | `/api/v1/it/support/tickets/kpis/` | Fetch KPI values |
 | GET | `/api/v1/it/support/tickets/today-summary/` | Today's category breakdown mini-bar |

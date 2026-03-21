@@ -115,7 +115,16 @@ Group Portal → IT & Technology → Data Privacy → Breach Incident Register
   - **Incident Details:** Full incident record — incident number, discovery datetime (who discovered and how), breach type, detailed description, data types affected, estimated individual count, branches affected, severity and reasoning, immediate actions taken, containment status
   - **Timeline:** Chronological action log — each update: who, when, what action, notes
   - **72h Notification:** Notification filing status, deadline countdown (or filed datetime and reference), filed notification document (download from Cloudflare R2 if filed), Board response (if received)
-  - **Subject Notification:** Status of notifications to affected data subjects (if applicable)
+  - **Subject Notification:** Tracks whether affected data subjects have been notified of the breach, as required by DPDP Act 2023. Fields displayed:
+    - Notification Required (Yes / No / To Be Determined — based on severity and data type)
+    - Notification Status (Not Started / In Progress / Sent / Not Required)
+    - Notification Method (WhatsApp / Email / Physical Letter / Portal Notice)
+    - Date Notification Sent (datetime — recorded when notification dispatched)
+    - Notification Content Summary (textarea — what was communicated to subjects)
+    - Number of Subjects Notified (count)
+    - Subjects Unable to Reach (count + reason — e.g., "Contact details outdated for 12 students")
+    - Subject Responses Received (count and brief notes on any responses/complaints)
+    - **Actions (IT Admin / IT Director only):** "Mark Notifications Sent" button (records date + method); "Upload Notification Evidence" button (upload notification dispatch report to Cloudflare R2)
 
 ### 6.2 Drawer: `breach-create` — Report New Incident (IT Admin / IT Director)
 - **Trigger:** `+ Report New Incident` button

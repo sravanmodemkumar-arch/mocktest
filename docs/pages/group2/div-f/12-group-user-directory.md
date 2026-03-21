@@ -138,7 +138,18 @@ Group Portal → IT & Technology → User Management → User Directory
   - Notify Branch Principal (checkbox, default checked)
 - **Buttons:** Confirm Suspend (red) · Cancel
 
-### 6.4 Modal: Reset OTP
+### 6.4 Modal: Unsuspend / Lift Suspension
+- **Trigger:** Actions → Unsuspend (visible only when row Status = Suspended)
+- **Type:** Centered modal (480px wide)
+- **Content:** "You are lifting the suspension for [User Name] ([Username]) at [Branch]. Their account will be restored to Active and they will be able to log in immediately."
+- **Fields:**
+  - Reason for Lifting Suspension (required, textarea — min 20 characters)
+  - Notify User via WhatsApp (checkbox, default checked)
+  - Notify Branch Principal (checkbox, default checked)
+- **Buttons:** Confirm Unsuspend (green) · Cancel
+- **On confirm:** POST to unsuspend endpoint; account status → Active; toast shown; audit log entry written.
+
+### 6.5 Modal: Reset OTP
 - **Trigger:** Actions → Reset OTP
 - **Type:** Centered modal (400px wide)
 - **Content:** "A new OTP will be sent to [masked phone number] for user [User Name]. Their current OTP credentials will be invalidated immediately."
@@ -159,6 +170,7 @@ No dedicated chart section on this page. KPI cards serve as the primary data vis
 |---|---|---|---|
 | User account updated | "Account updated for [Name]." | Success | 3s |
 | Suspension confirmed | "[Name]'s account has been suspended. Active sessions terminated." | Warning | 5s |
+| Suspension lifted | "[Name]'s account has been restored to Active." | Success | 4s |
 | OTP reset sent | "OTP reset initiated for [Name]. OTP sent to registered mobile." | Success | 4s |
 | Bulk suspend completed | "[N] accounts suspended. Branch principals notified." | Warning | 5s |
 | Bulk OTP reset triggered | "OTP reset initiated for [N] accounts." | Info | 4s |
@@ -197,7 +209,8 @@ No dedicated chart section on this page. KPI cards serve as the primary data vis
 | Full table (all columns) | Visible | Visible | Visible | Name/Branch/Status only | Visible |
 | Email / Phone column | Visible (partial mask) | Visible (partial mask) | Visible (partial mask) | Hidden | Hidden |
 | Edit Action | Visible | Visible | Hidden | Hidden | Hidden |
-| Suspend Action | Visible | Visible | Hidden | Hidden | Hidden |
+| Suspend Action (status ≠ Suspended) | Visible | Visible | Hidden | Hidden | Hidden |
+| Unsuspend Action (status = Suspended) | Visible | Visible | Hidden | Hidden | Hidden |
 | Reset OTP Action | Visible | Visible | Hidden | Hidden | Visible |
 | Bulk Actions dropdown | Visible | Visible | Hidden | Hidden | Hidden |
 | Export button | Visible | Visible | Visible (read-only export) | Hidden | Hidden |
@@ -214,6 +227,7 @@ No dedicated chart section on this page. KPI cards serve as the primary data vis
 | GET | `/api/v1/it/users/{id}/login-history/` | JWT (G1+) | Last 10 login events for a specific user |
 | PATCH | `/api/v1/it/users/{id}/` | JWT (G4 — IT Admin / IT Director) | Update user account fields |
 | POST | `/api/v1/it/users/{id}/suspend/` | JWT (G4) | Suspend account; terminates active sessions |
+| POST | `/api/v1/it/users/{id}/unsuspend/` | JWT (G4) | Lift suspension; restores account to Active |
 | POST | `/api/v1/it/users/{id}/reset-otp/` | JWT (G3+) | Trigger OTP reset for a user |
 | POST | `/api/v1/it/users/bulk-suspend/` | JWT (G4) | Bulk suspend selected user IDs |
 | POST | `/api/v1/it/users/bulk-reset-otp/` | JWT (G4) | Bulk OTP reset for selected user IDs |
@@ -235,6 +249,7 @@ No dedicated chart section on this page. KPI cards serve as the primary data vis
 | Load login history in drawer | `load` (drawer inner) | GET `/api/v1/it/users/{id}/login-history/` | `#login-history-section` | `innerHTML` |
 | Submit edit form | `click` on Save Changes | PATCH `/api/v1/it/users/{id}/` | `#user-table` | `innerHTML` (after close) |
 | Confirm suspend | `click` on Confirm Suspend | POST `/api/v1/it/users/{id}/suspend/` | `#user-table` | `innerHTML` |
+| Confirm unsuspend | `click` on Confirm Unsuspend | POST `/api/v1/it/users/{id}/unsuspend/` | `#user-table` | `innerHTML` |
 | Confirm OTP reset | `click` on Confirm | POST `/api/v1/it/users/{id}/reset-otp/` | `#toast-container` | `afterbegin` |
 | Bulk action confirm | `click` on Confirm in bulk modal | POST `/api/v1/it/users/bulk-suspend/` | `#bulk-result-banner` | `innerHTML` |
 

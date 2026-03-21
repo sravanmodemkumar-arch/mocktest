@@ -150,6 +150,23 @@ A small table showing per-branch WhatsApp config status:
 
 ---
 
+### 6.5 Drawer: `template-import` — Import / Register Template from Meta
+- **Trigger:** `Import Template` button (top-right of templates table, IT Admin / Integration Manager only)
+- **Width:** 520px
+- **Context note at top:** "WhatsApp templates are created and submitted for approval in Meta Business Manager. Once Meta approves a template, register it here so EduForge can use it for notifications. Do NOT create templates in EduForge — they must exist and be approved in Meta Business Manager first."
+- **Fields:**
+  - Meta Template Name (required, text — exact name as registered in Meta Business Manager; case-sensitive)
+  - Category (required, dropdown: Authentication / Utility / Marketing)
+  - Language (required, dropdown: English / Telugu / Hindi / Tamil / Kannada / Malayalam)
+  - Meta Template ID (optional, text — the numeric ID from Meta Business Manager for reference)
+  - Variable Mapping (dynamic section — shown after name is entered): for each `{{N}}` variable in the template body, provide a human-readable label (e.g., `{{1}}` → "Student Name", `{{2}}` → "Fee Amount") so IT Admin can understand the template in the EduForge interface
+  - Set as Active OTP Template (checkbox — only shown if Category = Authentication; marks this as the template used for login OTPs)
+- **Fetch from Meta button:** "Validate & Fetch Template" — calls Meta API with the given name to confirm the template exists and is Approved; populates the body preview inline; shows error if template not found or not approved
+- **Footer:** Import Template / Cancel
+- **On submit:** Template registered in EduForge's template registry; status reflects Meta's current approval status (Approved/Pending/Rejected)
+
+---
+
 ### 6.6 Section 5: Delivery Logs (Table Panel)
 
 Most recent 100 WhatsApp messages sent group-wide:
@@ -186,6 +203,8 @@ No dedicated chart section. Delivery Logs table provides operational visibility.
 | Test message failed | "Test message failed: [error message from provider]." | Error | 6s |
 | Template set Active | "Template '[Name]' is now set as Active." | Success | 3s |
 | Template set Inactive | "Template '[Name]' has been deactivated." | Warning | 3s |
+| Template imported | "Template '[Name]' imported successfully. Status: [Approved/Pending]." | Success | 4s |
+| Template validation failed | "Template '[Name]' not found in Meta Business Manager or not yet approved." | Error | 6s |
 | Delivery settings saved | "Delivery settings updated." | Success | 3s |
 
 ---
@@ -194,7 +213,7 @@ No dedicated chart section. Delivery Logs table provides operational visibility.
 
 | Condition | Heading | Description | CTA |
 |---|---|---|---|
-| No templates configured | "No WhatsApp Templates" | "No message templates have been added. Add templates from the WhatsApp Business Manager and import them here." | Add Template |
+| No templates configured | "No WhatsApp Templates" | "No message templates have been registered. Create templates in Meta Business Manager, get them approved, then import them here." | Import Template |
 | Delivery Logs — no messages sent yet | "No Delivery Logs" | "No WhatsApp messages have been sent through this configuration yet." | — |
 | Templates table — no results for filter | "No Templates Match" | "No templates match the selected category or status filter." | Clear Filters |
 
@@ -239,6 +258,8 @@ No dedicated chart section. Delivery Logs table provides operational visibility.
 | GET | `/api/v1/it/notifications/whatsapp/templates/` | JWT (G4) | Paginated template list |
 | GET | `/api/v1/it/notifications/whatsapp/templates/{id}/` | JWT (G4) | Single template detail |
 | POST | `/api/v1/it/notifications/whatsapp/templates/{id}/test/` | JWT (G4) | Send test message for a template |
+| POST | `/api/v1/it/notifications/whatsapp/templates/import/` | JWT (G4) | Import a Meta-approved template into EduForge |
+| POST | `/api/v1/it/notifications/whatsapp/templates/validate/` | JWT (G4) | Validate template name against Meta API and fetch body preview |
 | PATCH | `/api/v1/it/notifications/whatsapp/templates/{id}/` | JWT (G4) | Set template active/inactive status |
 | PATCH | `/api/v1/it/notifications/whatsapp/delivery-settings/` | JWT (G4) | Update retry and fallback settings |
 | GET | `/api/v1/it/notifications/whatsapp/delivery-logs/` | JWT (G3+) | Paginated delivery log (last 100) |

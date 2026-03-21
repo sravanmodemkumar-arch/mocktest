@@ -72,7 +72,9 @@ No main table on this settings page. The page is organised as a tabbed settings 
 - **Purpose:** Core portal identity and operational settings
 - **Fields:**
   - Portal Name: text input (displayed in the branch portal header and browser title)
-  - Portal Slug: text input (read-only after activation; shows note "Cannot change slug on an active portal without IT Director approval")
+  - Portal Slug: text input (read-only after activation; shows note "Cannot change slug on an active portal without IT Director approval" + `Request Slug Change` link button). Clicking "Request Slug Change" opens a modal:
+    - **Modal: `slug-change-request` (440px):** Title "Request Portal Slug Change". Fields: Proposed New Slug (text input, unique-validated), Reason for Change (required, textarea min 30 chars), Impact Acknowledgement (checkbox: "I understand changing the slug will break existing bookmarks and any hardcoded links to this portal"). On submit: creates an IT Director approval request; toast "Slug change request submitted for IT Director approval. Current slug remains active until approved." The request appears in the IT Director's policy approval queue (page 01) and on the Role Permission Matrix pending approvals.
+    - **API:** `POST /api/v1/it/portals/{id}/request-slug-change/` — creates approval request
   - Primary Contact Name: text input (branch principal or IT admin contact name)
   - Primary Contact Email: email input (used for system notifications)
   - Timezone: dropdown (IST default; all 30 Indian timezones listed)
@@ -168,6 +170,8 @@ No charts on this settings page. Configuration changes are tracked in the IT Aud
 | Reset to defaults | "All feature toggles reset to group defaults." | Info | 5s |
 | Save error | "Failed to save changes. Please check your input." | Error | 6s |
 | Unsaved changes warning on tab switch | Modal: "You have unsaved changes on this tab. Save them before switching?" — Save + Stay / Discard + Switch | — | Modal (no auto-dismiss) |
+| Slug change request submitted | "Slug change request submitted for IT Director approval." | Info | 5s |
+| Slug change approved (IT Director) | "Portal slug changed to [new-slug]. All portal URLs have been updated." | Success | 6s |
 
 ---
 
@@ -232,6 +236,7 @@ No charts on this settings page. Configuration changes are tracked in the IT Aud
 | POST | `/api/v1/it/portals/{id}/deactivate/` | JWT (G4) | Deactivate portal (Danger Zone) |
 | POST | `/api/v1/it/portals/{id}/reset-defaults/` | JWT (G4) | Reset feature toggles to group defaults |
 | POST | `/api/v1/it/portals/{id}/archive/` | JWT (G4) | Submit archive request (pending IT Director approval) |
+| POST | `/api/v1/it/portals/{id}/request-slug-change/` | JWT (G4) | Submit slug change request for IT Director approval |
 
 ---
 
