@@ -496,6 +496,185 @@ Completion tracked per day. Induction completion shown on O-01 HR Dashboard L&D 
 
 ---
 
+## Skills Gap Auto-Remediation Rules
+
+When the Skills Gap Report identifies an employee with a gap (required proficiency not met), the system takes one of two actions depending on configuration:
+
+### Policy: Alert-Only vs Auto-Enrol
+
+Configured globally by HR Manager in `hr_policy_config.skills_gap_remediation` (default: ALERT_ONLY):
+
+| Mode | Behaviour |
+|---|---|
+| `ALERT_ONLY` | Skills gap appears in L&D Coordinator's dashboard strip on O-01 and in the Skills Gap Report. No automatic enrollment. L&D Coordinator decides manually whether to enroll. Toast on gap detection: "5 employees have a gap in AWS Lambda. [View Gap Report]" |
+| `AUTO_ENROL` | If a course in the library directly maps to the gap skill (`hr_training_course.skill_impact` JSONB contains the skill), the system auto-enrolls the employee in the next scheduled session of that course. L&D Coordinator receives notification: "[Name] auto-enrolled in [course] to address AWS Lambda gap." Employee receives enrollment notification. HR Manager approval gate still applies if cost exceeds ₹50K. |
+
+### Gap Detection Trigger
+
+Gap detection runs:
+1. **Daily** — Task O-12 extension: after certification/skill update, re-runs gap check for affected employee
+2. **After performance review cycle close** — HRBP's skills recommendations from review → `hr_required_skill` update → gap re-check
+3. **Manual** — L&D Coordinator or HR Manager clicks [Run Gap Analysis] in Skills tab
+
+### Auto-Enrol Edge Cases
+
+| Case | Handling |
+|---|---|
+| No matching course in library | Falls back to ALERT_ONLY. Gap flagged for L&D Coordinator to source a course. |
+| Employee already enrolled | No duplicate enrollment created. Existing enrollment noted in gap report. |
+| Course has no upcoming session | Gap alert raised + L&D Coordinator prompted to schedule a session. |
+| Employee on leave during session | Enrollment created but L&D Coordinator notified: "[Name] is on leave on session date." |
+| Cost threshold exceeded | Auto-enrol paused; HR Manager approval required before enrollment confirmed. |
+
+---
+
+## TNA Feed — Extraction Methodology
+
+Training Needs Analysis (TNA) is auto-populated from three sources:
+
+### Source 1: Performance Review Self-Assessments
+
+After each review cycle closes, a Celery task parses `hr_performance_review.self_assessment` (free-text field) for training signals:
+
+```python
+# Pattern matching via keyword extraction (no LLM — keyword list maintained by L&D Coord)
+TRAINING_KEYWORDS = [
+    "training", "learn", "upskill", "certification", "course",
+    "improve", "develop", "skill", "gap", "need to", "wish I knew"
+]
+# Extracts sentences containing keywords + associated skill/technology mentions
+# Groups by most-mentioned skills across all employees in the cycle
+# Stores as hr_tna_suggestion rows: {source='REVIEW', skill, mention_count, cycle_id}
+```
+
+### Source 2: Manager Review Recommendations
+
+`hr_performance_review.manager_review` free-text parsed for the same keyword list. Manager-suggested training needs weighted ×1.5 vs self-identified (manager visibility tends to be more objective).
+
+### Source 3: Active PIP Goals
+
+All open PIPs with `goal_text` containing training milestones (e.g., "Complete AWS certification by...") are extracted directly — these are the highest-priority TNA items as they are linked to active performance remediation.
+
+### TNA Display in Analytics Tab
+
+```
+  Training Needs Analysis (auto-extracted — FY 2025-26 Annual Review Cycle)
+  Last refreshed: 21 Mar 2026
+
+  Source: Performance Reviews + Manager Reviews + Active PIPs
+
+  Skill / Area             Mentions   Sources              Priority   Actions
+  ──────────────────────────────────────────────────────────────────────────
+  AWS Lambda (advanced)       6       4 self + 2 mgr        MEDIUM    [Add Course]
+  System Design               5       2 self + 3 mgr        HIGH      [Add Course]
+  Communication Skills        4       0 self + 4 mgr        HIGH      [Add Course]
+  HTMX Internals              3       3 self + 0 mgr        MEDIUM    [Add Course]
+  Python Performance          2       1 self + 1 mgr + PIP  CRITICAL  [Add Course]
+  ──────────────────────────────────────────────────────────────────────────
+  [Export TNA Report CSV]
+```
+
+Priority logic:
+- `CRITICAL`: mentioned in at least 1 active PIP goal
+- `HIGH`: mentioned ≥3 times across reviews AND ≥1 manager mention
+- `MEDIUM`: mentioned 2–4 times, no manager mention or PIP link
+
+[Add Course] pre-fills Create Course modal with skill name in the description field.
+
+---
+
+## `/hr/my-learning/` — Employee Self-Serve Spec
+
+All employees access their own learning profile. `@login_required` only — no Division O membership.
+
+| Feature | Description |
+|---|---|
+| My Courses | Grid/list of enrolled courses with status (ENROLLED / IN_PROGRESS / COMPLETED / OVERDUE). Click → course detail with session date, materials link (if LMS), and certificate download (if completed) |
+| Mandatory Training Status | Prominent card: mandatory compliance courses for the employee's role. Shows completion status and due date. Overdue courses shown with red badge |
+| Request Enrollment | Employee can browse the course library and request enrollment in any course. L&D Coordinator receives notification to approve/enroll. Creates a `hr_training_enrollment` row with `status='PENDING_APPROVAL'` |
+| My Skills | View own skills profile with proficiency levels. Employee can self-update proficiency (pending L&D Coordinator confirmation for ADVANCED+ levels) |
+| My Certifications | View own certifications with expiry dates. Upload new certificate (pending L&D Coordinator review) |
+| My Learning History | Paginated history of all past enrollments, completion dates, and scores |
+
+**Enrollment request flow:**
+```
+  Employee → [Request Enrollment] on course
+  → POST /hr/my-learning/enroll-request/{course_id}/
+  → hr_training_enrollment created: status='PENDING_APPROVAL'
+  → L&D Coordinator notified: "[Name] requested enrollment in [course]."
+  → L&D Coordinator approves/rejects in O-08 Enrollments tab
+  → Employee notified of outcome via email
+```
+
+**Skill self-update:**
+```
+  Employee → [Update Skill] → select proficiency [BEG/INT/ADV/EXPERT]
+  → If INTERMEDIATE or below: auto-confirmed, updates hr_skills directly
+  → If ADVANCED or EXPERT: status='PENDING_CONFIRMATION'
+    → L&D Coordinator reviews in Skills tab [Confirm Skill] queue
+    → Confirmation requires evidence: training completion or certification link
+```
+
+Route guard: `@login_required`. No minimum role — every active employee sees own learning profile.
+
+---
+
+## Role-Based UI Visibility Summary
+
+| UI Element | HR Manager (#79) | L&D Coord (#107) | HRBP (#106) |
+|---|---|---|---|
+| Calendar tab — full access | ✓ | ✓ | Read-only |
+| Courses tab — [+ Add Course] | ✓ | ✓ | — |
+| Budget approval gate | ✓ (approver) | — (requestor) | — |
+| Enrollments tab — [Mark Complete] | ✓ | ✓ | — |
+| Enrollments tab — [Send Reminder] | ✓ | ✓ | — |
+| Mandatory compliance tracker | ✓ | ✓ | Read-only |
+| [Send Bulk Reminder — Overdue] | ✓ | ✓ | — |
+| Skills tab — full matrix | ✓ | ✓ | Read-only |
+| Skills gap report | ✓ (full) | ✓ (full) | Read-only |
+| [Confirm Skill] queue | ✓ | ✓ | — |
+| Certifications tab — [Add/Renew] | ✓ | ✓ | — |
+| Analytics — L&D Spend chart | ✓ | — | — |
+| Analytics — TNA feed | ✓ | ✓ | Read-only |
+| [Export skills matrix / completion report] | ✓ | ✓ | — |
+| `/hr/my-learning/` (self-serve) | ✓ (own) | ✓ (own) | ✓ (own) |
+
+---
+
+## Performance Requirements
+
+| Operation | Target | Notes |
+|---|---|---|
+| Calendar tab load | < 800ms P95 | Upcoming sessions + KPI strip; Memcached 10 min |
+| Course library load | < 600ms P95 | Paginated 50/page; Memcached 10 min |
+| Enrollment table load | < 800ms P95 | JOIN across 3 tables, paginated; Memcached 5 min |
+| Skills matrix render | < 1.5s P95 | 150 employees × 20+ skills heatmap; Memcached 15 min |
+| Skills gap report generation | < 3s | Compares skills vs `hr_required_skill`; triggered on demand |
+| TNA feed parse (post-cycle) | < 30s | Celery task; keyword extraction across all review texts |
+| Mandatory compliance tracker | < 1s P95 | Aggregated completion counts; Memcached 5 min |
+| Certificate PDF upload to R2 | < 5s | Up to 10MB; KMS-encrypted at rest |
+| Export completion report CSV | < 10s | All enrollments for FY; async if > 500 rows |
+| `/hr/my-learning/` self-serve | < 500ms P95 | Own records; no matrix computation |
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `g l` | Go to Learning & Development page (`/hr/learning/`) |
+| `t c` | Switch to Calendar tab |
+| `t o` | Switch to Courses tab |
+| `t e` | Switch to Enrollments tab |
+| `t s` | Switch to Skills tab |
+| `t x` | Switch to Certifications tab |
+| `t a` | Switch to Analytics tab |
+| `n` | New Course (opens Create Course modal) |
+| `/` | Focus search / filter input |
+| `Esc` | Close drawer / modal |
+
+---
+
 ## Performance Requirements
 
 | Metric | Target | Notes |

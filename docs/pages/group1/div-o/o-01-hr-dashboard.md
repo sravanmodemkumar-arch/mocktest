@@ -415,5 +415,6 @@ Data source: `hr_survey` + `hr_survey_response` aggregated. Cache: 30 min.
 | `g` `v` | Go to Leave & Attendance (O-06) |
 | `g` `f` | Go to Performance Management (O-07) |
 | `g` `l` | Go to Learning & Development (O-08) |
+| `g` `a` | Go to Asset & Facilities (O-09) |
 | `Esc` | Close open drawer or modal |
 | `?` | Show keyboard shortcut help overlay |

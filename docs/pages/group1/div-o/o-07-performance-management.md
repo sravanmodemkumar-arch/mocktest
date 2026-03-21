@@ -40,7 +40,7 @@ Cache keys scoped to `(user_id, cycle_id)`.
 
 | Param | Values | Default | Effect |
 |---|---|---|---|
-| `?tab` | `overview`, `okrs`, `reviews`, `calibration`, `pips` | `overview` | Active section |
+| `?tab` | `overview`, `okrs`, `reviews`, `calibration`, `pips`, `surveys`, `analytics` | `overview` | Active section |
 | `?cycle_id` | UUID | latest active | Select review cycle |
 | `?division` | A–O | `all` | Filter employees by division |
 | `?employee_id` | UUID | — | Jump to specific employee's review/OKR |
@@ -465,3 +465,253 @@ Outcome stored in `hr_performance_review.probation_outcome`. On CONFIRM: `hr_emp
 | [Close PIP with SEPARATED outcome] | HR Manager (#79) only |
 | 9-Box export | HR Manager (#79) only |
 | Division managers | View-only their team's reviews via separate route `/hr/performance/team/` (requires login, not Division O membership) |
+
+---
+
+## eNPS & Culture Surveys
+
+Owned by HR Business Partner (#106). Allows HRBP to create, dispatch, and analyse company-wide employee engagement surveys.
+
+### Survey Types
+
+| Type | Cadence | Description |
+|---|---|---|
+| eNPS (Employee Net Promoter Score) | Quarterly (Task O-17) | Single question: "On a scale of 0–10, how likely are you to recommend EduForge as a great place to work?" + 1 open-text follow-up |
+| Culture Survey | Annual or ad-hoc | Multi-question survey on culture dimensions: values alignment, manager effectiveness, collaboration, growth opportunities, work-life balance |
+| Pulse Survey | Ad-hoc (HRBP-triggered) | Short 3–5 question check-in for targeted topics (e.g., return-to-office, restructuring feedback) |
+
+### eNPS Score Calculation
+
+```
+  eNPS = % Promoters (9–10) − % Detractors (0–6)
+  Passives (7–8) excluded from score calculation
+
+  Example:
+    Total respondents: 98
+    Promoters (9–10):  54  →  55.1%
+    Passives (7–8):    32  →  32.7%
+    Detractors (0–6):  12  →  12.2%
+    eNPS = 55.1 − 12.2 = +42.9  →  displayed as +42
+```
+
+Score benchmark: > +30 = Good, > +50 = Excellent, < 0 = Needs urgent attention.
+
+### Survey Creation
+
+[+ Create Survey] button (HRBP + HR Manager only):
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Create Survey                                                   │
+├──────────────────────────────────────────────────────────────────┤
+│  Survey Type*     [eNPS / Culture / Pulse          ▼]            │
+│  Title*           [Q1 2026 eNPS Survey               ]           │
+│  Target audience* [All Employees / By Division ▼]  [Div C ▼]    │
+│  Anonymity*       [☑ Anonymous (responses not linked to name)]   │
+│  Launch Date*     [2026-04-01                        ]           │
+│  Close Date*      [2026-04-14  (14-day window)       ]           │
+│  Questions:                                                      │
+│  [Auto-fill eNPS question template]  or  [+ Add Question]        │
+│                                                                  │
+│  Q1. [On a scale of 0–10, how likely are you to recommend...]    │
+│      Type: [Rating 0–10 ▼]                                       │
+│  Q2. [What is the primary reason for your score?         ]       │
+│      Type: [Free text ▼]                                         │
+│                                                                  │
+│  [Cancel]                                [Save Draft]  [Launch]  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Stored in `hr_survey` table. On [Launch]: status → ACTIVE, Task O-17 dispatches email invite with unique survey link to each target employee.
+
+### Survey Response Tracking
+
+HTMX part `?part=survey_tracker` updates every 15 minutes:
+
+```
+  Q1 2026 eNPS Survey — Active
+  ──────────────────────────────────────────────────────────────────
+  Launched: 1 Apr 2026   Closes: 14 Apr 2026 (5 days remaining)
+  Target: 112 employees
+  Responded: 78 (69.6%)  ████████████████████░░░░░░░░░
+  Pending:   34 (30.4%)
+
+  [Send Reminder to Non-Respondents]  (throttled: max once per 3 days)
+  Task O-18 auto-reminder: fires 7 days before close date
+```
+
+### Survey Results View (post-close)
+
+Accessed via [View Results] after survey closes:
+
+```
+  eNPS Results — Q1 2026
+  ──────────────────────────────────────────────────────────────────
+  eNPS Score:  +42
+  Promoters:   55.1%   ████████████████████████████
+  Passives:    32.7%   ████████████████
+  Detractors:  12.2%   ██████
+
+  Trend:  Q4 2025: +38  →  Q3 2025: +35  →  Q2 2025: +41
+  (Line chart — last 4 quarters)
+
+  By Division:
+  Div C (Engineering):   +51   [████████████████████████████████]
+  Div D (Content):       +38   [█████████████████████░░░░░░░░░░░]
+  Div I (Support):       +29   [████████████████░░░░░░░░░░░░░░░░]  ⚠ Below +30
+  HR (Div O):            +60   [██████████████████████████████████]
+
+  By Tenure:
+  < 1 year:  +48
+  1–3 years: +44
+  > 3 years: +38
+
+  Top open-text themes (anonymised):
+  "Growth opportunities" mentioned by 23 respondents
+  "Manager support" mentioned by 18 respondents
+  "Work-life balance" mentioned by 12 respondents
+```
+
+**Anonymity guarantee:** Individual responses never shown to anyone except aggregates. If a segment has < 5 respondents, score is suppressed ("Insufficient responses to show breakdown").
+
+### Culture Survey Questions (multi-dimension)
+
+Culture surveys use a 5-point Likert scale (Strongly Disagree → Strongly Agree) across dimensions:
+
+| Dimension | Sample Questions |
+|---|---|
+| Values Alignment | "EduForge's values align with my personal values" |
+| Manager Effectiveness | "My manager gives me clear, actionable feedback" |
+| Collaboration | "Teams across EduForge collaborate effectively" |
+| Growth | "I have clear opportunities for career growth here" |
+| Work-Life Balance | "I can maintain a healthy work-life balance at EduForge" |
+| Inclusion | "I feel I belong at EduForge regardless of my background" |
+
+Results shown as average score per dimension in a radar/spider chart (Chart.js).
+
+### O-01 Dashboard Integration
+
+eNPS strip on O-01 HR Dashboard (HRBP-visible, `?part=enps_strip`):
+- Last eNPS score + trend arrow vs previous quarter
+- Response rate for current active survey
+- Next scheduled eNPS dispatch date (from Task O-17 cron)
+- [View Full Results] → deeplinks to this section
+
+---
+
+## Salary Revision → O-05 Payroll Flow
+
+When calibration is finalised in O-07, the salary change must be applied in O-05. The explicit flow:
+
+```
+  Step 1 (O-07):  HR Manager finalises calibration
+                  → sets increment_pct and/or new_grade for employee
+                  → hr_performance_review.calibration_status = 'LOCKED'
+
+  Step 2 (O-07):  System creates hr_salary_revision_history record:
+                  {
+                    employee_id: <uuid>,
+                    revision_type: 'ANNUAL_INCREMENT',
+                    old_ctc: <current>,
+                    new_ctc: <computed from increment_pct>,
+                    effective_date: '2026-04-01',  ← first day of new FY
+                    approved_by: <HR Manager user_id>,
+                    source_review_id: <hr_performance_review.id>
+                  }
+
+  Step 3 (O-16):  Task O-16 (Salary Revision Notification) fires:
+                  → Payroll Exec (#105) receives email:
+                    "[N] salary revisions pending for April payroll run.
+                     Review before running April payroll."
+
+  Step 4 (O-05):  Payroll Exec opens O-05. "14 salary revisions pending"
+                  alert shown at top of page. [Apply to Next Payroll Run]
+                  → updates hr_employee.ctc and hr_employee.grade
+                  → clears pending revision records
+
+  Step 5 (O-05):  April payroll run picks up updated CTC for all revised
+                  employees. Payslips reflect new gross = new CTC / 12.
+```
+
+**Mid-year off-cycle revision:** HRBP or HR Manager can initiate a standalone salary revision (not tied to annual review) via O-02 Employee Directory → Profile tab → [+ Add Salary Revision]. This creates a `hr_salary_revision_history` record with `revision_type='OFF_CYCLE'` and triggers O-16 immediately (not waiting for scheduled cron).
+
+---
+
+## `/hr/my-performance/` — Employee Self-Serve Spec
+
+All employees access their own performance data. `@login_required` only — no Division O membership.
+
+| Feature | Description |
+|---|---|
+| My OKRs | View own objectives and key results for active cycle. [Check-In] button per KR: update progress %, confidence (ON_TRACK / AT_RISK / OFF_TRACK), add check-in note |
+| My Review Status | Card showing current review cycle status: "Self-assessment due by [date]" → [Start Self-Assessment] → multi-field form (achievements, strengths, development areas, support needed, self-rating). Once submitted, locked for editing |
+| My Review History | Paginated list of past review cycles with final calibration rating (once published by HR Manager) |
+| My OKR History | Historical OKR cycles — objective completion %, final confidence per KR |
+| My PIP (if active) | Stripped-down PIP view: goals, checkpoint dates, status. Read-only — no edit capability for employee |
+
+**OKR check-in flow:**
+```
+  Employee → [Check-In] on Key Result
+  → Modal: Progress % (0–100), Confidence [ON_TRACK/AT_RISK/OFF_TRACK], Note (optional)
+  → POST to /hr/my-performance/okr/{kr_id}/checkin/
+  → Saves to hr_okr_key_result.check_in_history JSONB array:
+    [{date, user_id, progress_pct, confidence, note}, ...]
+  → HRBP can see all check-ins in O-07 OKR detail drawer
+```
+
+Route guard: `@login_required`. No minimum role — every active employee sees this.
+
+---
+
+## Role-Based UI Visibility Summary
+
+| UI Element | HR Manager (#79) | HRBP (#106) |
+|---|---|---|
+| Overview tab — all employees | Full | Full |
+| OKRs tab — view all employees | ✓ | ✓ |
+| OKRs tab — edit employee OKRs | ✓ | ✓ |
+| Reviews tab — view all reviews | ✓ | ✓ |
+| Reviews tab — edit calibration | ✓ (finalise + lock) | ✓ (draft only) |
+| Calibration tab — 9-Box Grid | ✓ (edit + export) | ✓ (edit) |
+| PIPs tab — view all PIPs | ✓ | ✓ |
+| [Initiate PIP] | ✓ (approve gate) | ✓ (draft + submit) |
+| [Approve PIP] | ✓ | — |
+| [Close PIP — SEPARATED] | ✓ | — |
+| eNPS / Culture Surveys | ✓ | ✓ (primary owner) |
+| [Export ratings CSV] | ✓ | — |
+| [Export 9-Box PNG] | ✓ | — |
+| Probation reviews | ✓ | ✓ |
+| Salary revision → O-05 trigger | ✓ (from calibration lock) | — |
+| `/hr/my-performance/` | ✓ (own records) | ✓ (own records) |
+
+---
+
+## Performance Requirements
+
+| Operation | Target | Notes |
+|---|---|---|
+| Overview tab load | < 800ms P95 | Cycle status strip + completion progress; Memcached 5 min |
+| OKR list for all employees | < 1s P95 | Paginated 50/page; Memcached 5 min scoped to `(user_id, cycle_id)` |
+| 9-Box calibration grid render | < 1.5s P95 | 150 employees plotted; Chart.js scatter on canvas |
+| Review drawer open | < 400ms P95 | Single employee review + OKR summary; no cache |
+| OKR check-in save | < 300ms P95 | Append to JSONB array; HTMX swap |
+| PIP detail drawer | < 400ms P95 | Checkpoint history + goals |
+| eNPS results chart | < 1s P95 | Aggregate query; Memcached 30 min |
+| Export ratings CSV (150 employees) | < 8s | Celery task for large cycles |
+| `/hr/my-performance/` self-serve | < 500ms P95 | Own records only |
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `g f` | Go to Performance Management page (`/hr/performance/`) |
+| `t o` | Switch to Overview tab |
+| `t k` | Switch to OKRs tab |
+| `t r` | Switch to Reviews tab |
+| `t c` | Switch to Calibration tab |
+| `t i` | Switch to PIPs tab |
+| `n` | New OKR / New Review (context-aware — opens relevant create modal) |
+| `/` | Focus search / filter input |
+| `Esc` | Close drawer / modal |

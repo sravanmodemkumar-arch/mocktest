@@ -310,7 +310,7 @@ Table of all active offers (DRAFT / SENT / ACCEPTED / DECLINED / LAPSED).
 | Expected Join | Expected join date (on acceptance) |
 | Actions | [View] [Resend] [Revoke] [Mark Accepted/Declined] |
 
-LAPSED: system auto-marks offers as LAPSED after expiry date passes with no response (Task background logic via O-8 equivalent — no Celery task defined in the page, the offer status check runs via O-15 filing task at daily 08:00 or at page load for < 24h precision).
+LAPSED: system auto-marks offers as LAPSED after expiry date passes with no response via **Task O-20** (Offer Lapse Scanner — daily 08:00 IST). Task sets `hr_offer.offer_status='LAPSED'` and reopens the candidate's position (if position was ON_HOLD waiting for this offer to convert). Recruiter sees the candidate return to OFFER_STAGE as "lapsed" for follow-up or rejection.
 
 ---
 
@@ -414,6 +414,16 @@ Auto-refreshes every 5 minutes.
 6. **Offer lapsed** (Task O-20 daily): if candidate doesn't respond before expiry, `offer_status='LAPSED'`. Position reopened to next candidate.
 
 **Offer status states:** DRAFT → SENT → ACCEPTED → CONVERTED (joined) | DECLINED | LAPSED (expired without response) | REVOKED (HR revoked after sending)
+
+**Offer declined/revoked outcome flow:**
+
+| Outcome | Candidate stage | Position | Next step |
+|---|---|---|---|
+| DECLINED (candidate refuses) | Moved to OFFER_DECLINED stage (visible in kanban) | Remains OPEN; no automatic action | Recruiter decides: re-engage candidate OR move to next candidate in pipeline OR close position |
+| LAPSED (Task O-20) | Candidate stage reverts to OFFER — shown with "LAPSED" badge | Position status unchanged | Same as DECLINED — Recruiter re-evaluates pipeline |
+| REVOKED (HR revokes after sending) | Candidate stage → OFFER_REVOKED | Position remains OPEN | Requires HR Manager to log revocation reason (free text, mandatory) for legal record. Legal Officer (#75) automatically notified if candidate had already verbally accepted (risk flag). |
+
+On any non-CONVERTED outcome, the kanban card stays visible in the Offers tab under the resolved filter for 30 days, then archived to `hr_candidate.stage='ARCHIVED'`.
 
 ---
 

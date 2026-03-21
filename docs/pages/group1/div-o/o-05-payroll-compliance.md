@@ -413,3 +413,105 @@ Green ✓ = FILED/ACKNOWLEDGED. Red ✗ = OVERDUE. Amber ⚠ = IN_PROGRESS. Grey
 | [Generate All Form 16s] | HR Manager (#79) only |
 | Export salary register CSV | Both HR Manager and Payroll Exec |
 | Finance Manager (#69) cross-link | Read-only API returns: month, headcount, total_gross, total_net, status — no individual-level data |
+
+---
+
+## Salary Revision Workflow (Post-Calibration)
+
+**Triggered by O-07 performance calibration lock.** When HRBP locks calibration and HR Manager approves increments in O-07, this page receives the pending revisions.
+
+**How Payroll Exec sees pending revisions:**
+
+In the Payroll Runs tab, before starting a new payroll run, a prominent alert shows:
+
+```
+  ⚠ 14 salary revisions pending for April 2026 payroll
+  ─────────────────────────────────────────────────────────────
+  Employee              Old CTC          New CTC          Effective
+  Rohan V.    (Div C)   ₹14,40,000 p.a.  ₹16,80,000 p.a.  1 Apr 2026
+  Priya S.    (Div D)   ₹12,00,000 p.a.  ₹13,44,000 p.a.  1 Apr 2026
+  Kavya R.    (Div I)   ₹10,80,000 p.a.  ₹11,88,000 p.a.  1 Apr 2026
+  ... 11 more
+  [Review All Revisions]   [Apply to Next Payroll Run]
+```
+
+**[Apply to Next Payroll Run]:** Updates `hr_employee.ctc` and `hr_employee.grade` for each employee with approved revision. Logs to `hr_salary_revision_history` with `revision_type='ANNUAL_INCREMENT'`, `effective_date`, `source_cycle_id`. On confirm: "14 salary revisions applied. April 2026 payroll run will use revised CTCs." Payroll run auto-picks up new CTC for affected employees.
+
+**Mid-month revision edge case:** If revision is approved on, say, 25 March for effective date 25 March (correction or joining scenario), the current month's payroll (March) is either:
+- Already DISBURSED: revision takes effect next month; no retroactive adjustment unless HR Manager explicitly creates a [Supplementary Payroll Run] (available via [···] menu on run, HR Manager only)
+- LOCKED or PROCESSING: HR Manager can unlock the run, Payroll Exec re-processes with new CTC, re-locks and re-submits for approval
+
+**LOP Calculation Edge Cases:**
+
+- **Second Saturday:** EduForge follows 5-day work week (Mon–Fri). Saturdays are non-working — they count as weekends (same as Sunday) for LOP calculation. No "second Saturday is working" variant.
+- **Public holiday on Sunday:** If a national holiday falls on Sunday, EduForge policy is NO compensatory holiday (holiday is on a non-working day and does not carry over). This is consistent with the holiday master (`hr_holiday.is_compensatory=false` for Sunday-holidays).
+- **Half-day LOP:** `hr_leave_request.days = 0.5` → LOP deduction = `(gross_monthly / 26) × 0.5` days. 26 is the convention for average paid days per month under the Payment of Wages Act (not 30 or working days in month). This applies consistently for both full-day and half-day LOP.
+- **Multiple part-day absences:** If employee has 3 half-day LOPs in a month, LOP total = 1.5 days. Payroll deduction = `(gross / 26) × 1.5`.
+
+---
+
+## Employee Self-Service: `/hr/my-payslips/`
+
+All EduForge employees access own payslips at this route (`@login_required`):
+
+| Feature | Description |
+|---|---|
+| Payslip list | All months since join date, most recent first |
+| Download PDF | Individual payslip PDF from R2 (KMS decrypted on-demand) |
+| Form 16 download | Available from 15 June each year for prior FY |
+| Month filter | Filter by financial year |
+| Gross/Net trend | Simple line chart: last 12 months' gross and net pay |
+
+No admin actions. Strictly own-data. Route is `/hr/my-payslips/` — not under `/hr/payroll/` to avoid confusion with payroll management.
+
+---
+
+## Role-Based UI Visibility Summary
+
+| Element | 79 HR Manager | 105 Payroll Exec | 69 Finance Mgr (cross-portal only) |
+|---|---|---|---|
+| Payroll runs list | Yes | Yes | Summary via API only |
+| [Start Payroll Run] | No | Yes | No |
+| [Approve Run] | Yes | No (disabled) | No |
+| [Unlock Run] (after rejection) | Yes | No | No |
+| Salary register — individual slip view | Yes | Yes | No |
+| Salary register — all employees | Yes | Yes | No |
+| Pending salary revisions panel | Yes | Yes (view + apply) | No |
+| [Apply to Next Payroll Run] | Yes | Yes | No |
+| Compensation distribution chart | Yes | No | No |
+| Statutory filings — full view | Yes | Yes | No |
+| Filing [Update Status] / [Upload Challan] | Yes | Yes | No |
+| [Generate All Form 16s] | Yes | No | No |
+| PF ECR file download | Yes | Yes | No |
+| Export salary register CSV | Yes | Yes | No |
+| Analytics — payroll trend | Yes | Yes | No |
+| Analytics — compensation distribution | Yes | No | No |
+| Analytics — statutory compliance heatmap | Yes | Yes | No |
+
+---
+
+## Performance Requirements
+
+| Metric | Target | Notes |
+|---|---|---|
+| Payroll runs list | < 600ms P95 (cache: 5 min) | Simple list of < 24 records |
+| Payslip table (150 rows) | < 800ms P95 (no cache) | Critical path — live data |
+| Payroll computation (Celery) | < 3 min for 150 employees | Background task — UI polls every 10s |
+| Salary register export (CSV, 150 rows) | < 5s | Stream generation |
+| PF ECR file generation | < 10s | Text file; 98 employee records |
+| Form 16 bulk generation (150 PDFs) | < 15 min (background) | Celery task; user notified on completion |
+| Statutory filings list | < 500ms P95 (cache: 5 min) | ~20–30 filing records max |
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `g` `p` | Go to Payroll & Compliance (O-05) |
+| `t` `r` | Switch to Payroll Runs tab |
+| `t` `s` | Switch to Salary Register tab |
+| `t` `f` | Switch to Statutory Filings tab |
+| `t` `a` | Switch to Analytics tab |
+| `Esc` | Close open drawer or modal |
+| `?` | Show keyboard shortcut help overlay |
