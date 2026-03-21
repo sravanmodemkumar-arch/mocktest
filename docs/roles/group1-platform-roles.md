@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 99 roles across 15 divisions.
+> Total: 106 roles across 15 divisions.
 
 ---
 
@@ -278,28 +278,40 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division N — Legal & Compliance (4 roles)
+## Division N — Legal & Compliance (6 roles)
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 75 | Legal Officer | 1 | Institution contracts, ToS, privacy policy updates |
-| 76 | Data Privacy Officer (DPO) | 1 | DPDP Act 2023, consent records, 72-hour breach notification |
-| 77 | Regulatory Affairs Exec | 1 | TRAI (SMS sender ID EDUFGE), CERT-In, MeitY filings |
-| 78 | POCSO Reporting Officer | 1 | Mandatory incident reporting to NCPCR, child welfare coordination |
+> DPDP Act 2023 — mandatory data subject request resolution within 30 days.
+> CERT-In — mandatory cyber incident reporting within 6 hours.
+> POCSO Act 2012 — mandatory NCPCR reporting within 24 hours.
+> TRAI DLT — sender ID EDUFGE must be continuously maintained; lapse = OTP failure for 7.6M students.
+> 2,050 institution contracts (MSA + DPA + SLA each) = ~6,150+ contract records to manage.
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 75 | Legal Officer | 1 | Institution contracts (creation, review, termination), ToS & Privacy Policy lifecycle, POCSO legal oversight, DPDP legal opinions, document repository management, co-approval of privacy policy publications | No data edits on platform; no billing config; cannot log POCSO incidents (Reporting Officer scope) |
+| 76 | Data Privacy Officer (DPO) | 1 | DPDP Act 2023 compliance, DSR resolution (30-day clock), breach incident coordination (72h DPDP notification), consent coverage oversight, sub-processor register, data flow register, privacy policy co-approval | No data edits; cannot configure system; cannot resolve DSRs without proper assessment; cannot terminate contracts |
+| 77 | Regulatory Affairs Exec | 1 | TRAI DLT entity registration & renewal (sender ID EDUFGE), DLT template registration/management, CERT-In filing, MeitY intermediary compliance, state board regulatory filings | No data edits; cannot approve breach reports (DPO/Legal scope); cannot access contract or POCSO modules |
+| 78 | POCSO Reporting Officer | 1 | Mandatory POCSO incident intake, NCPCR submission within 24 hours, police FIR coordination, child welfare committee liaison, annual NCPCR compliance report, accused-BGV flag coordination with Division G | Cannot access any non-POCSO platform modules; cannot log incidents without Legal Officer notification; cannot access victim data without re-authentication |
+| 103 | Contract Coordinator | 2 | End-to-end contract workflow: instantiate from approved templates, send for e-signature (DigiSign), follow-up on unsigned contracts, expiry tracking, renewal initiation, contract filing and document management | Cannot create or modify contract templates (Legal Officer owns templates); cannot sign off on contracts requiring legal review (`requires_legal_review=true`); cannot terminate contracts; no POCSO/DSR/filing access |
+| 104 | Data Compliance Analyst | 1 | DSR intake triage (log, assign to DPO), data flow register maintenance, consent coverage reporting, DPDP compliance KPI tracking, weekly compliance data pack, Privacy Impact Assessment documentation support | Cannot resolve or reject DSRs (DPO only); cannot approve breach notifications; cannot create regulatory filings; no POCSO access; all platform data read-only |
 
 ---
 
-## Division O — HR & Administration (3 roles)
+## Division O — HR & Administration (6 roles)
 
-> No platform system access.
+> No EduForge platform system access. All roles operate exclusively on the internal HR portal (`/hr/`).
+> At Phase 4 scale (100–150 EduForge employees across multiple cities), HR is a multi-function operation: talent, payroll, compliance, culture, and L&D each require a dedicated owner.
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 79 | HR Manager | 0 | Hiring, payroll, policies — internal only |
-| 80 | Recruiter | 0 | Talent acquisition only |
-| 81 | Office Administrator | 0 | Facilities, vendor payments — no platform access |
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 79 | HR Manager | 0 | HR strategy & policy, hiring approvals, payroll sign-off, statutory compliance oversight, HR analytics, POSH committee chair, HR vendor management | Cannot process payroll directly (Payroll Executive executes); cannot deploy code or manage infra |
+| 80 | Recruiter | 0 | Full-cycle talent acquisition: JD publishing, sourcing, interview coordination, offer rollout, ATS management, campus hiring | Cannot approve offers (HR Manager approves); cannot onboard (Onboarding Specialist scope) |
+| 81 | Office Administrator | 0 | Facilities management, office vendor payments, asset register (laptops, furniture, access cards), travel & accommodation bookings, petty cash, housekeeping and pantry | Cannot process payroll; no access to HR records or candidate data |
+| 105 | Payroll & Compliance Executive | 0 | Monthly payroll processing (earnings, deductions, net pay computation), PF/ESI/PT challan filing, TDS deposit and quarterly returns, Form 16 generation, salary register maintenance, full & final settlement computation, multi-state labour law compliance | Cannot approve payroll (HR Manager approves before disbursal); cannot create or modify employee records; no access to performance or L&D data |
+| 106 | HR Business Partner | 0 | OKR framework rollout, performance review cycle management (annual, mid-year, probation), PIP initiation and tracking, culture pulse and eNPS surveys, D&I initiatives, exit interview programme, manager effectiveness surveys, HRBP for technical divisions (C, D, E, F) | Cannot approve payroll; cannot post job openings (Recruiter owns); cannot configure system access (DevOps #14 owns) |
+| 107 | L&D Coordinator | 0 | Training needs assessment from performance data, training calendar management, LMS administration, external vendor-led training procurement, certification tracking, skills matrix maintenance, induction programme, mandatory compliance training (POSH awareness, data privacy, POCSO awareness) | Cannot approve training budget >₹50K (HR Manager approves); cannot create or approve performance reviews; no payroll access |
 
-> Note: Internal IT (employee laptops, GitHub, VPN) is handled by DevOps Engineer (#14).
+> Note: Internal IT for EduForge employees (laptops, GitHub access, VPN) is handled by DevOps Engineer (#14) via an IT request coordination workflow with Office Administrator (#81).
 
 ---
 
@@ -320,9 +332,9 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | K — Sales & Business Development | 10 (7 original + 3 new: #95, #96, #97) |
 | L — Marketing & Growth | 8 (5 original + 3 new: #98, #99, #100) |
 | M — Finance & Billing | 8 (6 original + 2 new: #101, #102) |
-| N — Legal & Compliance | 4 |
-| O — HR & Administration | 3 |
-| **Total** | **101** |
+| N — Legal & Compliance | 6 (4 original + 2 new: #103 Contract Coordinator, #104 Data Compliance Analyst) |
+| O — HR & Administration | 6 (3 original + 3 new: #105 Payroll & Compliance Exec, #106 HR Business Partner, #107 L&D Coordinator) |
+| **Total** | **106** |
 
 ---
 
