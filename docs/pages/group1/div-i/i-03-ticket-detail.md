@@ -167,8 +167,11 @@ Tabbed interface below the thread:
 Status:    [IN_PROGRESS ▼]    Tier: [L2 ▼]
 Priority:  [CRITICAL ▼]       Assigned: [Rahul Kumar ▼]
 Category:  Technical Bug       Created: 5 Nov 2024, 2:05 PM
-Source:    PORTAL              Last updated: 2 min ago
+Source:    PORTAL              Created by: Meena Reddy (self-service)
+Last updated: 2 min ago
 ```
+
+`created_by_id`: if null → shows "Self-service / {source}"; if set → shows platform staff name. For `source=DIVISION_H_ALERT` or `DIVISION_F_ESCALATION`, shows the source system name instead of a user name. For `source=EMAIL`, shows "Email inbound".
 
 Inline edit dropdowns (Support Manager or assigned agent):
 - Status dropdown: allowed transitions shown only (can't skip to CLOSED from IN_PROGRESS without RESOLVED first)
@@ -188,15 +191,19 @@ Changes POST to `/support/tickets/{id}/update/`; header HTMX refresh.
 │  ████████████████░░░░  72% used          │
 │                                          │
 │  Resolution deadline: 2:45 PM (12 min)  │
-│  First response: ✓ Met (2:10 PM)        │
+│  First response SLA: 2:35 PM ✓ Met      │
+│  (Responded at 2:10 PM — 25 min early)  │
 │                                          │
-│  SLA paused: 0h 0m (customer wait)      │
+│  SLA paused: 0h 14m (customer wait)     │
+│  Effective deadline: 2:59 PM (adjusted) │
 └─────────────────────────────────────────┘
 ```
 
-Progress bar: green → amber → red as SLA depletes.
-If breached: shows red "BREACHED 2h 4m ago" with breach timestamp.
-First response SLA: green checkmark if met; red X if missed (shows how late).
+Progress bar: green → amber → red as SLA depletes. Bar uses **effective** deadline (pause-adjusted).
+If breached: shows red "BREACHED 2h 4m ago" with effective breach timestamp.
+**First response**: compares `first_response_at` vs `first_response_sla_at` (both stored on ticket); green ✓ if `first_response_at ≤ first_response_sla_at`; red ✗ if missed, showing by how much.
+**SLA paused**: shows accumulated `sla_pause_duration_seconds`; if currently in PENDING_CUSTOMER, also shows running elapsed time (JS client-side counter).
+**Effective deadline**: `sla_breach_at + sla_pause_duration_seconds` — always shown when pause > 0.
 
 ---
 
@@ -236,23 +243,31 @@ Vertical list of action buttons on right panel, below institution context:
 | [Merge with…] | Support Manager | Search for duplicate ticket; merges thread |
 | [Mark as Duplicate] | Any agent | Links to canonical ticket; closes this one with note |
 | [Reopen] | Support Manager only | Re-opens CLOSED ticket with required reason |
-| [Close Ticket] | Assigned agent when RESOLVED; Support Manager any time | Confirmation modal; CSAT sent to requester |
+| [Close Ticket] | Assigned agent when RESOLVED; Support Manager any time | Confirmation modal "Close this ticket? The requester will be notified."; CSAT survey was already sent on RESOLVED — closing does NOT re-send CSAT. If customer has not submitted CSAT, they may still submit after ticket closes (link valid for 30 days). |
 
 **Escalation Modal:**
 ```
-Escalate Ticket to L2
+Escalate Ticket
 
-Reason: [________________] (required; max 500 chars)
-Reason type: [▼ Select type]
+Destination tier: [L2 ▼]  ← Support Manager can select L2 or L3 directly
+                            L1/L2 agents: destination pre-set to next tier
+
+Reason type: [▼ Select type] (required)
   - Needs DB investigation
   - Technical bug confirmed
   - Requires code/config change
   - Customer requesting supervisor
   - SLA breach imminent
+  - Tier skip — emergency (Support Manager only; logs warning)
+  - Billing escalation
   - Other (specify)
 
-[Cancel]  [Escalate to L2]
+Additional notes: [________________] (optional free-text; max 500 chars)
+
+[Cancel]  [Escalate →]
 ```
+
+`reason_type` maps to `support_ticket_escalation.reason_type` enum. `notes` becomes `reason` text in the escalation record.
 
 POST `/support/tickets/{id}/escalate/`; creates `support_ticket_escalation` record; updates `tier` and `assigned_to_id` (clears assignment for L2 to pick up); inserts system message in thread; HTMX full panel refresh.
 
@@ -344,8 +359,10 @@ Files served via R2 signed URL (24h validity). [Download] generates fresh signed
 6. **L3 ticket with code change required**: L3 agent can add internal note with GitHub PR link; no formal code review flow inside this page — L3 links externally.
 7. **Thread auto-refresh conflicts with typing**: Auto-refresh (`?part=thread`) is suspended while reply textarea has focus; resumes on blur.
 8. **Merge creates orphan attachments**: Both tickets' attachments are moved to the primary ticket on merge; orphan records cleaned up by background job.
-9. **Quality annotation on own ticket (Quality Lead is also the assigned agent)**: Not possible — Quality Lead (#90) cannot be assigned to tickets; role restriction enforced at DB level.
-10. **CSAT already submitted**: CSAT section on right panel shows the submitted score and comment (read-only). [Resend CSAT] button shown to Support Manager; resending resets the score and sends a new survey.
+9. **Quality annotation on own ticket (Quality Lead is also the assigned agent)**: Not possible — Quality Lead (#90) cannot be assigned to tickets; this is enforced at **application level**: the ticket assignment API rejects `assigned_to_id` values where the target user has role=90; the dropdown in I-02/I-03 excludes role-90 users.
+10. **CSAT already submitted**: CSAT section on right panel shows the submitted score and comment (read-only). [Resend CSAT] button shown to Support Manager; resending: sets `csat_submitted_at=null`, `csat_score=null`, `csat_comment=null`, `csat_sent_at=now()`, sends a new survey link; the old score is gone (no history of previous CSAT submissions stored).
+11. **Thread pagination**: If a ticket has >100 messages, thread shows the last 50 by default with a "Load earlier messages (N more)" link at the top (HTMX: `?part=thread&before={message_id}`). Auto-scroll always to bottom on initial load.
+12. **[Flag KB gap] access**: All roles with I-03 access (L1, L2, L3, Support Manager, Quality Lead, Onboarding Specialist) can click [Flag KB gap →] in the KB suggestions section. Creates `kb_article_gap_flag` record with ticket's category pre-filled as `ticket_category`, `gap_type=MISSING_ARTICLE`.
 
 ---
 

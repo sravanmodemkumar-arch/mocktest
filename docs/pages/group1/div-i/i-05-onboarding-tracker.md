@@ -117,7 +117,7 @@ Columns: Institution | Type | Stage | Specialist | Checklist Progress | Target G
 - Future 0 days: red ("due today")
 - Past and not LIVE/COMPLETED: red bold + "OVERDUE"
 
-**Days in Stage**: How many days since last stage transition. Red if >14 days (potential stall before Celery auto-flags at 7 days; indicates Celery may not have triggered yet or was cleared).
+**Days in Stage**: How many days since last stage transition. Amber if 5–7 days (approaching stall threshold); red if >7 days (Celery should have already flagged as STALLED — if showing red but not STALLED, check that Celery Task 4 ran). The 7-day threshold matches the Celery stall detection threshold exactly.
 
 **Status badge**: ACTIVE (green), STALLED (red pulsing), COMPLETED (grey).
 
@@ -269,6 +269,8 @@ Opens a New Onboarding modal:
 5. **Target go-live in the past and not yet LIVE**: Drawer shows "OVERDUE" banner in red. Celery `flag_stalled_onboarding` handles notification but does not auto-close — specialist must take action.
 6. **Training Coordinator (#52) access**: Can view all onboarding records and training sessions in read-only mode. Cannot modify checklist, progress stages, or schedule sessions directly (sessions go through Onboarding Specialist). Can view recordings from past sessions.
 7. **Kanban with >50 cards per column**: Column shows first 20 cards + "Load more" button. Kanban not suitable for viewing COMPLETED column (2,000+ records) — that column collapses with pagination link to table view filtered by COMPLETED.
+8. **Backward stage movement in kanban**: Drag-drop to a prior stage is allowed only for Support Manager (with mandatory reason field); blocked for Onboarding Specialist. Backward move: creates a system note "Stage moved back from {current} to {previous} by {manager} — Reason: {text}"; `last_activity_at` updated; `stalled_since` cleared. Use case: institution portal config broke after ADMIN_TRAINED; specialist needs to redo PORTAL_CONFIGURED items.
+9. **Stall detection reliability**: `last_activity_at` is updated by application code (not a trigger) whenever: a checklist item is marked complete, a training session is created or completed, or the stage changes. If `last_activity_at` is accidentally stale (e.g., bug), Support Manager can [Manually Reset Stall] from the drawer (sets `stalled_since=null`, `last_activity_at=now()`); creates audit note.
 8. **Specialist reassignment**: [Reassign Specialist] button in drawer (Support Manager only); reassignment notifies both old and new specialist via F-06.
 
 ---

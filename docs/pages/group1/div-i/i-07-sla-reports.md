@@ -162,6 +162,8 @@ Hover tooltip: breakdown per category for that period.
 
 Below chart: top 5 categories ranked by volume for the selected period with % of total.
 
+**Exam-day markers**: On dates where a live exam occurred, a yellow vertical marker is drawn on the X-axis. Implementation: server-side query `SELECT DISTINCT DATE(start_date) FROM exam WHERE DATE(start_date) BETWEEN {from} AND {to}` via read-only service account (Division F DB read replica); result cached for 60 min. Marker tooltip on hover: exam name + student count. If Division F DB is unavailable, markers are omitted silently (no error shown).
+
 ---
 
 ### Category Breakdown (pie chart)

@@ -181,7 +181,9 @@ Checkbox selects rows. [Bulk Actions ▼] dropdown:
 | Change Priority | Support Manager | Set priority for all selected |
 | Change Tier | Support Manager | Move selected tickets to different tier queue |
 | Close (resolved) | Support Manager | Mass-close; requires confirmation modal "Close {N} tickets?" |
-| Export Selected | Support Manager, Support Quality Lead | Downloads CSV of selected tickets (no PII in export unless DPO-approved) |
+| Export Selected | Support Manager, Support Quality Lead | Downloads CSV of selected tickets; **Support Manager**: full export including institution name, category, resolution time, CSAT (no student PII — emails masked); **Quality Lead**: exports ticket metadata only (ticket_number, category, tier, quality_score, resolution_time) — no requester fields at all; logged to audit trail |
+
+All bulk actions are **audit-logged**: each affected ticket gets a SYSTEM message inserted into its thread: e.g., "Bulk assigned to Rahul Kumar by Priya (Support Manager) via bulk action on 5 Nov 2024 at 2:15 PM". This ensures every ticket has a complete history of who touched it and when.
 
 Bulk action bar appears at the bottom of the screen as a fixed bar when ≥1 ticket selected:
 ```
@@ -191,6 +193,8 @@ Bulk action bar appears at the bottom of the screen as a fixed bar when ≥1 tic
 ---
 
 ### [+ New Ticket] Button
+
+**Access**: L1, L2, L3, Support Manager. Onboarding Specialist can create `ONBOARDING_HELP` category only. Training Coordinator and Support Quality Lead (#90) have no [+ New Ticket] button.
 
 Opens a Create Ticket drawer (not modal — wider form needed):
 
@@ -249,7 +253,7 @@ Page size selector: 25 / 50 / 100. Default 25.
 1. **SLA timer precision**: Countdown shows `Xh Ym` for ≥1h remaining; shows `Xm Ys` for <1h remaining. Counts down client-side via JS; does not depend on HTMX refresh.
 2. **PENDING_CUSTOMER ticket SLA**: SLA timer shows "Paused" with the total pause duration. Effective SLA = `sla_breach_at + sla_pause_duration_seconds`. Timer resumes on next customer reply.
 3. **L1 agent tries to view L2 ticket URL directly**: Returns 403 with "This ticket is in the L2 queue. You don't have access." — does not silently show ticket.
-4. **Exam day: >500 CRITICAL tickets open**: Table auto-applies `priority=CRITICAL&exam_day=true` filter with a banner "Exam day mode active. Showing critical tickets only. [Show all]".
+4. **Exam day: >500 CRITICAL tickets open**: Table auto-applies `priority=CRITICAL&exam_day=true` filter with a banner "Exam day mode active. Showing critical tickets only. [Show all]". If surge threshold exceeded (>200 EXAM_DAY_INCIDENT open), Support Manager sees [Activate Triage Mode] button — see Workflow 1 in pages-list.
 5. **Agent has 0 assigned tickets and no unassigned in their queue**: "No open tickets in your queue. [Check unassigned tickets]" button links to `?assigned=unassigned`.
 6. **Support Quality Lead (#90) row actions**: All row action buttons hidden; no create button shown. Only [View →] available.
 7. **Ticket number search**: `?q=SUP-20241105` matches all tickets with that date prefix — useful for bulk exam-day lookup.

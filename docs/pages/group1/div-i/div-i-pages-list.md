@@ -97,7 +97,10 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | quality_audit_score | smallint | 1–5; set by Support Quality Lead (#90) during audit; null = not yet audited |
 | quality_audit_note | text | Auditor note on ticket quality |
 | quality_audited_at | timestamptz | — |
-| tags | varchar[] DEFAULT '{}' | Free-form tags for filtering and KB gap detection |
+| first_response_sla_at | timestamptz NOT NULL | Computed at creation: `created_at + first_response_minutes` from `support_sla_config`; used for first-response SLA tracking in I-03 SLA tracker |
+| sla_warning_sent | boolean DEFAULT false | Set to true when Task 2 sends the at-risk warning; prevents duplicate notifications within same breach window; reset to false when ticket is re-escalated (tier change recomputes SLA) |
+| csat_sent_at | timestamptz | Set when CSAT survey is sent on RESOLVED; used by Task 3 to distinguish initial send from reminder |
+| tags | varchar[] DEFAULT '{}' | Free-form tags; editable by assigned agent and Support Manager; not editable by Quality Lead (#90) |
 | created_at | timestamptz DEFAULT now() | — |
 | updated_at | timestamptz DEFAULT now() | — |
 
@@ -105,10 +108,13 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 `LOGIN_ISSUE`, `OTP_FAILURE`, `EXAM_ACCESS`, `RESULT_QUERY`, `BILLING_QUERY`, `TECHNICAL_BUG`, `FEATURE_REQUEST`, `ONBOARDING_HELP`, `DATA_CORRECTION`, `EXAM_DAY_INCIDENT`, `OTHER`
 
 **Routing rules at creation:**
-- `EXAM_DAY_INCIDENT` → auto-tier = L2, auto-priority = CRITICAL
+- `EXAM_DAY_INCIDENT` → auto-tier = L2, auto-priority = CRITICAL, `exam_day_incident=true`; never appears in L1 queue unless Support Manager explicitly overrides tier (with audit note)
 - `DATA_CORRECTION` → auto-tier = L2
-- `TECHNICAL_BUG` → auto-tier = L1 (escalates to L2 if not resolved in SLA window)
+- `TECHNICAL_BUG` → auto-tier = L1; Celery Task 2 flags for escalation if first-response SLA is breached and status still = OPEN (agent must escalate manually — no auto-tier change)
 - All others → tier = L1
+- **Catch-all**: any category not listed above → tier = L1, priority = MEDIUM
+
+**Ticket number sequence**: `ticket_number` uses a PostgreSQL daily sequence (`support_ticket_seq_{YYYYMMDD}`). Sequence created on first ticket of each day; auto-increments without gaps. Max throughput: PostgreSQL sequences are lockless — handles exam-day peak (25,000 tickets/48h = ~520/hour) without collision.
 
 ---
 
@@ -136,7 +142,8 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | from_tier | varchar(5) | L1 or L2; null if escalated from Support Manager directly |
 | to_tier | varchar(5) NOT NULL | L2 or L3 |
 | escalated_by_id | int FK → user | — |
-| reason | text | Required; displayed in ticket thread |
+| reason | text | Required free-text reason; displayed in ticket thread |
+| reason_type | varchar(50) NOT NULL | Structured reason code: `NEEDS_DB_INVESTIGATION`, `TECHNICAL_BUG_CONFIRMED`, `REQUIRES_CODE_CHANGE`, `CUSTOMER_REQUESTING_SUPERVISOR`, `SLA_BREACH_IMMINENT`, `TIER_SKIP_EMERGENCY`, `BILLING_ESCALATION`, `OTHER` |
 | escalated_at | timestamptz DEFAULT now() | — |
 
 ---
@@ -150,8 +157,9 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | priority | varchar(20) NOT NULL | CRITICAL, HIGH, MEDIUM, LOW |
 | first_response_minutes | int NOT NULL | Minutes until first response SLA |
 | resolution_minutes | int NOT NULL | Minutes until resolution SLA |
+| is_exam_day_override | boolean DEFAULT false | If true, this row is the exam-day override config; matched when `support_ticket.exam_day_incident=true` AND priority=CRITICAL; takes precedence over standard row for same tier+priority |
 | is_active | boolean DEFAULT true | — |
-| UNIQUE(tier, priority) | — | — |
+| UNIQUE(tier, priority, is_exam_day_override) | — | — |
 
 **Default SLA values:**
 
@@ -170,7 +178,7 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | L3 | MEDIUM | 480 min | 1,440 min |
 | L3 | LOW | 1,440 min | 4,320 min |
 
-> Exam-day override: Any ticket with `exam_day_incident=true` and priority=CRITICAL uses L1 first-response = **15 minutes**, regardless of configured value.
+> Exam-day override: A dedicated row with `is_exam_day_override=true` exists for L1/CRITICAL: first_response=15min, resolution=60min. Matched at ticket creation when `exam_day_incident=true`. All exam-day incidents auto-tier to L2 (so L2/CRITICAL exam-day row: first_response=30min, resolution=120min).
 
 ---
 
@@ -186,9 +194,10 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | target_go_live_at | date | Set at initiation; agreed go-live date |
 | actual_go_live_at | date | Set when stage transitions to LIVE |
 | completed_at | timestamptz | Set when stage = COMPLETED |
-| stalled_since | timestamptz | Set by Celery when no activity for 7 days |
+| stalled_since | timestamptz | Set by Celery Task 4 when `last_activity_at < now() - interval '7 days'` |
+| last_activity_at | timestamptz DEFAULT now() | Updated whenever: a checklist item is completed, a training session is created, or the stage changes; used by Celery Task 4 for stall detection (NOT `updated_at`, which only updates on direct instance edits) |
 | notes | text | Specialist notes |
-| updated_at | timestamptz DEFAULT now() | — |
+| updated_at | timestamptz DEFAULT now() | Updated on direct instance edits; do NOT use for stall detection — use `last_activity_at` |
 
 **Stage machine:** `INITIATED → SETUP_CALL_SCHEDULED → PORTAL_CONFIGURED → ADMIN_TRAINED → FIRST_EXAM_CREATED → LIVE → COMPLETED`
 Parallel: any stage → `STALLED` (Celery auto-sets after 7 days inactivity); Support Manager can re-activate.
@@ -260,7 +269,8 @@ Parallel: any stage → `STALLED` (Celery auto-sets after 7 days inactivity); Su
 | view_count | int DEFAULT 0 | Incremented on each view |
 | helpful_votes | int DEFAULT 0 | — |
 | not_helpful_votes | int DEFAULT 0 | — |
-| linked_ticket_categories | varchar[] DEFAULT '{}' | Which `support_ticket.category` values this article helps resolve |
+| linked_ticket_categories | varchar[] DEFAULT '{}' | Which `support_ticket.category` values this article helps resolve; multi-select in editor; updated in-place (array replaced) |
+| review_feedback | text | Rejection feedback from Support Manager; shown as yellow banner in editor when status=DRAFT after rejection; cleared on next PENDING_REVIEW submission |
 | created_at | timestamptz DEFAULT now() | — |
 | updated_at | timestamptz DEFAULT now() | — |
 
@@ -276,9 +286,11 @@ Training Coordinator (#52) authors; Support Manager (#47) approves. Support Qual
 | id | serial PK | — |
 | flagged_by_id | int FK → user | Support Quality Lead (#90) or any agent |
 | ticket_category | varchar(30) | Category where the KB gap was identified |
-| description | text NOT NULL | Description of the missing content |
+| gap_type | varchar(30) NOT NULL DEFAULT 'MISSING_ARTICLE' | `MISSING_ARTICLE` (no article for this category), `INACCURATE` (existing article has wrong info), `OUTDATED` (article correct but stale), `INCOMPLETE` (article exists but missing steps) |
+| description | text NOT NULL | Description of the missing or incorrect content |
 | status | varchar(20) DEFAULT 'OPEN' | `OPEN`, `ASSIGNED`, `RESOLVED` |
 | assigned_to_id | int FK → user | Training Coordinator assigned to fill gap |
+| resolved_at | timestamptz | Set when status → RESOLVED |
 | created_at | timestamptz DEFAULT now() | — |
 
 ---
@@ -295,6 +307,69 @@ Training Coordinator (#52) authors; Support Manager (#47) approves. Support Qual
 | notes | text | Detailed feedback |
 | shared_with_agent | boolean DEFAULT false | Whether audit result was shared with ticket agent |
 | audited_at | timestamptz DEFAULT now() | — |
+
+---
+
+### `institution_contact`
+
+> Support team's operational contact directory for each institution. Separate from institution admin user accounts — may include IT contacts, finance contacts, principal's office, etc.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | serial PK | — |
+| institution_id | int FK → institution | — |
+| name | varchar(200) NOT NULL | — |
+| role_title | varchar(100) | e.g., "IT Coordinator", "Finance Admin", "Principal" |
+| email | varchar(254) | — |
+| phone | varchar(20) | — |
+| preferred_contact | varchar(20) DEFAULT 'EMAIL' | `EMAIL`, `PHONE`, `WHATSAPP` |
+| last_contacted_at | date | Manually updated by support staff |
+| notes | text | Internal notes about this contact |
+| created_by_id | int FK → user | Support staff who added this contact |
+| created_at | timestamptz DEFAULT now() | — |
+| updated_at | timestamptz DEFAULT now() | — |
+
+---
+
+### `institution_support_note`
+
+> Internal notes about an institution maintained by the support team. Not visible to institution.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | serial PK | — |
+| institution_id | int FK → institution | — |
+| author_id | int FK → user | Support staff who created the note |
+| note_type | varchar(20) NOT NULL DEFAULT 'INFO' | `PINNED` (always shown first), `WARNING` (orange ⚠ — flags special handling), `INFO` (grey — general note) |
+| body | text NOT NULL | No length limit |
+| is_pinned | boolean DEFAULT false | True for PINNED type; multiple pinned notes allowed; shown reverse-chronologically |
+| created_at | timestamptz DEFAULT now() | — |
+| updated_at | timestamptz DEFAULT now() | — |
+
+---
+
+### `support_weekly_report`
+
+> Pre-computed weekly performance snapshot generated by Celery Task 5 every Monday 09:00 IST. Read by I-07 for the "Weekly Snapshot" section.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | serial PK | — |
+| week_start | date NOT NULL UNIQUE | Monday of the report week (ISO: first day of week) |
+| total_tickets | int | COUNT for the week |
+| sla_compliance_l1 | numeric(5,2) | % tickets meeting resolution SLA in L1 |
+| sla_compliance_l2 | numeric(5,2) | % tickets meeting resolution SLA in L2 |
+| sla_compliance_l3 | numeric(5,2) | % tickets meeting resolution SLA in L3 |
+| avg_csat_score | numeric(3,2) | Average CSAT score for the week |
+| csat_response_rate | numeric(5,2) | % of resolved tickets that received CSAT |
+| avg_resolution_minutes_l1 | int | Average resolution time for L1 tickets |
+| avg_resolution_minutes_l2 | int | — |
+| avg_resolution_minutes_l3 | int | — |
+| tickets_by_category | jsonb | `{LOGIN_ISSUE: 142, OTP_FAILURE: 87, ...}` |
+| escalation_rate_l1 | numeric(5,2) | % of L1 tickets escalated to L2 |
+| escalation_rate_l2 | numeric(5,2) | % of L2 tickets escalated to L3 |
+| agent_stats | jsonb | `[{user_id, name, tier, tickets_handled, avg_resolution_min, csat_avg, sla_compliance_pct}]` |
+| generated_at | timestamptz DEFAULT now() | — |
 
 ---
 
@@ -318,8 +393,32 @@ OPEN
   └─ (Unassigned >30min, Support Manager assigns) → IN_PROGRESS
 ```
 
-CSAT survey sent to requester when status changes to `RESOLVED`.
-Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason).
+CSAT survey sent to requester **immediately when status changes to `RESOLVED`** (not on CLOSED). Sets `csat_sent_at` timestamp. Celery Task 3 sends a **reminder** (not a new survey) if `csat_submitted_at IS NULL` and ticket auto-closes after 7 days.
+Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason). Re-opening CLOSED → status = `IN_PROGRESS`; new SLA computed from L1/MEDIUM as default (Support Manager can adjust).
+
+---
+
+## SLA Pause/Resume Accumulation
+
+When status changes to `PENDING_CUSTOMER`:
+- `sla_pause_started_at` = `now()`; `sla_warning_sent` = false (warning resets on new customer activity)
+
+When status changes from `PENDING_CUSTOMER` to any other status (customer replies or agent takes action):
+- `sla_pause_duration_seconds += EXTRACT(EPOCH FROM (now() - sla_pause_started_at))`
+- `sla_pause_started_at` = null
+
+**Effective SLA breach time** (used in all Celery tasks and I-03 display):
+```
+effective_breach_at = sla_breach_at + sla_pause_duration_seconds * interval '1 second'
+```
+For tickets currently in `PENDING_CUSTOMER`, the running pause is also added:
+```
+effective_breach_at = sla_breach_at
+  + sla_pause_duration_seconds * interval '1 second'
+  + EXTRACT(EPOCH FROM (now() - sla_pause_started_at)) * interval '1 second'
+```
+
+This means a ticket that waited 4h for a customer reply effectively gets 4h added to its deadline. Task 1 uses `effective_breach_at < now()` (not raw `sla_breach_at`) for breach detection, and does NOT exclude `PENDING_CUSTOMER` tickets — it just adjusts for pause time.
 
 ---
 
@@ -327,11 +426,11 @@ Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason).
 
 | # | Task Name | Schedule | Queue | Action |
 |---|---|---|---|---|
-| 1 | `check_sla_breaches` | Every 5 min | `support` | Scans open tickets where `sla_breach_at < now()` AND status NOT IN (`RESOLVED`, `CLOSED`, `PENDING_CUSTOMER`); sends breach notification via F-06 to assigned agent + Support Manager |
-| 2 | `send_sla_warnings` | Every 15 min | `support` | Finds tickets where `sla_breach_at BETWEEN now() AND now() + interval '60 min'` and status = `IN_PROGRESS`; sends warning notification to assigned agent only |
-| 3 | `auto_close_resolved_tickets` | Daily at 00:00 IST | `support` | Closes tickets in `RESOLVED` status with `resolved_at < now() - interval '7 days'` and no new messages; sends CSAT reminder if not yet submitted |
-| 4 | `flag_stalled_onboarding` | Daily at 08:00 IST | `support` | Marks onboarding instances as `STALLED` if `updated_at < now() - interval '7 days'` and stage NOT IN (`LIVE`, `COMPLETED`); notifies assigned Onboarding Specialist and Support Manager via F-06 |
-| 5 | `generate_support_weekly_report` | Every Monday 09:00 IST | `support` | Computes SLA compliance %, CSAT scores, ticket volume by category, agent performance metrics; stores in `support_weekly_report` table; notifies Support Manager |
+| 1 | `check_sla_breaches` | Every 5 min | `support` | Scans ALL open tickets (including PENDING_CUSTOMER) where `effective_breach_at < now()` (see SLA Pause/Resume section for formula); sends breach notification via F-06 to assigned agent + Support Manager; PENDING_CUSTOMER tickets use extended effective deadline; does not breach tickets in RESOLVED or CLOSED |
+| 2 | `send_sla_warnings` | Every 15 min | `support` | Checks two thresholds: (a) **Resolution SLA**: tickets where `effective_breach_at BETWEEN now() AND now() + interval '60 min'` and status NOT IN (RESOLVED, CLOSED) and `sla_warning_sent=false`; (b) **First response SLA**: tickets where `first_response_at IS NULL` and `first_response_sla_at BETWEEN now() AND now() + interval '30 min'` and status=OPEN; sends F-06 warning push to assigned agent; sets `sla_warning_sent=true` to prevent duplicate sends |
+| 3 | `auto_close_resolved_tickets` | Daily at 00:00 IST | `support` | Closes tickets in `RESOLVED` status where `resolved_at < now() - interval '7 days'` and no new `support_ticket_message` rows since `resolved_at`; if `csat_submitted_at IS NULL` and `csat_sent_at IS NOT NULL`, sends one CSAT **reminder** push via F-06 (not a new survey); sets `closed_at = now()` |
+| 4 | `flag_stalled_onboarding` | Daily at 08:00 IST | `support` | Marks onboarding instances as `STALLED` if `last_activity_at < now() - interval '7 days'` and stage NOT IN (`LIVE`, `COMPLETED`); notifies assigned Onboarding Specialist and Support Manager via F-06; does not re-notify if `stalled_since` is already set (idempotent) |
+| 5 | `generate_support_weekly_report` | Every Monday 09:00 IST | `support` | Computes all metrics for the prior week (Mon–Sun); upserts into `support_weekly_report` (idempotent on `week_start`); notifies Support Manager via F-06 push with summary stats |
 
 ---
 
@@ -355,24 +454,29 @@ Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason).
 
 | External System | Direction | What Flows |
 |---|---|---|
-| Division F — Exam Day Ops | Inbound | Incident Manager (#38) can create EXAM_DAY_INCIDENT tickets directly in L2 queue via internal API; F-06 routes all ticket notifications (breach, escalation, resolution) |
-| Division H — Analytics | Inbound | Anomaly alerts from H-01 can auto-create `source=DIVISION_H_ALERT` tickets assigned to Support Manager for triage |
-| Division G — BGV | Inbound | BGV_QUERY tickets auto-route to BGV Manager (#39) via internal handoff note; Support team creates ticket, BGV team resolves |
-| Division K — Sales | Inbound | New institution sign-off from Sales creates `onboarding_instance` record; triggers Onboarding Specialist assignment |
-| Division B — Product | Outbound | FEATURE_REQUEST tickets with 3+ duplicates generate a feature request item in Product Manager (#5) dashboard |
-| AWS SES / WhatsApp | Bidirectional | Email: ticket creation and reply notifications; WhatsApp: CSAT survey delivery after resolution |
+| Division F — Exam Day Ops | Inbound + Outbound | Incident Manager (#38) creates `EXAM_DAY_INCIDENT` tickets via `POST /api/support/tickets/` with `source=DIVISION_F_ESCALATION`; auto-tier=L2, auto-priority=CRITICAL; F-06 routes all ticket notifications (breach, escalation, resolution). Outbound: I-07 volume chart shows exam-day markers by joining `support_ticket.linked_exam_id` → Division F `exam` table (read-only via service account); Division F `exam.start_date` used as marker date |
+| Division H — Analytics | Inbound | H-01 anomaly alert webhook calls `POST /api/support/tickets/` with `source=DIVISION_H_ALERT`, category=`TECHNICAL_BUG`, priority=`HIGH`, subject pre-populated from anomaly description; auto-assigned to Support Manager; appears in I-02 with grey "H-01 Alert" badge; Support Manager triages and re-assigns |
+| Division G — BGV | Inbound | BGV_QUERY tickets: on creation (any agent), a post-save signal creates a SYSTEM message: "BGV query detected. Assigning to BGV Manager for resolution." and sets `assigned_to_id` to BGV Manager (#39) user ID; ticket remains in Division I system for tracking; BGV Manager resolves and closes via I-03 |
+| Division K — Sales | Inbound | When Sales marks a deal as WON in the CRM, a webhook calls `POST /api/support/onboarding/create/` with institution_id and expected_go_live_date; creates `onboarding_instance` with `stage=INITIATED`; notifies all Onboarding Specialists via F-06 for assignment |
+| Division B — Product | Outbound | Background Celery task: every hour, check if any `category=FEATURE_REQUEST` ticket has 3+ tickets with identical/similar subject (trigram similarity >0.8); if so, creates a flag record for Product Manager (#5) (Division B internal system — notification only, no cross-module write) |
+| Division M — Billing | Inbound (read-only) | `institution_subscription` table read for I-04 institution header subscription status; fetched via `subscription` service read-only API; cached for 30 min; graceful fallback: if Division M unavailable, subscription badge shows "Status unavailable" grey without blocking page load |
+| AWS SES | Bidirectional | Inbound: SES inbound email handler parses emails to support@eduforge.in → creates ticket with `source=EMAIL`; replies to ticket notification emails are appended as REPLY messages (SES SNS webhook). Outbound: ticket notification emails, CSAT survey emails, training session invites |
+| WhatsApp (Meta API) | Outbound | CSAT surveys sent as WhatsApp message to `requester_phone` if `preferred_contact=WHATSAPP` (from `institution_contact` table); template pre-approved by Meta; managed by Notification Manager (#37); retry: 1 attempt only (no loops) |
 
 ---
 
 ## Cross-Page Workflows
 
 ### Workflow 1 — Exam Day Surge Handling
-1. Live exam begins (Division F confirms exam started)
-2. I-01 shows yellow exam-day banner: "Exam live: {exam_name} — {N} CRITICAL tickets"
-3. All L1 agents see exam-day ticket filter auto-applied in I-02
-4. EXAM_DAY_INCIDENT tickets sorted to top of queue; SLA = 15 min first response
-5. L1 agents cannot close EXAM_DAY_INCIDENT tickets — must route to L2 minimum
-6. After exam ends, banner clears; normal queue resumes
+1. Live exam begins (Division F confirms exam started; `exam.status=LIVE` in Division F DB)
+2. I-01 shows red exam-day banner; I-02 auto-applies `?exam_day=true&priority=CRITICAL` filter for all agents
+3. `EXAM_DAY_INCIDENT` tickets auto-route to L2; SLA = 30-min first response, 120-min resolution (exam-day override row)
+4. **Surge overflow handling**: If open `EXAM_DAY_INCIDENT` ticket count exceeds 200 (configurable env var `EXAM_DAY_SURGE_THRESHOLD`), I-02 shows surge mode: "⚠ Surge active: {N} critical tickets. [Activate Triage Mode]"
+   - Triage mode (Support Manager activates): collapses ticket detail — reply box shows only 3 canned responses ([Exam is ongoing — issue logged], [Technical team notified], [Rejoin link: {link}]); agents can reply with one click; full detail still accessible via [Full View] link
+   - Support Manager can auto-assign unassigned surge tickets in bulk via [Distribute {N} tickets across L2 team] button (round-robin assignment)
+5. EXAM_DAY_INCIDENT tickets: L2 can attempt resolution; if needs L3 code change, escalate immediately; L2 cannot close without resolution note
+6. After exam ends (Division F updates `exam.status`), banner clears on next 60s HTMX refresh; surge mode deactivates; normal queue resumes
+7. Post-exam: Support Manager runs I-07 report filtered to exam day to review surge handling performance
 
 ### Workflow 2 — L1 → L2 → L3 Escalation
 1. L1 agent in I-03 clicks [Escalate to L2]; required: select reason from dropdown (8 reasons)
@@ -407,12 +511,15 @@ Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason).
 
 ## DPDPA 2023 Considerations
 
-- Ticket records contain requester PII (name, email) — classified as **personal data** under DPDPA
-- Access strictly role-scoped: agents see only tickets in their queue; Support Manager sees all
-- All PII access logged via `support_ticket_message` (system type) for audit trail
-- Bulk PII export (ticket export with requester details) requires Data Privacy Officer (#76) approval
-- Student tickets: requester email masked in exported reports (`s***@domain.com`)
-- **Retention**: `support_ticket` + `support_ticket_message` → 7 years (legal compliance); `onboarding_instance` → 5 years; `kb_article` → permanent (published); `support_quality_audit` → 2 years
+- Ticket records contain requester PII (name, email, phone) — classified as **personal data** under DPDPA 2023
+- Access strictly role-scoped: agents see only tickets in their tier queue; Support Manager sees all; Quality Lead reads all but cannot export without DPO approval
+- All PII data access (view, export, download) logged as SYSTEM message in `support_ticket_message` for 7-year audit trail
+- **Bulk PII export rules**:
+  - Institution admin tickets: exportable by Support Manager with audit log entry (institutional data, DPDPA purpose = legitimate interest)
+  - Student tickets (requester_role=STUDENT): `requester_email` masked as `s***@domain.com` in all exports regardless of role; requires DPO (#76) approval for unmasked export
+  - Quality Lead (#90): can export ticket metadata (ticket_number, category, score, resolution_time) but NOT requester PII fields
+- `institution_contact` table contains operational contact PII — access limited to support roles; not exportable in bulk
+- **Retention** enforced by annual archival Celery job (runs 1 Jan each year): archives `support_ticket` records older than 7 years to S3 cold storage; cascades to messages and escalations
 
 ---
 
@@ -428,6 +535,8 @@ Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason).
 | `onboarding_checklist_progress` | 5 years | Cascades with instance |
 | `onboarding_training_session` | 5 years | Cascades with instance |
 | `kb_article` | Permanent (published); 1 year (DRAFT/ARCHIVED) | — |
-| `kb_article_gap_flag` | 1 year post-resolution | — |
-| `support_quality_audit` | 2 years | — |
-| `support_weekly_report` | 3 years | — |
+| `kb_article_gap_flag` | 1 year post-resolution | Soft-delete; `resolved_at + 1 year` |
+| `support_quality_audit` | 2 years | Hard delete after 2 years |
+| `support_weekly_report` | 3 years | Hard delete after 3 years |
+| `institution_contact` | 5 years post institution offboarding | Cascades on institution deletion |
+| `institution_support_note` | 5 years post institution offboarding | Cascades on institution deletion |
