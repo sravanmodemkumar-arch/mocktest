@@ -301,6 +301,7 @@ Same columns + "Decision" (Approved/Rejected) + "Decision By" + "Decision Date" 
 | Bulk approve (confirm modal) | `click` | POST `.../approvals/bulk-approve/` | `#approvals-tab-content` | `innerHTML` |
 | Withdraw | `click` | POST `.../approvals/{aid}/withdraw/` | `#approval-row-{aid}` | `outerHTML` |
 | Override (Chairman) | `click` | POST `.../approvals/{aid}/override/` | `#approval-row-{aid}` | `outerHTML` |
+| Pending queue auto-refresh | `every 60s` | GET `.../approvals/stats/` | `#approvals-pending-badge` | `innerHTML` |
 
 ---
 

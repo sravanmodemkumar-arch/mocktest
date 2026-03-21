@@ -180,6 +180,26 @@ Immutable record · 7-year retention per DPDP Act · [N] events today
 
 ---
 
+## 7a. Charts
+
+### 7a.1 Audit Event Volume (last 30 days)
+- **Type:** Line chart
+- **Data:** Daily event count for last 30 days — all severities stacked (Info / Warning / Critical)
+- **X-axis:** Dates
+- **Y-axis:** Event count
+- **Colours:** Blue (Info) · Yellow (Warning) · Red (Critical)
+- **Tooltip:** Date · Info: N · Warning: N · Critical: N · Total: N
+- **Export:** PNG
+
+### 7a.2 Event Type Distribution (this month)
+- **Type:** Doughnut chart
+- **Data:** Count per Action Type (Login · Create · Edit · Delete · Approve · Reject · Config Change · Override · Export)
+- **Colours:** One per action type
+- **Centre text:** Total events this month
+- **Export:** PNG
+
+---
+
 ## 8. Toast Messages
 
 | Action | Toast | Type | Duration |
@@ -236,6 +256,8 @@ Immutable record · 7-year retention per DPDP Act · [N] events today
 | GET | `/api/v1/group/{id}/audit-log/{eid}/` | JWT | Event detail |
 | GET | `/api/v1/group/{id}/audit-log/export/?format=csv` | JWT (G4/G5) | Export CSV |
 | GET | `/api/v1/group/{id}/audit-log/stats/` | JWT | Summary stats |
+| GET | `/api/v1/group/{id}/audit-log/charts/volume/` | JWT | Daily event volume (last 30d) |
+| GET | `/api/v1/group/{id}/audit-log/charts/type-distribution/` | JWT | Event type distribution |
 
 **No POST/PUT/DELETE endpoints exist for audit log — append-only at database level (PostgreSQL row-level security).**
 
@@ -250,6 +272,7 @@ Immutable record · 7-year retention per DPDP Act · [N] events today
 | Sort | `click` | GET `.../audit-log/?sort=&dir=` | `#audit-table-section` | `innerHTML` |
 | Pagination | `click` | GET `.../audit-log/?page=` | `#audit-table-section` | `innerHTML` |
 | Open detail | `click` | GET `.../audit-log/{id}/` | `#drawer-body` | `innerHTML` |
+| Stats bar auto-refresh | `every 5m` | GET `.../audit-log/stats/` | `#audit-stats-bar` | `innerHTML` |
 
 ---
 

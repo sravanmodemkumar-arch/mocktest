@@ -326,6 +326,7 @@ Fields: Branch · Bus No · Type (Breakdown / Accident / Route Deviation) · Dat
 | Resolve modal submit | `submit` | POST `.../resolve/` | `#escalation-row-{id}` | `outerHTML` |
 | Procurement approve | `click` | POST `.../approve/` | `#procurement-row-{id}` | `outerHTML` |
 | SLA table sort | `click` | GET `.../branches/sla/?sort=` | `#sla-table-body` | `innerHTML` |
+| KPI stats auto-refresh | `every 5m` | GET `.../vp/dashboard/stats/` | `#vp-stats-bar` | `innerHTML` |
 
 ---
 

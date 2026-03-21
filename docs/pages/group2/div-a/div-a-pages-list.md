@@ -314,6 +314,12 @@
 | Exam Result Publication had no approval gate | Page 17 — added Exam Result Publication approval type |
 | 13 pages missing HTMX interaction patterns | All 33 spec pages now have complete HTMX Patterns section |
 | MD (G5) missing from announcement approvers despite outranking CEO (G4) | Page 21 — MD added as approver in Role Access, UI Visibility, and API auth |
+| Page 21 approval modal trigger still named Chairman/CEO after role fix | Page 21 Section 5.3 — modal trigger updated to Chairman/MD/CEO |
+| Approval Workflow Hub missing pending-queue auto-refresh HTMX | Page 17 — added `every 60s` poll for `#approvals-pending-badge` |
+| MD Dashboard missing KPI stats auto-refresh HTMX | Page 02 — added `every 5m` poll for `#md-stats-bar` |
+| Policy create API auth said JWT (G3+) allowing Exec Secretary (G3) to create policies | Page 19 — corrected to JWT (G4+); Exec Secretary has no create rights per Role Access table |
+| Group Audit Log missing Charts section entirely | Page 26 — added Event Volume Trend (line, 30d) and Event Type Distribution (donut); chart API endpoints; stats auto-refresh |
+| Dashboards 04, 05, 06, 08 missing HTMX auto-refresh (01, 02, 03, 07 had it) | Pages 04/05/06/08 — added `every 5m` dashboard refresh; all 8 role dashboards now consistent |
 
 ---
 
@@ -335,4 +341,4 @@ P2 — Sprint 3
 
 ---
 
-*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 21 · Audit passes: 3 — zero gaps remaining*
+*Last updated: 2026-03-21 · Total pages: 33 · Roles: 8 · Gaps resolved: 27 · Audit passes: 4 — zero gaps remaining*

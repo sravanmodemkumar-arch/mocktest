@@ -257,7 +257,7 @@ Group Policy Management                                [+ New Policy]  [Export A
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | GET | `/api/v1/group/{id}/policies/` | JWT | Policy list |
-| POST | `/api/v1/group/{id}/policies/` | JWT (G3+) | Create policy draft |
+| POST | `/api/v1/group/{id}/policies/` | JWT (G4+) | Create policy draft |
 | GET | `/api/v1/group/{id}/policies/{pid}/` | JWT | Policy detail |
 | PUT | `/api/v1/group/{id}/policies/{pid}/` | JWT (G3+) | Update draft |
 | POST | `/api/v1/group/{id}/policies/{pid}/publish/` | JWT (G3+) | Publish policy |

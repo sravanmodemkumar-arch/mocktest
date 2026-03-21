@@ -141,7 +141,7 @@ Character limit indicator: If SMS selected and message >160 chars → warning ba
   - Click rate (if links in message)
 
 ### 5.3 Modal: `announcement-approve`
-- **Trigger:** Chairman/CEO row action or Pending Approval tab
+- **Trigger:** Chairman/MD/CEO row action or Pending Approval tab
 - **Width:** 480px
 - **Content:** Full announcement preview (title, message, targeting, channels, schedule)
 - **Buttons:** [Approve & Schedule] (green) · [Reject with Reason] (red) · [Request Changes] (yellow) · [Cancel]

@@ -278,6 +278,7 @@ Group Strategic Advisor · Last login: [date time]
 | Open expansion study drawer | `click` | GET `.../expansion/studies/{id}/` | `#drawer-body` | `innerHTML` |
 | Download strategy brief | `click` | GET `.../reports/strategy-brief/latest/` | — | — (triggers download) |
 | Chart year filter | `change` | GET `.../enrollment-trend/?years={val}` | `#enrollment-chart-data` | `innerHTML` (re-renders) |
+| Dashboard data refresh | `every 5m` | GET `.../advisor/dashboard/summary/` | `#advisor-summary` | `innerHTML` |
 
 ---
 

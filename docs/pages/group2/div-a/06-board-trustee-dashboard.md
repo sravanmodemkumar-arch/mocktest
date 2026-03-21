@@ -313,6 +313,7 @@ can only download the already-generated pack.
 | Download board pack | `click` | GET `.../board-pack/latest/` | — | — (triggers download) |
 | Open compliance drawer (read) | `click` | GET `.../compliance/{area}/branches/` | `#drawer-body` | `innerHTML` |
 | Performance table sort (client) | `click` on header | Client-side sort only for G1 | `#perf-table-body` | `innerHTML` |
+| Dashboard data refresh | `every 5m` | GET `.../board/dashboard/summary/` | `#trustee-summary` | `innerHTML` |
 
 ---
 

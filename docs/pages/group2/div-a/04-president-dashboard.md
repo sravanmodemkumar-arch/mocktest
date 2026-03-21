@@ -296,6 +296,7 @@ Opens confirm modal listing all selected exams before submitting.
 | Approve inline | `click` | POST `.../approve/` | `#exam-row-{id}` | `outerHTML` |
 | Bulk approve confirm | `click` | POST `.../bulk-approve/` | `#exam-table-section` | `innerHTML` |
 | Performance table sort | `click` | GET `.../performance/?sort=` | `#perf-table-body` | `innerHTML` |
+| KPI stats auto-refresh | `every 5m` | GET `.../president/dashboard/stats/` | `#president-stats-bar` | `innerHTML` |
 
 ---
 

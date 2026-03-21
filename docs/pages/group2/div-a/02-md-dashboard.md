@@ -352,6 +352,7 @@ name, branch, last login, and individual [Send Reminder] per row.
 | Submit user-create form | `submit` | POST `.../users/` | `#drawer-body` | `innerHTML` |
 | Approve request | `click` | POST `.../requests/{id}/approve/` | `#pending-queue` | `innerHTML` |
 | Send policy reminder | `click` | POST `.../policies/{id}/remind/` | `#policy-row-{id}` | `outerHTML` |
+| KPI stats auto-refresh | `every 5m` | GET `.../md/dashboard/stats/` | `#md-stats-bar` | `innerHTML` |
 
 ---
 
