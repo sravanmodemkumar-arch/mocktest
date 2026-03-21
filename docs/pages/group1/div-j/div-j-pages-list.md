@@ -206,6 +206,7 @@ Only one in-flight renewal per institution at any time. New renewal cycle begins
 | cross_division_notes | jsonb DEFAULT '[]' | Array of `{division, contact_name, status, note, logged_at, logged_by_id}`; `logged_by_id` is FK to user for audit |
 | account_at_risk | boolean NOT NULL DEFAULT false | True = institution has threatened to churn; surfaces in J-01 red flag |
 | arr_at_risk_paise | bigint | Populated when `account_at_risk=true`; copied from active renewal ARR |
+| last_notify_csm_at | timestamptz | Set when Escalation Manager triggers [Escalate to CSM]; enforces 60-min cooldown per escalation — endpoint checks `now() - last_notify_csm_at < 60 min` and returns 429 if within cooldown |
 | opened_at | timestamptz NOT NULL DEFAULT now() | — |
 | resolved_at | timestamptz | Set when status → RESOLVED |
 | closed_at | timestamptz | Set when status → CLOSED (after institution confirms) |
@@ -218,6 +219,14 @@ Only one in-flight renewal per institution at any time. New renewal cycle begins
 - P3_MEDIUM: commit_sla = 72h from open; resolve_sla = 7d from open
 
 Both `commit_sla_at` and `resolve_sla_at` are shown as countdown timers in the J-05 Escalation Detail Drawer. Breached timers display in red.
+
+**Status transition rules (application-level; enforced in Django model `clean()` method):**
+Valid forward transitions only: `OPEN → IN_PROGRESS → PENDING_INSTITUTION | PENDING_DIVISION → RESOLVED → CLOSED`. Backward transitions (e.g., RESOLVED → OPEN) are rejected — escalations must be re-opened by creating a new escalation if a resolved issue resurfaces. Exception: admin staff can force-set status in Django admin for data corrections. A DB CHECK constraint is intentionally NOT used to preserve admin override capability.
+
+**FK ON DELETE behaviour:**
+- `institution_id → institution` : ON DELETE RESTRICT (preserve historical escalations for churn analysis; institution cannot be deleted with open escalations)
+- `assigned_to_id → user` : ON DELETE SET NULL (escalation un-assigns if manager account deleted; Task J-2 picks up unassigned escalations)
+- `opened_by_id → user` : ON DELETE SET NULL (preserve audit record)
 
 ---
 
@@ -282,10 +291,15 @@ Both `commit_sla_at` and `resolve_sla_at` are shown as countdown timers in the J
 | link_expires_at | timestamptz NOT NULL | `sent_at + interval '14 days'`; submission rejected after expiry |
 | reminder_sent_at | timestamptz | Set when Celery Task J-3 sends 7-day reminder; prevents duplicate reminders |
 | superseded_by_id | int FK → csm_nps_survey | Set when a Resend creates a new row to replace this one; old row is inactive; null = current active survey |
+| dispatch_channel | varchar(20) NOT NULL DEFAULT 'EMAIL' | Channel used to send this survey: `EMAIL` · `WHATSAPP`; COACHING institutions receive QUARTERLY_NPS via WhatsApp (F-06); all others receive via email |
 | created_at | timestamptz DEFAULT now() | — |
 | updated_at | timestamptz DEFAULT now() | — |
 
 **Supersession rule:** When a survey is resent via [Resend], a new `csm_nps_survey` row is created. The old row gets `superseded_by_id = new_row.id`. The public survey endpoint rejects submissions to tokens where `superseded_by_id IS NOT NULL`.
+
+**NPS response threshold rules:**
+- Portfolio-wide KPI tiles and `csm_weekly_snapshot.nps_score`: require **≥ 10 responses** in the period (statistical minimum for credibility).
+- Per-month trend chart data points (in J-07 NPS Trend Chart and J-01 NPS Trend Chart): require **≥ 5 responses** per month — monthly samples are smaller by nature; fewer responses are acceptable for trend visualisation (displayed with a "low sample" indicator icon). These thresholds are intentionally different.
 
 ---
 
@@ -401,6 +415,23 @@ CREATE INDEX csm_assignment_history_inst ON csm_account_assignment_history (inst
 | updated_by_id | int FK → user | — |
 | updated_at | timestamptz DEFAULT now() | — |
 
+**Initial seed values (applied in data migration on first deploy):**
+
+| Key | Default | Description |
+|---|---|---|
+| `health_threshold_healthy` | `85` | Minimum score for HEALTHY tier |
+| `health_threshold_engaged` | `65` | Minimum score for ENGAGED tier |
+| `health_threshold_at_risk` | `45` | Minimum score for AT_RISK tier |
+| `health_threshold_critical` | `25` | Minimum score for CRITICAL tier |
+| `new_institution_grace_days` | `30` | Days since creation before health scoring begins |
+| `renewal_alert_days` | `30` | Days before renewal date to trigger alerts |
+| `nps_quarterly_enabled` | `true` | Enable/disable quarterly NPS dispatch (Task J-3) |
+| `nps_min_kpi_responses` | `10` | Min responses needed to display portfolio-wide NPS KPI |
+| `nps_min_chart_responses` | `5` | Min responses needed per month to render trend chart point |
+| `at_risk_default_playbook_template_id` | `null` | Set post-seed once AT_RISK_RECOVERY template is created |
+| `churn_risk_default_playbook_template_id` | `null` | Set post-seed once CHURN_SAVE template is created |
+| `last_health_compute_at` | `null` | Updated by Task J-1 on each successful completion; read by Task J-4 |
+
 ---
 
 ## Health Score Computation (Celery Task J-1)
@@ -511,11 +542,11 @@ If new tier = CHURNED_RISK (score 0–24) AND previous tier was not CHURNED_RISK
 | Task ID | Name | Schedule | Description |
 |---|---|---|---|
 | J-1 | `csm_health_recompute` | Nightly 01:00 IST | (1) Applies grace period guard for institutions < 30 days old. (2) Recomputes health scores for all 2,050 institutions. (3) Upserts `csm_institution_health`. (4) Inserts today's row into `csm_health_history`; deletes history rows > 90 days old. (5) Auto-creates `csm_renewal` records for active subscriptions with no open renewal. (6) Updates `csm_escalation.commit_sla_breached` and `resolve_sla_breached` flags. (7) Sets `csm_config['last_health_compute_at']` on completion (used by Task J-4 to verify data freshness). Duration ~12–18 min. |
-| J-2 | `csm_renewal_alert` | Daily 09:00 IST | Checks renewals due in ≤30 days with no touchpoint in last 14 days and stage not in (COMMITTED, RENEWED, CHURNED). Sends in-app notification to assigned AM + Renewal Exec. Sends WhatsApp via F-06 if stage = IDENTIFIED and days_to_renewal ≤ 7. Also sends ISM tenure-end warning: if `ism_tenure_end_date` is 10 days away, sends in-app + email to ISM (#94) and AM (#54). |
+| J-2 | `csm_renewal_alert` | Daily 09:00 IST | Checks renewals due in ≤30 days with no touchpoint in last 14 days and stage not in (COMMITTED, RENEWED, CHURNED). Sends in-app notification to assigned AM + Renewal Exec. For ≤7 days remaining: escalates to WhatsApp via F-06 **for all active stages** (IDENTIFIED, OUTREACH_SENT, QUOTE_SENT, NEGOTIATING) — not limited to IDENTIFIED only; urgency applies regardless of pipeline progress. Also sends ISM tenure-end warning: if `ism_tenure_end_date` is 10 days away, sends in-app + email to ISM (#94) and AM (#54). Also sends daily digest to platform CSM (#53) listing count of institutions with no CSM or AM assigned. |
 | J-3 | `csm_nps_dispatch` | 1st of each quarter at 10:00 IST | Sends `QUARTERLY_NPS` surveys to primary contacts of HEALTHY + ENGAGED institutions. Uses `@app.task(rate_limit='50/h')` Celery rate limiting; surveys spread via individual subtasks with ETA scheduling — no blocking sleep. Skips institutions surveyed in last 60 days. Queues 7-day reminder subtasks for non-respondents (sets `reminder_sent_at` on send). For COACHING-type institutions: dispatches via WhatsApp (F-06) instead of email, as coaching centres have higher WhatsApp engagement than email. |
-| J-4 | `csm_at_risk_alert` | Daily 08:00 IST | Checks `csm_config['last_health_compute_at']` first — if Task J-1 did not complete today, runs on yesterday's data and adds note to notification: "based on last available data [timestamp]". Scans for tier crossings: (a) health_score dropped below 65 → sends CSM notification + auto-creates AT_RISK_RECOVERY playbook (template from `csm_config['at_risk_default_playbook_template_id']`). (b) health_score dropped below 25 (CHURNED_RISK crossing) → sends CSM + Escalation Manager notification + auto-creates CHURN_SAVE playbook instead (`csm_config['churn_risk_default_playbook_template_id']`). Does not create duplicate playbooks if same-type instance is already ACTIVE. |
-| J-5 | `csm_weekly_snapshot` | Monday 02:00 IST | Aggregates portfolio-wide metrics into `csm_weekly_snapshot`. Computes GRR = MIN(ARR_renewed_base, ARR_due) / ARR_due (capped at 100%; excludes expansion delta). Computes NRR = (ARR_renewed_base + expansion_arr) / ARR_due. Uses rolling 13-week window for quarterly GRR/NRR. Also cleans up `csm_health_history` rows as a safety net (duplicate cleanup). |
-| J-6 | `csm_ism_tenure_handoff` | Daily 07:00 IST | Scans `csm_account_assignment` where `ism_tenure_end_date = today`. For each: (1) Sends in-app + email to ISM and AM: "ISM tenure complete for [Institution]. AM takes ownership from today." (2) Checks if any `csm_playbook_instance` with `assigned_to_id = ism_id` and `status = ACTIVE` exists — if so, reassigns instance to `account_manager_id` and sends AM a notification: "Playbook '[name]' for [Institution] transferred to you." (3) Does NOT nullify `ism_id` — keeps as reference; AM is now primary. |
+| J-4 | `csm_at_risk_alert` | Daily 08:00 IST | Checks `csm_config['last_health_compute_at']` first — if Task J-1 did not complete today, runs on yesterday's data and adds note to notification: "based on last available data [timestamp]". Scans for tier crossings: (a) health_score dropped below 65 → sends CSM notification + auto-creates AT_RISK_RECOVERY playbook (template from `csm_config['at_risk_default_playbook_template_id']`). (b) health_score dropped below 25 (CHURNED_RISK crossing) → sends CSM + Escalation Manager notification + auto-creates CHURN_SAVE playbook instead (`csm_config['churn_risk_default_playbook_template_id']`). Does not create duplicate playbooks if same-type instance is already ACTIVE. **Template null guard:** if the config key is null or the referenced template ID does not exist or `is_active = false`, skip playbook auto-creation and send an additional in-app notification to the platform CSM (#53): "Auto-playbook skipped for [Institution] — default template not configured. Update `at_risk_default_playbook_template_id` in CS config." |
+| J-5 | `csm_weekly_snapshot` | Monday 02:00 IST | Aggregates portfolio-wide metrics into `csm_weekly_snapshot`. Computes GRR = MIN(ARR_renewed_base, ARR_due) / ARR_due (capped at 100%; excludes expansion delta). Computes NRR = (ARR_renewed_base + expansion_arr) / ARR_due. **ARR_renewed_base** = `SUM(arr_value_paise WHERE stage='RENEWED' AND expansion_arr_paise IS NULL)` — base renewal ARR for institutions that renewed without expansion; **expansion_arr** = `SUM(expansion_arr_paise WHERE stage='EXPANSION')`; **ARR_due** = `SUM(arr_value_paise WHERE renewal_date in period)`. Uses rolling 13-week window for quarterly GRR/NRR. Also cleans up `csm_health_history` rows as a safety net (duplicate cleanup for rare retry-caused duplicates on the UNIQUE index). |
+| J-6 | `csm_ism_tenure_handoff` | Daily 07:00 IST | Scans `csm_account_assignment` where `ism_tenure_end_date = today`. For each: (1) Sends in-app + email to ISM and AM: "ISM tenure complete for [Institution]. AM takes ownership from today." (2) Checks if any `csm_playbook_instance` with `assigned_to_id = ism_id` and `status = ACTIVE` exists — if so, reassigns instance to `account_manager_id` and sends AM a notification: "Playbook '[name]' for [Institution] transferred to you." **AM null guard:** if `account_manager_id` is null, do NOT reassign; instead notify the assigned CSM (#53): "[Institution] ISM tenure ended but no AM is assigned — active playbooks remain with ISM until an AM is assigned." Log a WARNING to application logs for monitoring. (3) Does NOT nullify `ism_id` — keeps as reference; AM is now primary. |
 
 ---
 
@@ -560,6 +591,7 @@ All Division J routes under `/csm/` prefix. Django app name: `csm`.
 | `GET /csm/accounts/export/` | `portfolio_export` | `csm:portfolio_export` |
 | `GET /csm/renewals/` | `renewal_pipeline` | `csm:renewals` |
 | `GET /csm/escalations/` | `escalation_console` | `csm:escalations` |
+| `GET /csm/escalations/<int:pk>/` | `escalation_detail` | `csm:escalation_detail` |
 | `GET /csm/playbooks/` | `playbook_hub` | `csm:playbooks` |
 | `GET /csm/feedback/` | `nps_feedback` | `csm:feedback` |
 | `GET /csm/reports/` | `cs_reports` | `csm:reports` |
@@ -591,6 +623,7 @@ All Division J routes under `/csm/` prefix. Django app name: `csm`.
 | `/csm/playbooks/instances/<int:pk>/abandon/` | POST | `playbook_instance_abandon` | `csm:instance_abandon` |
 | `/csm/feedback/surveys/send/` | POST | `survey_send` | `csm:survey_send` |
 | `/csm/feedback/surveys/<int:pk>/followup/` | PATCH | `survey_followup` | `csm:survey_followup` |
+| `/csm/feedback/surveys/<int:pk>/resend/` | POST | `survey_resend` | `csm:survey_resend` |
 | `/csm/feedback/dispatch/skip/` | POST | `dispatch_skip` | `csm:dispatch_skip` |
 | `/csm/accounts/bulk_assign/` | POST | `bulk_account_assign` | `csm:bulk_assign` |
 | `/csm/accounts/bulk_playbook_start/` | POST | `bulk_playbook_start` | `csm:bulk_playbook_start` |

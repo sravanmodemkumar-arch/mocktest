@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 93 roles across 15 divisions.
+> Total: 96 roles across 15 divisions.
 
 ---
 
@@ -220,17 +220,24 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division K — Sales & Business Development (7 roles)
+## Division K — Sales & Business Development (10 roles)
 
-| # | Role | Level | Territory |
-|---|---|---|---|
-| 57 | B2B Sales Manager | 3 | Full pipeline — pricing approvals, demo sign-off |
-| 58 | Sales Executive — Schools | 3 | 1,000 schools — day scholar + hosteler institutions |
-| 59 | Sales Executive — Colleges | 3 | 800 intermediate colleges |
-| 60 | Sales Executive — Coaching | 3 | 100 coaching centres (5K–15K members each) |
-| 61 | Partnership Manager | 3 | State board govt contracts, coaching chain MoUs |
-| 62 | Demo Manager | 3 | Free trial tenants, sandbox setup, demo data, reset |
-| 63 | Channel Partner Manager | 1 | Reseller/partner network, commission tracking |
+> Pipeline covers 2,050 institutions across schools, colleges, coaching centres, and groups.
+> Channel partners and government contracts add multi-institution deal velocity.
+> Avg sales cycle: 3–8 weeks (schools), 8–24 weeks (govt/groups).
+
+| # | Role | Level | Territory / Scope | Can Do | Cannot Do |
+|---|---|---|---|---|---|
+| 57 | B2B Sales Manager | 3 | All segments — pricing approvals, deal sign-off | View all pipeline; approve pricing exceptions; set quotas; assign territories; all reports | Billing config; infra config |
+| 58 | Sales Executive — Schools | 3 | 1,000 schools — day scholar + hosteler institutions | Own leads — create, log activities, advance stages, schedule demos | Access other execs' leads; approve pricing; create demo tenants |
+| 59 | Sales Executive — Colleges | 3 | 800 intermediate colleges | Same as #58 | Same as #58 |
+| 60 | Sales Executive — Coaching | 3 | 100 coaching centres (5K–15K members each) | Same as #58 | Same as #58 |
+| 61 | Partnership Manager | 3 | State board govt contracts, coaching chain MoUs | Manage all partnerships; upload MoUs; track renewals; log partner activities | Demo tenant management; channel partner commissions; billing |
+| 62 | Demo Manager | 3 | All segments — free trial tenant lifecycle | Create/reset/extend/deactivate demo tenants; link to leads; seed data; generate access links | Edit production tenants; access billing; approve deals |
+| 63 | Channel Partner Manager | 1 | Reseller/partner network — commission tracking | View partner performance; log partner interactions; commission reports | Commission approval (Sales Manager does that); onboard without Manager approval |
+| 95 | Sales Operations Analyst | 1 | Platform-wide — CRM data quality, pipeline reporting | Read all pipeline; quota reports; win/loss analysis; territory map view; export reports | Any pipeline edits; no customer-facing actions; no territory reassignment |
+| 96 | Pre-Sales / Solutions Engineer | 3 | Large deals (>₹2L ARR) and government tenders | Technical discovery calls; RFP/tender response builder; PoC tenant deployment; document feature gaps for product team | Cannot close deals (Sales Exec owns); cannot approve pricing; no commission management |
+| 97 | Inside Sales Executive | 3 | Inbound queue — website leads, marketing-sourced, trial activations | Manage inbound leads; qualify and assign; first contact calls; schedule demos; move PROSPECT→CONTACTED | Cannot access outbound pipeline of other execs; no pricing approvals; no demo tenant creation |
 
 ---
 
@@ -300,12 +307,12 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | H — Data & Analytics | 5 |
 | I — Customer Support | 7 |
 | J — Customer Success | 6 |
-| K — Sales & Business Development | 7 |
+| K — Sales & Business Development | 10 (7 original + 3 new: #95, #96, #97) |
 | L — Marketing & Growth | 5 |
 | M — Finance & Billing | 6 |
 | N — Legal & Compliance | 4 |
 | O — HR & Administration | 3 |
-| **Total** | **93** |
+| **Total** | **96** |
 
 ---
 

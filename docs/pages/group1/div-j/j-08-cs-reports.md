@@ -20,7 +20,7 @@ Executive-grade CS analytics. Surfaces GRR/NRR retention metrics, churn root-cau
 | Retention KPI strip | `csm_weekly_snapshot` (pre-computed) | 60 min |
 | GRR/NRR trend | `csm_renewal` closed by quarter for last 8 quarters | 15 min |
 | Churn analysis | `csm_renewal` WHERE stage='CHURNED' for selected period | 15 min |
-| Cohort analysis | `institution` JOIN `csm_health_history` grouped by join_quarter (daily snapshots, 90-day retention) | 15 min |
+| Cohort analysis | `institution` JOIN `csm_health_history` grouped by join_quarter — `join_quarter` is derived from `institution.created_at` (the date the institution record was first created in EduForge, i.e., contract start date); formatted as `YYYY-QN` (e.g., Q2 2024) | 15 min |
 | CSM performance table | `csm_touchpoint` + `csm_renewal` + `csm_nps_survey` + `csm_institution_health` grouped by csm_id | 15 min |
 | Playbook effectiveness | `csm_playbook_instance` + `csm_institution_health` pre/post comparison | 15 min |
 | Health score distribution | `csm_institution_health.health_score` histogram | 15 min |
@@ -103,6 +103,9 @@ All chart data pre-computed by Celery Task J-5 (weekly snapshot). Live queries u
 
 - **GRR:** MIN(ARR_renewed_base, ARR_due) / ARR_due (capped at 100%; excludes expansion delta; covers contract renewals only — does not capture mid-period cancellations). Green if ≥ 90%, amber 80–89%, red < 80%.
 - **NRR:** (ARR_renewed_base + expansion_arr) / ARR_due (can exceed 100% when net expansion outpaces churn). Green if ≥ 100%, amber 90–99%, red < 90%.
+- **ARR_renewed_base** = `SUM(arr_value_paise WHERE stage='RENEWED' AND expansion_arr_paise IS NULL)` — base renewal ARR, excludes expansion-only contracts.
+- **expansion_arr** = `SUM(expansion_arr_paise WHERE stage='EXPANSION')` — net new ARR from expanded seats/plans.
+- **ARR_due** = `SUM(arr_value_paise WHERE renewal_date BETWEEN period_start AND period_end)` — total ARR up for renewal in the period.
 - **Logo Churn Rate:** Count(CHURNED institutions) / Count(total institutions at period start) × 100.
 - **Expansion Rate:** Sum(expansion_arr) / ARR_due × 100.
 - **NPS Score:** From `csm_weekly_snapshot` most recent.
@@ -198,7 +201,7 @@ Sorted by churn_date DESC. Exportable by CS Analyst.
 
 ## Cohort Analysis
 
-**What it shows:** For institutions that joined in the same quarter (cohort), how has their average health score evolved over time?
+**What it shows:** For institutions that joined EduForge in the same quarter (cohort, derived from `institution.created_at`), how has their average health score evolved over time? Each cohort row represents all institutions whose `created_at` falls within that calendar quarter.
 
 Cohort table (rows = join quarter, columns = quarters since joining):
 

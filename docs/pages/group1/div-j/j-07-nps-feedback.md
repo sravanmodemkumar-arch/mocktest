@@ -108,7 +108,7 @@ Cache key includes all filter params. `?nocache=true` for CSM (#53) and CS Analy
 
 Tiles shown in selected period. "last_quarter" = Q4 2025 (Oct–Dec 2025) if today is Q1 2026.
 
-Note: NPS formula counts only `QUARTERLY_NPS` surveys by default; includes all NPS-type surveys if `?survey_type=all`.
+Note: NPS formula counts only `QUARTERLY_NPS` surveys by default; includes all NPS-type surveys if `?survey_type=all`. The NPS Score tile shows "— (no data)" if fewer than `csm_config['nps_min_kpi_responses']` (default: 10) responses exist for the period — this threshold is intentionally higher than the per-month trend chart threshold (5) because portfolio-wide KPIs require statistical credibility.
 
 ---
 
@@ -120,7 +120,7 @@ Line chart (Chart.js) — 12 months of monthly NPS scores.
 - Y-axis: -100 to +100
 - Dotted reference line at 0 (neutral)
 - Solid reference line at +40 (good) and +70 (excellent)
-- Data points: NPS score per month. Null if < 5 responses (shown as gap with tooltip "Not enough responses")
+- Data points: NPS score per month. Null (shown as gap with tooltip "Not enough responses — need ≥5 for trend") if < 5 responses for that month — per-month samples are naturally smaller; the ≥5 threshold is intentionally lower than the ≥10 threshold used for KPI tiles (which represent portfolio-wide quarterly aggregates requiring higher statistical confidence). A "low sample" indicator icon (⚠) shown on data points with 5–9 responses.
 - Secondary bars (right Y-axis, 0–100): response count per month as grey bars
 
 Hover tooltip: NPS score · Promoters% · Detractors% · Response count.

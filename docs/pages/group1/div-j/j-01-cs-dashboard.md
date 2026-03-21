@@ -93,7 +93,7 @@ All caches bypass with `?nocache=true` (CSM #53 only).
 └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
-**Tile 1 — Total Institutions:** Count by segment (from `csm_institution_health` count). Shows segment breakdown on hover as tooltip. Sub-label shows "N unassigned" in amber if any institutions have `csm_account_assignment.csm_id IS NULL` — clicking filters J-02 to `?csm_id=unassigned`.
+**Tile 1 — Total Institutions:** Count by segment (from `csm_institution_health` count). Shows segment breakdown on hover as tooltip. Sub-label shows "N unassigned" in amber if any institutions have no assigned CSM — query: `SELECT COUNT(*) FROM institution LEFT JOIN csm_account_assignment USING (institution_id) WHERE csm_account_assignment.csm_id IS NULL OR csm_account_assignment.institution_id IS NULL` (LEFT JOIN ensures institutions with no assignment row at all are also counted). Clicking filters J-02 to `?csm_id=unassigned`.
 
 **Tile 2 — Avg Health Score:** Platform-wide average health score. Shows `↑+X` or `↓-X` delta vs last week's snapshot in `csm_weekly_snapshot`. Color: green if score ≥ 65, amber if 45–64, red if < 45.
 
@@ -132,7 +132,7 @@ Stacked bars               Donut
 
 Clicking a segment bar filters the At-Risk feed and Renewal strip to that segment (via `?segment=` param swap using `hx-push-url`).
 
-**Last computed timestamp:** Small grey text below heatmap — "Health scores as of [computed_at timestamp from csm_institution_health, MIN(computed_at) across all rows]". If `computed_at` is > 26 hours old (Task J-1 likely failed), shows amber warning: "Health data may be stale — scores from [timestamp]." CSM (#53) can click to open `?nocache=true` refresh.
+**Last computed timestamp:** Small grey text below heatmap — "Health scores as of [csm_config['last_health_compute_at']]" — this single timestamp is set by Task J-1 at the moment it finishes computing all 2,050 institutions, giving a single authoritative freshness marker. If this timestamp is > 26 hours ago (Task J-1 likely failed or was delayed), shows amber warning: "Health data may be stale — scores from [timestamp]. Task J-1 may have failed." CSM (#53) can click to open `?nocache=true` live refresh. Do NOT use `MIN(computed_at)` from individual institution rows — that would falsely show the oldest-ever row, not the last batch run time.
 
 ---
 
