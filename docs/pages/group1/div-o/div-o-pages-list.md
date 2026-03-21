@@ -62,15 +62,15 @@ Accessible by all EduForge employees via `@login_required` — no Division O mem
 
 | Table | Purpose |
 |---|---|
-| `hr_employee` | Master employee record — name, employee_id, designation, division, role_id, join_date, employment_type (FULL_TIME/PART_TIME/CONTRACT/INTERN), status (ACTIVE/ON_NOTICE/EXITED/INACTIVE), manager_id, work_location, state_code (for PT computation), pf_uan, esic_ip_number |
+| `hr_employee` | Master employee record — name, employee_id, designation, division, role_id, join_date, employment_type (FULL_TIME/PART_TIME/CONTRACT/INTERN), status (ACTIVE/ON_NOTICE/EXITED/INACTIVE/PRE_JOIN), manager_id, work_location, state_code (for PT computation), pf_uan, esic_ip_number, notice_period_days (int), is_posh_member (bool — POSH ICC roster), tds_declaration (JSONB — 80C/80D/HRA/LTA declarations updated annually in Dec), exit_interview (JSONB — structured exit interview responses, nullable), probation_status (PENDING_CONFIRMATION/CONFIRMED/EXTENDED/SEPARATED) |
 | `hr_employee_document` | Documents attached to employee — offer letter, appointment letter, Aadhaar, PAN, Form 16, relieving letter, BGV report. Stored in Cloudflare R2, KMS-encrypted. |
 | `hr_department` | Division/team lookup for org chart and reporting |
 | `hr_position` | Open and filled positions — JD, required skills, approved headcount, budget, linked division, current_status (OPEN/ON_HOLD/CLOSED/FILLED) |
 | `hr_candidate` | Applicant records — source, resume_r2_key, current_stage, applied_position_id |
-| `hr_interview` | Interview sessions — stage, interviewer_id, scheduled_at, mode (IN_PERSON/VIDEO/TELEPHONIC), feedback_text, recommendation (STRONG_YES/YES/NO/STRONG_NO) |
+| `hr_interview` | Interview sessions — stage, interviewer_id, scheduled_at, mode (IN_PERSON/VIDEO/TELEPHONIC), feedback_text (JSONB — criteria scores, strengths, concerns), recommendation (STRONG_YES/YES/NO/STRONG_NO), feedback_token (URLsafe 32-char token for tokenised form), feedback_submitted_at (nullable timestamp — set on first submit; token single-use), anonymous_feedback (bool — hides interviewer name in candidate drawer, default false) |
 | `hr_offer` | Offer letters — ctc_breakup (JSONB), offer_status (DRAFT/SENT/ACCEPTED/DECLINED/LAPSED), expected_join_date, offer_letter_r2_key |
-| `hr_onboarding_checklist` | Per-employee joining tasks — task_code, task_type (IT/PAYROLL/BGV/DOCUMENTATION/ORIENTATION), assigned_to_role, due_by_day (day N from join_date), completed_at |
-| `hr_offboarding_checklist` | Exit checklist per employee — equipment return, access revocation, F&F computation trigger, experience letter dispatch |
+| `hr_onboarding_checklist` | Per-employee joining tasks — task_code, task_name, task_type (IT/PAYROLL/BGV/DOCUMENTATION/ORIENTATION), assigned_to_role, due_by_day (day N from join_date), completed_at, completed_by, completion_note, completion_token (URLsafe 32-char, 30-day expiry, single-use for external task completion via `/hr/tasks/{token}/complete/`), bgv_outcome (BGV_CLEAR/BGV_FLAGGED/BGV_INCONCLUSIVE — nullable, set by BGV task completion) |
+| `hr_offboarding_checklist` | Exit checklist per employee — task_code, task_name, task_type, assigned_to_role, due_by_day (day N before last working date), completed_at, completed_by, completion_note, completion_token (same pattern as onboarding — for external role task completion) |
 | `hr_payroll_run` | Monthly payroll run record — month_year, status (DRAFT/PROCESSING/LOCKED/APPROVED/DISBURSED), total_gross_paise, total_net_paise, run_by, approved_by, disbursed_at |
 | `hr_payroll_slip` | Per-employee per-month payslip — earnings JSONB (basic, HRA, special_allowance, LTA, bonus), deductions JSONB (pf_employee, esic_employee, pt, tds_advance, loan_emi), gross_paise, net_paise, payslip_pdf_r2_key |
 | `hr_statutory_filing` | Compliance filing tracker — filing_type (PF_ECR/ESI_RETURN/PT_CHALLAN/TDS_24Q/FORM_16/LWF), period, due_date, filed_at, status (UPCOMING/IN_PROGRESS/FILED/ACKNOWLEDGED/OVERDUE), reference_number, challan_r2_key |
@@ -79,9 +79,9 @@ Accessible by all EduForge employees via `@login_required` — no Division O mem
 | `hr_leave_request` | Leave applications — leave_type_id, from_date, to_date, days (fractional for half-days), reason, status (PENDING/APPROVED/REJECTED/CANCELLED/AUTO_APPROVED), approved_by, approved_at |
 | `hr_attendance_record` | Daily record per employee — date, mode (OFFICE/WFH/OOO/LEAVE/HOLIDAY/WEEKEND), check_in, check_out, source (MANUAL/BIOMETRIC/WFH_SELF_MARK) |
 | `hr_performance_cycle` | Review cycle definition — cycle_type (ANNUAL/MID_YEAR/PROBATION/CONFIRMATION), period, self_assessment_deadline, manager_review_deadline, calibration_deadline, status |
-| `hr_performance_review` | Per-employee review — cycle_id, self_assessment JSONB, manager_assessment JSONB, calibration_rating (EXCEPTIONAL/EXCEEDS/MEETS/BELOW/UNSATISFACTORY), final_rating, promotion_recommended (bool), increment_pct |
+| `hr_performance_review` | Per-employee review — cycle_id, self_assessment JSONB, manager_assessment JSONB, calibration_rating (EXCEPTIONAL/EXCEEDS/MEETS/BELOW/UNSATISFACTORY), final_rating, promotion_recommended (bool), increment_pct, potential_rating (LOW/MEDIUM/HIGH — set by HRBP for 9-box grid), calibration_status (DRAFT/APPROVED/LOCKED — LOCKED triggers salary revision record creation), probation_outcome (CONFIRMED/EXTENDED/SEPARATED — only for PROBATION/CONFIRMATION cycle types) |
 | `hr_okr_objective` | OKR objective per employee per cycle — title, description, weight_pct, status |
-| `hr_okr_key_result` | Key results under each objective — metric, target_value, unit, current_value, confidence (ON_TRACK/AT_RISK/OFF_TRACK), last_checkin_at |
+| `hr_okr_key_result` | Key results under each objective — metric, target_value, unit, current_value, confidence (ON_TRACK/AT_RISK/OFF_TRACK), last_checkin_at, check_in_history (JSONB array — [{date, user_id, progress_pct, confidence, note}, ...] appended on each employee check-in) |
 | `hr_pip` | Performance Improvement Plans — employee_id, initiated_by, start_date, end_date, goals JSONB, checkpoints JSONB, final_outcome (IMPROVED/EXTENDED/SEPARATED), status |
 | `hr_training_course` | Course catalog — title, description, category (TECHNICAL/DOMAIN/COMPLIANCE/LEADERSHIP/SOFT_SKILLS), delivery_mode (IN_HOUSE/EXTERNAL_VENDOR/ONLINE_LMS), duration_hours, mandatory (bool), applicable_roles (array), vendor_name, cost_per_seat_paise |
 | `hr_training_enrollment` | Per-employee enrollment — course_id, enrolled_by, enrolled_at, scheduled_date, completion_status (ENROLLED/IN_PROGRESS/COMPLETED/FAILED/DROPPED), score_pct, certificate_r2_key, completion_date |
@@ -99,6 +99,9 @@ Accessible by all EduForge employees via `@login_required` — no Division O mem
 | `hr_vendor_invoice` | Vendor invoices — vendor_id, invoice_number, invoice_date, amount_paise, gst_paise, due_date, status (PENDING_APPROVAL/APPROVED/PAID/OVERDUE/DISPUTED), approved_by, paid_at, payment_ref, invoice_pdf_r2_key |
 | `hr_petty_cash` | Petty cash transaction log — transaction_date, description, category (OFFICE_SUPPLIES/PANTRY/COURIER/MAINTENANCE/MISC), amount_paise (positive=expense, negative=replenishment), receipt_r2_key, recorded_by, approved_by, running_balance_paise |
 | `hr_travel_request` | Employee travel requests — employee_id, travel_from, travel_to, purpose, departure_date, return_date, mode (AIR/TRAIN/ROAD), hotel_required (bool), estimated_cost_paise, advance_requested_paise, status (DRAFT/APPROVED/BOOKED/COMPLETED/CANCELLED/REJECTED), approved_by, rejection_reason, booking_ref, actual_cost_paise |
+| `hr_comp_off_request` | Compensatory off requests — employee_id, worked_on (date of the holiday/weekend worked), work_reason (description), status (PENDING/APPROVED/REJECTED/CONSUMED/LAPSED), approved_by, approved_at, expiry_date (30 days from approval — comp-off lapses if not consumed), rejection_reason, consumed_on (date the comp-off was taken — linked to hr_leave_request) |
+| `hr_tna_suggestion` | Training needs auto-extracted from performance reviews and PIPs — source (SELF_REVIEW/MANAGER_REVIEW/PIP_GOAL), skill_name, category, mention_count, cycle_id (FK to hr_performance_cycle — nullable for PIP-sourced), priority (CRITICAL/HIGH/MEDIUM), suggested_course_id (nullable — if a matching course already exists in library), created_at |
+| `hr_policy_config` | HR policy settings configurable by HR Manager — key (string, e.g. 'wfh_limit_per_month', 'petty_cash_float_paise', 'skills_gap_remediation'), value (JSONB), description, last_updated_by, last_updated_at. Keyed lookup by (key). Used in O-06 WFH limits, O-08 skills gap mode, O-09 petty cash float. |
 
 ---
 
@@ -112,7 +115,7 @@ Accessible by all EduForge employees via `@login_required` — no Division O mem
 | O-4 — TDS Deposit Reminder | 5th of each month (TDS due by 7th) | O-05 |
 | O-5 — Leave Balance Accrual | 1st of each month, 00:01 IST — credit monthly EL accrual | O-06 |
 | O-6 — Annual Leave Balance Reset | 1 Jan 00:01 IST — carry forward EL (max 30 days), lapse remainder | O-06 |
-| O-7 — Leave Auto-Approval | Every 30 min — auto-approve leave requests pending > 3 working days with no manager action | O-06 |
+| O-7 — Leave Auto-Approval | Every 30 min — auto-approve leave requests pending > 3 working days with no manager action. **Excluded leave types (never auto-approved): ML (Maternity Leave — requires HR Manager manual approval + payroll notification), PL (Paternity Leave), BL (Bereavement Leave), LOP.** Only CL, SL, EL, COMP_OFF are eligible for auto-approval. | O-06 |
 | O-8 — Probation Review Reminder | Daily 09:00 IST — alert HR Manager + HRBP 14 days before 3-month and 6-month completion | O-07 |
 | O-9 — Performance Cycle Deadline Alert | Daily 09:00 IST during active cycle — alert reviewers 7 days and 1 day before deadlines | O-07 |
 | O-10 — OKR Check-in Nudge | Every Monday 09:00 IST — nudge employees with OKR check-in overdue > 14 days | O-07 |

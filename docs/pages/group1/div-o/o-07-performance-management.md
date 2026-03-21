@@ -40,7 +40,7 @@ Cache keys scoped to `(user_id, cycle_id)`.
 
 | Param | Values | Default | Effect |
 |---|---|---|---|
-| `?tab` | `overview`, `okrs`, `reviews`, `calibration`, `pips` | `overview` | Active section |
+| `?tab` | `overview`, `okrs`, `reviews`, `calibration`, `pips`, `surveys`, `analytics` | `overview` | Active section |
 | `?cycle_id` | UUID | latest active | Select review cycle |
 | `?division` | A–O | `all` | Filter employees by division |
 | `?employee_id` | UUID | — | Jump to specific employee's review/OKR |
@@ -706,7 +706,7 @@ Route guard: `@login_required`. No minimum role — every active employee sees t
 
 | Shortcut | Action |
 |---|---|
-| `g p` | Go to Performance Management page (`/hr/performance/`) |
+| `g f` | Go to Performance Management page (`/hr/performance/`) |
 | `t o` | Switch to Overview tab |
 | `t k` | Switch to OKRs tab |
 | `t r` | Switch to Reviews tab |

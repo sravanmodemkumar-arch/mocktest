@@ -301,6 +301,35 @@ All edits are appended to the employee Timeline (Tab 6) as immutable audit entri
 
 ---
 
+## Reset Password
+
+**[Reset Password]** action (HR Manager only — visible in Employee Profile drawer, kebab menu [···]):
+
+```
+  Reset HR Portal Password — Rohan Verma (EF-0047)
+  ─────────────────────────────────────────────────
+  This will send a password reset link to:
+  rohan.v@eduforge.com
+
+  The link expires in 24 hours.
+  The employee's current session will be invalidated immediately.
+
+  [Cancel]              [Send Reset Link]
+```
+
+**Flow:**
+1. HR Manager clicks [Reset Password] → confirmation modal shown (above)
+2. On confirm: Django `PasswordResetView` generates a one-time token and sends email to `hr_employee.work_email`
+3. Employee's all active sessions are invalidated (`django.contrib.sessions` clear for user)
+4. Reset link valid for 24 hours. After expiry, employee must contact HR Manager to re-trigger.
+5. Timeline entry created: `"Password reset triggered by [HR Manager name]"` + timestamp
+
+**When used:** Employee forgot HR portal password (standard self-service reset is available at `/accounts/password-reset/` — HR Manager reset is for cases where employee cannot access work email either, e.g., account lockout on first day).
+
+**Visible to:** HR Manager (#79) only.
+
+---
+
 ## Org Chart View
 
 `?view=org_chart` — Hierarchical tree of all active employees.

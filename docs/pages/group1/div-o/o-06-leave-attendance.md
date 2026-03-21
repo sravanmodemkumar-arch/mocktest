@@ -141,6 +141,41 @@ On HR Manager opening a leave request for approval, the system checks:
 | LOP | Loss of Pay | Unlimited | N/A | No — HR Manager manually marks | Applied when leave balance exhausted; deducted from salary |
 | BL | Bereavement Leave | 3 days | No | No | Immediate family death |
 
+**Task O-7 auto-approval eligibility:** Only CL, SL, EL, and COMP_OFF are eligible for auto-approval after 3 working days. ML, PL, BL, and LOP are **never** auto-approved — they require HR Manager manual review (ML requires payroll team notification; BL requires documentation; LOP is HR Manager-initiated only).
+
+---
+
+## Comp Off Admin Flow
+
+When an employee works on a declared holiday (`hr_holiday.is_compensatory=true` for that holiday), they earn a compensatory off day.
+
+### Employee Request (via `/hr/my-leave/`)
+
+```
+  Comp Off Request
+  ────────────────────────────────────────────────────
+  Worked on holiday*:  [25 Mar 2026 — Holi ▼]
+  (only declared compensatory holidays listed)
+  Work reason*:        [Production incident — exam day support]
+  [Submit Comp Off Request]
+```
+
+Creates `hr_comp_off_request` with `status='PENDING'`.
+
+### HR Manager Side (Leave Requests tab)
+
+Comp-off requests appear in the leave requests list with type badge `COMP_OFF` and are subject to the same approve/reject flow.
+
+| Rule | Detail |
+|---|---|
+| HR Manager approval required | Comp-off is not automatic — manager must confirm the holiday work |
+| 30-day expiry | On approval, `hr_comp_off_request.expiry_date = approved_at + 30 days`. If not consumed within 30 days, Task O-7 extension lapses the record. |
+| Balance creation | On approval: `hr_leave_balance.comp_off_balance += 1`. Employee can then apply COMP_OFF leave normally. |
+| Lapse enforcement | Daily check (extension of Task O-5): expired comp-offs removed from balance; employee notified "Your comp-off earned for [holiday] has lapsed." |
+| Maximum accumulated | HR Manager can set a cap (default: 2 comp-offs in balance at once) via `hr_policy_config`. |
+
+Consumed comp-off: when employee applies COMP_OFF leave and it's approved, `hr_comp_off_request.status='CONSUMED'`, `consumed_on` set, balance decremented.
+
 ---
 
 ## Balances Tab
