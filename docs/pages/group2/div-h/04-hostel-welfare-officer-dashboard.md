@@ -168,7 +168,7 @@ Red highlight on rows where log not submitted and it is past 9 AM.
 - **Trigger:** + New Incident button
 - **Width:** 600px
 - **Fields:** Branch · Hostel Type (Boys/Girls) · Hosteler (search autocomplete) · Incident Type · Severity · Description (textarea, min 50 chars) · Immediate Action Taken · Follow-up Required (checkbox) · Notify Warden (checkbox, default checked) · Notify Hostel Director (checkbox, auto-checked if Sev 1/2)
-- **On submit:** POST; audit log entry; WhatsApp notification to assigned parties
+- **On submit:** POST `.../incidents/`; incident created; **drawer remains open** displaying the success toast (enables rapid multi-incident creation — coordinator can log multiple incidents without reopening the drawer each time); Priority Action Queue (`#priority-queue`) and incident table (`#incident-table-section`) refresh via HTMX in background; audit log entry created; WhatsApp notification sent to assigned parties.
 
 ---
 

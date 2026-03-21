@@ -74,7 +74,7 @@ Group HQ  ›  Hostel Management  ›  Parent Visits  ›  Scheduler
 - **Time Slots tab:** 10 AM–4 PM in 1-hour slots; each slot shows booked visitors vs capacity
 - **Visitor List tab:** All pre-booked visitors with hosteler name, slot time, biometric status
 - **Attendance tab:** Post-visit — mark which parents actually arrived (vs no-show)
-- **Biometric Gate List tab:** Printable / exportable list of cleared visitors for security gate
+- **Biometric Gate List tab:** Printable / exportable list of cleared visitors for security gate. **Export format:** Printable PDF (A4 portrait); one visitor per row; includes visitor photo (if uploaded during pre-registration), visitor name + relation, hosteler name + room number, assigned time slot, and QR code for biometric verification at gate. Large-font gate-ready layout for easy reading by security staff. Triggered via [Print Gate List] or [Download PDF] buttons within the tab.
 
 ### 5.2 Drawer: `parent-visit-schedule` (see Page 09 Section 6.2 for full spec)
 

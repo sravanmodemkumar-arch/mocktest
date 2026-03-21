@@ -196,11 +196,16 @@ Shift types: Morning (6AM–2PM) / Afternoon (2PM–10PM) / Night (10PM–6AM). 
 
 | Element | Security Coordinator G3 | Boys Coordinator G3 | Girls Coordinator G3 | Hostel Director G3 |
 |---|---|---|---|---|
-| Create Security Alert | ✅ | ✅ Boys | ✅ Girls | ✅ |
+| Boys hostel data (CCTV, alerts, roster) | ✅ All | ✅ Boys only | ❌ Hidden | ✅ All |
+| Girls hostel data (CCTV, alerts, roster) | ✅ All | ❌ Hidden | ✅ Girls only | ✅ All |
+| Create Security Alert | ✅ All hostels | ✅ Boys hostels | ✅ Girls hostels | ✅ All |
 | Escalate to Director | ✅ | ✅ | ✅ | — |
 | Report CCTV Offline | ✅ | ✅ Boys | ✅ Girls | ✅ |
 | Guard roster view | ✅ All | ✅ Boys | ✅ Girls | ✅ All |
 | Visitor log — girls detail | ✅ | ❌ | ✅ | ✅ |
+| POCSO Alert button (girls hostel incidents) | ✅ | ❌ | ✅ | ✅ |
+
+> **Data isolation enforcement:** All Boys/Girls data separation is enforced server-side via Django queryset filters (`gender = M` / `gender = F` on hostel records). No client-side role check.
 
 ---
 

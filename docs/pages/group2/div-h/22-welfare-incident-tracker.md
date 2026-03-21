@@ -20,6 +20,8 @@ Every welfare event — from a minor food complaint (Severity 4) to a child safe
 - S3 (Medium): Action within 24h · Resolution within 7 days
 - S4 (Low): Log and close within 14 days
 
+> **Cross-reference:** SLA thresholds are also shown on the Welfare Officer Dashboard (Page 04) for quick reference. This page (Page 22) is the authoritative source for SLA definitions.
+
 ---
 
 ## 2. Role Access

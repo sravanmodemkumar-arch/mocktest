@@ -27,6 +27,7 @@ Group HQ  ›  Hostel Management  ›  Reports  ›  Hostel Analytics
 - **Title:** `Hostel Analytics`
 - **Global Filters (persistent, apply to all charts):** Date Range · Branch(es) · Gender · Hostel Type (AC/Non-AC)
 - **Right controls:** `Export All Charts (PNG)` · `Export Data (CSV)`
+- **PNG export format:** 300 DPI · minimum 1200px wide · group branding footer (group name, page title, export date) appended automatically. Per-chart export available via ⬇ icon on each chart card; "Export All Charts (PNG)" bundles all charts into a ZIP.
 
 ---
 
@@ -134,12 +135,19 @@ Group HQ  ›  Hostel Management  ›  Reports  ›  Hostel Analytics
 
 > Advanced section — relates two metrics to identify correlations.
 
-**Example combinations:**
+**Pre-configured quick-select combinations (shown as chips above the chart):**
 - Welfare incidents vs Fee defaulters (same branch, same month) → do financial stress and welfare incidents correlate?
 - Mess hygiene score vs food complaints → validates audit system accuracy
 - Security incidents vs roll call discrepancies → identifies branches with system-wide control issues
+- Occupancy rate vs welfare incident rate → do crowded hostels generate more welfare events?
+- Discipline cases vs welfare incidents → are high-discipline branches also high-welfare-burden?
+- Medical visits per 100 hostelers vs mess hygiene score → does poor hygiene drive medical room usage?
+- CCTV uptime % vs unauthorized visitor entries → does camera coverage deter violations?
+- Fee collection rate vs hostel type (AC vs Non-AC) → do AC hostel families pay more reliably?
+- Welfare SLA compliance % vs branch hosteler count → do larger branches miss SLAs more often?
+- Calling hour violations vs welfare incident count (girls hostels only) → do communication restrictions correlate with mental health incidents?
 
-**Display:** Scatter plot with branch names as data points. Axes configurable from metric dropdowns.
+**Display:** Scatter plot with branch names as data points. Axes configurable from metric dropdowns (override any pre-configured pair).
 
 ---
 

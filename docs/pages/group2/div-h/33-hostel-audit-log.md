@@ -116,6 +116,7 @@ Group HQ  ›  Hostel Management  ›  Hostel Audit Log
 - **Width:** 520px
 - **Content:**
   - Event metadata: Timestamp, Actor, Role, Branch, IP address, Session ID
+  - **Session ID:** Links this audit event to the actor's authenticated login session (matches the session token record in the auth system). Cross-referencing Session IDs across multiple log entries reveals all actions taken within a single login session — enables full session-replay forensics for security investigations (e.g., compromised account activity review).
   - Entity: Type + ID + Name + Link to entity (if still accessible)
   - Action: Full action type and summary
   - Before state: JSON-formatted previous state (if update/delete)

@@ -50,6 +50,8 @@ Group HQ  ›  Hostel Management  ›  Room Allocation Manager
 
 Changing any selector instantly loads the room grid for that combination via HTMX.
 
+> **Selector change safeguard:** If a drawer (`room-allocate` or `room-swap`) is currently open, all selector inputs are disabled and made read-only. A tooltip appears on hover: "Close the open drawer before switching branch or hostel." This prevents partial allocation data from being submitted to the wrong hostel campus.
+
 ---
 
 ## 5. Room Grid View

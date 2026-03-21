@@ -27,6 +27,7 @@ Group HQ  ›  Hostel Management  ›  Welfare  ›  Welfare Reports
 - **Title:** `Hostel Welfare Reports`
 - **Filters:** AY · Month Range · Branch · Gender
 - **Right controls:** `Export Report ↓` · `Schedule Auto-Report`
+- **PNG export format:** Individual charts exported at 300 DPI · minimum 1200px wide · group branding footer (group name, report title, export date) appended. Per-chart ⬇ PNG icon available on each chart; Export Report ↓ includes full PDF report + chart PNGs as a ZIP.
 
 ---
 

@@ -76,6 +76,8 @@ Group HQ  ›  Hostel Management  ›  Hostel Occupancy Overview
 
 **Group by:** Branch (default) or Room Type or Zone.
 
+> **Zone grouping:** The "Zone" option is visible only when Zone configuration is enabled for the group (applicable to large multi-city groups). For groups without Zone management set up, the Zone option is hidden from the Group by control. No "Zone management not configured" error is shown — the option is simply absent.
+
 ---
 
 ### 5.2 Branch Occupancy Table

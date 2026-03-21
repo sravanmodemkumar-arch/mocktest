@@ -164,7 +164,7 @@ Click on a date → opens `parent-visit-schedule` drawer for that date.
 - **On submit:** Visit day created in all selected branches; parent notifications queued
 
 ### 6.3 Drawer: `visitor-register-create` (pre-registration)
-- **Trigger:** Via Page 25 Visitor Management → + New Registration
+- **Trigger:** Via Page 25 Visitor Management → Pre-registered Visitor List section → `+ Pre-register Visitor` button (distinct from the `+ New Entry` button which logs a day-of visitor entry)
 - **Width:** 520px
 - **Fields:** Parent/Guardian name · Relation · Mobile · Aadhaar/ID type + number · Hosteler search (autocomplete) · Biometric registration date · Photo upload
 

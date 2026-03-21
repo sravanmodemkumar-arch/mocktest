@@ -93,7 +93,7 @@ Group HQ  ›  Hostel Management  ›  Fee Management  ›  Fee Collection
 ### 5.2 Drawer: `record-payment`
 - **Trigger:** Actions → Record Payment (manual cash/DD/NEFT payment)
 - **Width:** 480px
-- **Fields:** Amount · Payment Mode (Cash/DD/NEFT/UPI) · Reference # · Date · Receipt # · Note
+- **Fields:** Amount · Payment Mode (Cash / DD (Demand Draft) / NEFT / UPI) · Reference # · Date · Receipt # · Note
 - **Warning:** "Online payments auto-synced from payment gateway. Record here only for manual payments."
 
 ### 5.3 Modal: `fee-waiver`

@@ -149,6 +149,11 @@ POCSO-linked incidents: [N]. Top incident type: [type].
 
 > Hostel Director adds a 100–500 word narrative commentary on key highlights and concerns before approval.
 
+**Field spec:** `textarea` — resizable, full width.
+- **Minimum:** 100 characters (soft guard — if the Director clicks Approve with fewer than 100 characters, a warning appears below the field: "Commentary is too brief. Please add at least 100 characters before approving.")
+- **Maximum:** 3000 characters (~500 words) hard limit; input blocked beyond this.
+- **Live character counter:** `[N / 3000 characters]` displayed bottom-right of the textarea in gray; turns amber when ≥ 2700 characters to warn the Director they are approaching the limit.
+
 ---
 
 ## 4. Approval & Distribution

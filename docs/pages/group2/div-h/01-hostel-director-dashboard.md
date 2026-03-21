@@ -57,7 +57,7 @@ AY [current academic year]  ·  [N] Hostel Campuses  ·  [N] Branches
 | Medical emergency in last 24h | "Medical emergency recorded at [Branch]. Check medical tracker." | Amber |
 | Discipline case open > 30 days | "[N] discipline cases open for > 30 days without resolution." | Amber |
 
-Max 5 alerts visible. "View all → Hostel Audit Log" link.
+Max 5 alerts visible. Alert-type links route to the relevant operational page: Welfare alerts → Page 22 · Security alerts → Page 24 · Fee alerts → Page 18 · Medical alerts → Page 27 · Discipline alerts → Page 28 · Mess alerts → Page 20. "View all audit events → Hostel Audit Log (Page 33)" link always shown below the alert list.
 
 ---
 
