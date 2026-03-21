@@ -1,6 +1,6 @@
 # EduForge — Group 1: Platform Level Roles
 > EduForge company employees only. Not institution staff.
-> Total: 90 roles across 15 divisions.
+> Total: 106 roles across 15 divisions.
 
 ---
 
@@ -190,93 +190,128 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 
 ---
 
-## Division I — Customer Support (6 roles)
+## Division I — Customer Support (7 roles)
 
 | # | Role | Level | Handles | Response Time |
 |---|---|---|---|---|
-| 47 | Support Manager | 3 | Team management, SLA tracking, escalation rules | — |
-| 48 | L1 Support Executive | 3 | Login, OTP, basic navigation, student queries | < 2 hours |
+| 47 | Support Manager | 3 | Team management, SLA tracking, escalation rules, cross-division coordination | — |
+| 48 | L1 Support Executive | 3 | Login, OTP, basic navigation, student and institution admin queries | < 2 hours |
 | 49 | L2 Support Engineer | 3 | Bug investigation, log analysis, DB read queries | < 8 hours |
 | 50 | L3 Support Engineer | 4 | Code-level fixes, DB writes, hotfixes, rollbacks | < 24 hours |
-| 51 | Onboarding Specialist | 3 | Train new institution admins, first-time portal setup | Per onboarding |
-| 52 | Training Coordinator | 2 | Create training docs, conduct sessions for institution staff | Scheduled |
+| 51 | Onboarding Specialist | 3 | New institution onboarding pipeline, portal setup, admin training coordination | Per onboarding |
+| 52 | Training Coordinator | 2 | Create training docs, KB articles (needs approval), conduct training sessions | Scheduled |
+| 90 | Support Quality Lead | 3 | Random-sample ticket quality audits, CSAT trend monitoring, L1 agent coaching, KB gap identification, weekly quality report | Ongoing |
 
 ---
 
-## Division J — Customer Success (4 roles)
+## Division J — Customer Success (6 roles)
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 53 | Customer Success Manager | 3 | Institution health score, retention risk, renewal pipeline |
-| 54 | Account Manager | 3 | Existing institution relationship, upsell, expansion seats |
-| 55 | Escalation Manager | 3 | Critical institution complaints, SLA breach handling |
-| 56 | Renewal Executive | 1 | Track subscription expiry, send renewal reminders |
+> At 2,050 institutions and ₹ARR across school/college/coaching segments, CS owns retention, expansion, and escalation resolution.
+> Health scores computed nightly from exam frequency, engagement depth, support burden, payment health, and relationship recency.
 
----
-
-## Division K — Sales & Business Development (7 roles)
-
-| # | Role | Level | Territory |
-|---|---|---|---|
-| 57 | B2B Sales Manager | 3 | Full pipeline — pricing approvals, demo sign-off |
-| 58 | Sales Executive — Schools | 3 | 1,000 schools — day scholar + hosteler institutions |
-| 59 | Sales Executive — Colleges | 3 | 800 intermediate colleges |
-| 60 | Sales Executive — Coaching | 3 | 100 coaching centres (5K–15K members each) |
-| 61 | Partnership Manager | 3 | State board govt contracts, coaching chain MoUs |
-| 62 | Demo Manager | 3 | Free trial tenants, sandbox setup, demo data, reset |
-| 63 | Channel Partner Manager | 1 | Reseller/partner network, commission tracking |
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 53 | Customer Success Manager | 3 | Institution health score, retention risk, renewal pipeline, playbook governance, NPS programme, portfolio strategy | Billing config, infra config |
+| 54 | Account Manager | 3 | Existing institution relationship, upsell, expansion seats, renewal co-ownership | Cannot send bulk surveys; cannot approve playbook templates |
+| 55 | Escalation Manager | 3 | Critical institution complaints, SLA breach handling, cross-division war-room coordination for account-threatening incidents | Cannot approve content; cannot modify billing |
+| 56 | Renewal Executive | 1 | Track subscription expiry, send renewal reminders, update renewal stage to COMMITTED | Cannot close/win renewals (AM or CSM must confirm); no data writes outside renewal module |
+| 93 | Customer Success Analyst | 1 | Health score model maintenance, churn signal analysis, portfolio cohort analytics, NPS/CSAT data analysis, weekly CS performance data pack | No customer-facing comms; no playbook execution; no billing access; no notifications |
+| 94 | Implementation Success Manager | 3 | First-90-day post-onboarding success journey (receives handoff from Division I Onboarding Specialist #51), time-to-value tracking, go-live readiness verification, first EBR facilitation | Billing config; renewal ownership hands off to Account Manager at day 90; no L2/L3 support queue access |
 
 ---
 
-## Division L — Marketing & Growth (5 roles)
+## Division K — Sales & Business Development (10 roles)
 
-> No platform system access — they use external tools (Meta Ads, Google Search Console, YouTube Studio).
+> Pipeline covers 2,050 institutions across schools, colleges, coaching centres, and groups.
+> Channel partners and government contracts add multi-institution deal velocity.
+> Avg sales cycle: 3–8 weeks (schools), 8–24 weeks (govt/groups).
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 64 | Marketing Manager | 0 | Brand strategy, campaigns across all 6 exam domains |
-| 65 | SEO / Content Executive | 0 | Blog, landing pages, exam prep articles for organic traffic |
-| 66 | Social Media Manager | 0 | YouTube, Instagram, Twitter — student community building |
-| 67 | Performance Marketing Exec | 0 | Google Ads, Meta Ads — school/coaching decision-maker targeting |
-| 68 | Brand Manager | 0 | Visual identity per domain (SSC brand ≠ School brand) |
-
----
-
-## Division M — Finance & Billing (6 roles)
-
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 69 | Finance Manager | 1 | Revenue P&L, Razorpay reconciliation, investor reporting |
-| 70 | Billing Admin | 3 | Subscription plans, invoice generation, refund approvals |
-| 71 | Accounts Receivable Exec | 1 | Outstanding dues tracking, payment follow-up per institution |
-| 72 | GST / Tax Consultant | 1 | SAC 9993 compliance, CGST/SGST/IGST filing, TDS |
-| 73 | Refund Processing Exec | 3 | Validate and trigger refunds via Razorpay API |
-| 74 | Pricing Admin | 3 | Configure subscription tiers, discounts, promo codes |
+| # | Role | Level | Territory / Scope | Can Do | Cannot Do |
+|---|---|---|---|---|---|
+| 57 | B2B Sales Manager | 3 | All segments — pricing approvals, deal sign-off | View all pipeline; approve pricing exceptions; set quotas; assign territories; all reports | Billing config; infra config |
+| 58 | Sales Executive — Schools | 3 | 1,000 schools — day scholar + hosteler institutions | Own leads — create, log activities, advance stages, schedule demos | Access other execs' leads; approve pricing; create demo tenants |
+| 59 | Sales Executive — Colleges | 3 | 800 intermediate colleges | Same as #58 | Same as #58 |
+| 60 | Sales Executive — Coaching | 3 | 100 coaching centres (5K–15K members each) | Same as #58 | Same as #58 |
+| 61 | Partnership Manager | 3 | State board govt contracts, coaching chain MoUs | Manage all partnerships; upload MoUs; track renewals; log partner activities | Demo tenant management; channel partner commissions; billing |
+| 62 | Demo Manager | 3 | All segments — free trial tenant lifecycle | Create/reset/extend/deactivate demo tenants; link to leads; seed data; generate access links | Edit production tenants; access billing; approve deals |
+| 63 | Channel Partner Manager | 1 | Reseller/partner network — commission tracking | View partner performance; log partner interactions; commission reports | Commission approval (Sales Manager does that); onboard without Manager approval |
+| 95 | Sales Operations Analyst | 1 | Platform-wide — CRM data quality, pipeline reporting | Read all pipeline; quota reports; win/loss analysis; territory map view; export reports | Any pipeline edits; no customer-facing actions; no territory reassignment |
+| 96 | Pre-Sales / Solutions Engineer | 3 | Large deals (>₹2L ARR) and government tenders | Technical discovery calls; RFP/tender response builder; PoC tenant deployment; document feature gaps for product team | Cannot close deals (Sales Exec owns); cannot approve pricing; no commission management |
+| 97 | Inside Sales Executive | 3 | Inbound queue — website leads, marketing-sourced, trial activations | Manage inbound leads; qualify and assign; first contact calls; schedule demos; move PROSPECT→CONTACTED | Cannot access outbound pipeline of other execs; no pricing approvals; no demo tenant creation |
 
 ---
 
-## Division N — Legal & Compliance (4 roles)
+## Division L — Marketing & Growth (8 roles)
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 75 | Legal Officer | 1 | Institution contracts, ToS, privacy policy updates |
-| 76 | Data Privacy Officer (DPO) | 1 | DPDP Act 2023, consent records, 72-hour breach notification |
-| 77 | Regulatory Affairs Exec | 1 | TRAI (SMS sender ID EDUFGE), CERT-In, MeitY filings |
-| 78 | POCSO Reporting Officer | 1 | Mandatory incident reporting to NCPCR, child welfare coordination |
+> Original 5 roles (64–68) have Level 0 for the EduForge student/institution platform — they use external tools (Meta Ads, Google Search Console, YouTube Studio).
+> 3 new roles added (#98, #99, #100) to complete the division.
+> All 8 roles access the internal Marketing Operations portal (`/marketing/`) for campaign mgmt, content pipeline, SEO, social, brand, attribution, and reporting.
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 64 | Marketing Manager | 0 | Brand strategy; approve all content, assets, campaigns; quarterly budget allocation; full L-portal access | EduForge platform config; billing; infra; sales pipeline edits |
+| 65 | SEO / Content Executive | 0 | Blog, landing pages, exam prep articles for organic traffic; keyword tracking; GSC monitoring | Approve own content; approve brand assets; paid ad config |
+| 66 | Social Media Manager | 0 | YouTube, Instagram, Twitter — student community building; post scheduling; platform analytics | Performance ad budget; content publishing approval; brand asset upload |
+| 67 | Performance Marketing Exec | 0 | Google Ads, Meta Ads — school/coaching decision-maker targeting; UTM config; A/B test campaigns | Content approve; brand asset upload; attribution model config |
+| 68 | Brand Manager | 0 | Visual identity per domain (SSC brand ≠ School brand); asset upload, versioning, deprecation; brand compliance review | Performance ad management; content authoring; social post scheduling |
+| 98 | Marketing Analyst | 1 | Attribution model config (First/Last/Linear); CAC/ROAS/CPL reporting; conversion funnel analytics; channel mix analysis; lead quality scoring; weekly data pack | No campaign edits; no content edits; no asset uploads; no customer-facing comms |
+| 99 | Content Strategist | 2 | Editorial calendar CRUD; content brief creation and assignment; keyword cluster strategy; content performance review; approve content (co-gate with Marketing Manager) | Performance ad management; brand asset upload; social scheduling; no EduForge platform writes |
+| 100 | Email & CRM Marketing Executive | 0 | Drip sequence creation; email template authoring; contact list management; send scheduling; open/click/bounce analytics; WhatsApp broadcast scripts | Cannot send to >10K contacts without Manager approval; no access to sales financial data; no platform config |
 
 ---
 
-## Division O — HR & Administration (3 roles)
+## Division M — Finance & Billing (8 roles)
 
-> No platform system access.
+> At 2,050 institutions and ₹18Cr–₹90Cr ARR, finance operations span invoice generation, Razorpay settlement reconciliation, GST compliance (SAC 9993), refund processing, and subscription tier management.
+> ~2,050 invoices generated per month. Overdue rate 3–5% (~60–100 institutions). GST obligations under GSTR-1/3B/9.
 
-| # | Role | Level | Owns |
-|---|---|---|---|
-| 79 | HR Manager | 0 | Hiring, payroll, policies — internal only |
-| 80 | Recruiter | 0 | Talent acquisition only |
-| 81 | Office Administrator | 0 | Facilities, vendor payments — no platform access |
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 69 | Finance Manager | 1 | Revenue P&L oversight, Razorpay reconciliation sign-off, investor reporting, refund approvals > ₹10K, write-off decisions, AR escalation resolution | Cannot edit invoices directly (must go via Billing Admin); cannot configure plan tiers (Pricing Admin) |
+| 70 | Billing Admin | 3 | Invoice generation, subscription plan assignment, invoice edits, refund request creation, account suspension/reactivation, bulk invoice dispatch | Cannot approve refunds > ₹10K (Finance Manager approval required); cannot configure plan tiers (Pricing Admin owns that) |
+| 71 | Accounts Receivable Exec | 1 | Outstanding dues tracking, reminder dispatch, promise-to-pay logging, payment follow-up for 0–60 day overdue accounts, AR aging report review | No invoice writes; cannot issue demand notices or suspend accounts; read-only on all financial records |
+| 72 | GST / Tax Consultant | 1 | SAC 9993 compliance, CGST/SGST/IGST computation per invoice, GSTR-1/3B/9 filing, TDS 194J tracking, Razorpay TCS reconciliation | Cannot edit invoices or subscriptions; no access to pricing configuration or refund processing |
+| 73 | Refund Processing Exec | 3 | Validate refund eligibility against policy, process approved refunds via Razorpay API, track Razorpay refund_id and status, handle failed refunds | Cannot approve refunds > ₹10K (Finance Manager approves first); cannot create refund requests (Billing Admin or Finance Manager creates them) |
+| 74 | Pricing Admin | 3 | Subscription tier configuration (create/edit/archive plans), institution-specific custom discounts, promo code lifecycle management, pricing change history | Cannot assign plans to institutions (Billing Admin does that); cannot approve discounts > 20% (Finance Manager must approve) |
+| 101 | Finance Analyst | 1 | ARR/MRR waterfall analysis (new/expansion/contraction/churn), P&L variance investigation, investor deck data preparation, cohort revenue analysis, NRR/GRR modelling, revenue forecast maintenance, segment-wise revenue attribution | No data edits anywhere; read-only across all finance modules; can export aggregated analytics only (not raw payment/invoice records) |
+| 102 | Collections Executive | 3 | Outbound dunning calls for 60+ day overdue accounts, formal demand notice generation and dispatch, payment plan negotiation and structured agreement logging, suspension coordination with Billing Admin, escalation of unresolvable accounts to Finance Manager for write-off | Cannot write off invoices; cannot approve refunds; no access to subscriptions, pricing config, or GST module |
 
-> Note: Internal IT (employee laptops, GitHub, VPN) is handled by DevOps Engineer (#14).
+---
+
+## Division N — Legal & Compliance (6 roles)
+
+> DPDP Act 2023 — mandatory data subject request resolution within 30 days.
+> CERT-In — mandatory cyber incident reporting within 6 hours.
+> POCSO Act 2012 — mandatory NCPCR reporting within 24 hours.
+> TRAI DLT — sender ID EDUFGE must be continuously maintained; lapse = OTP failure for 7.6M students.
+> 2,050 institution contracts (MSA + DPA + SLA each) = ~6,150+ contract records to manage.
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 75 | Legal Officer | 1 | Institution contracts (creation, review, termination), ToS & Privacy Policy lifecycle, POCSO legal oversight, DPDP legal opinions, document repository management, co-approval of privacy policy publications | No data edits on platform; no billing config; cannot log POCSO incidents (Reporting Officer scope) |
+| 76 | Data Privacy Officer (DPO) | 1 | DPDP Act 2023 compliance, DSR resolution (30-day clock), breach incident coordination (72h DPDP notification), consent coverage oversight, sub-processor register, data flow register, privacy policy co-approval | No data edits; cannot configure system; cannot resolve DSRs without proper assessment; cannot terminate contracts |
+| 77 | Regulatory Affairs Exec | 1 | TRAI DLT entity registration & renewal (sender ID EDUFGE), DLT template registration/management, CERT-In filing, MeitY intermediary compliance, state board regulatory filings | No data edits; cannot approve breach reports (DPO/Legal scope); cannot access contract or POCSO modules |
+| 78 | POCSO Reporting Officer | 1 | Mandatory POCSO incident intake, NCPCR submission within 24 hours, police FIR coordination, child welfare committee liaison, annual NCPCR compliance report, accused-BGV flag coordination with Division G | Cannot access any non-POCSO platform modules; cannot log incidents without Legal Officer notification; cannot access victim data without re-authentication |
+| 103 | Contract Coordinator | 2 | End-to-end contract workflow: instantiate from approved templates, send for e-signature (DigiSign), follow-up on unsigned contracts, expiry tracking, renewal initiation, contract filing and document management | Cannot create or modify contract templates (Legal Officer owns templates); cannot sign off on contracts requiring legal review (`requires_legal_review=true`); cannot terminate contracts; no POCSO/DSR/filing access |
+| 104 | Data Compliance Analyst | 1 | DSR intake triage (log, assign to DPO), data flow register maintenance, consent coverage reporting, DPDP compliance KPI tracking, weekly compliance data pack, Privacy Impact Assessment documentation support | Cannot resolve or reject DSRs (DPO only); cannot approve breach notifications; cannot create regulatory filings; no POCSO access; all platform data read-only |
+
+---
+
+## Division O — HR & Administration (6 roles)
+
+> No EduForge platform system access. All roles operate exclusively on the internal HR portal (`/hr/`).
+> At Phase 4 scale (100–150 EduForge employees across multiple cities), HR is a multi-function operation: talent, payroll, compliance, culture, and L&D each require a dedicated owner.
+
+| # | Role | Level | Owns | Cannot Do |
+|---|---|---|---|---|
+| 79 | HR Manager | 0 | HR strategy & policy, hiring approvals, payroll sign-off, statutory compliance oversight, HR analytics, POSH committee chair, HR vendor management | Cannot process payroll directly (Payroll Executive executes); cannot deploy code or manage infra |
+| 80 | Recruiter | 0 | Full-cycle talent acquisition: JD publishing, sourcing, interview coordination, offer rollout, ATS management, campus hiring | Cannot approve offers (HR Manager approves); cannot onboard (Onboarding Specialist scope) |
+| 81 | Office Administrator | 0 | Facilities management, office vendor payments, asset register (laptops, furniture, access cards), travel & accommodation bookings, petty cash, housekeeping and pantry | Cannot process payroll; no access to HR records or candidate data |
+| 105 | Payroll & Compliance Executive | 0 | Monthly payroll processing (earnings, deductions, net pay computation), PF/ESI/PT challan filing, TDS deposit and quarterly returns, Form 16 generation, salary register maintenance, full & final settlement computation, multi-state labour law compliance | Cannot approve payroll (HR Manager approves before disbursal); cannot create or modify employee records; no access to performance or L&D data |
+| 106 | HR Business Partner | 0 | OKR framework rollout, performance review cycle management (annual, mid-year, probation), PIP initiation and tracking, culture pulse and eNPS surveys, D&I initiatives, exit interview programme, manager effectiveness surveys, HRBP for technical divisions (C, D, E, F) | Cannot approve payroll; cannot post job openings (Recruiter owns); cannot configure system access (DevOps #14 owns) |
+| 107 | L&D Coordinator | 0 | Training needs assessment from performance data, training calendar management, LMS administration, external vendor-led training procurement, certification tracking, skills matrix maintenance, induction programme, mandatory compliance training (POSH awareness, data privacy, POCSO awareness) | Cannot approve training budget >₹50K (HR Manager approves); cannot create or approve performance reviews; no payroll access |
+
+> Note: Internal IT for EduForge employees (laptops, GitHub access, VPN) is handled by DevOps Engineer (#14) via an IT request coordination workflow with Office Administrator (#81).
 
 ---
 
@@ -292,14 +327,14 @@ Peak concurrent exam load: **74,000 simultaneous submissions**
 | F — Exam Day Operations | 5 |
 | G — Background Verification | 4 |
 | H — Data & Analytics | 5 |
-| I — Customer Support | 6 |
-| J — Customer Success | 4 |
-| K — Sales & Business Development | 7 |
-| L — Marketing & Growth | 5 |
-| M — Finance & Billing | 6 |
-| N — Legal & Compliance | 4 |
-| O — HR & Administration | 3 |
-| **Total** | **90** |
+| I — Customer Support | 7 |
+| J — Customer Success | 6 |
+| K — Sales & Business Development | 10 (7 original + 3 new: #95, #96, #97) |
+| L — Marketing & Growth | 8 (5 original + 3 new: #98, #99, #100) |
+| M — Finance & Billing | 8 (6 original + 2 new: #101, #102) |
+| N — Legal & Compliance | 6 (4 original + 2 new: #103 Contract Coordinator, #104 Data Compliance Analyst) |
+| O — HR & Administration | 6 (3 original + 3 new: #105 Payroll & Compliance Exec, #106 HR Business Partner, #107 L&D Coordinator) |
+| **Total** | **106** |
 
 ---
 
