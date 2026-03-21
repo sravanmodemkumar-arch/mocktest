@@ -32,7 +32,7 @@ Institution onboarding pipeline management. Tracks every institution from contra
 | `?stage` | Any stage value | Pre-filters table to that stage |
 | `?specialist` | user_id | Filter by assigned specialist |
 | `?institution_type` | `SCHOOL`, `COLLEGE`, `COACHING`, `GROUP` | Filter by institution type |
-| `?status` | `ACTIVE`, `STALLED`, `COMPLETED` | Filter by operational status |
+| `?status` | `ACTIVE`, `STALLED`, `COMPLETED` | Filter by operational status — **derived state** (not a DB column): `ACTIVE` = `stalled_since IS NULL AND stage NOT IN ('COMPLETED')`; `STALLED` = `stalled_since IS NOT NULL`; `COMPLETED` = `stage='COMPLETED'` |
 | `?institution_id` | integer | Jump directly to specific institution's onboarding |
 | `?view` | `table`, `kanban` | Toggle display mode; default `table` |
 
@@ -131,7 +131,7 @@ Row click: opens the institution's onboarding drawer (see below).
 **Support Manager additional row actions:**
 - [Override Stage ▼] — dropdown: shows all stages with a required reason text field. Allows moving forward multiple stages at once (skipping) or moving backward.
   - **Moving forward by skip**: marks all mandatory checklist items in skipped stages as completed by Support Manager with note "Auto-completed via stage skip"; `last_activity_at` updated.
-  - **Moving backward**: inserts SYSTEM note "Stage moved back from {from} to {to} by {manager} — Reason: {text}"; **resets all checklist items for the destination stage and every stage between destination and current stage back to incomplete** (sets `onboarding_checklist_progress.completed_at = NULL`, `completed_by_id = NULL`, `notes` preserved); `last_activity_at` updated. The intent is that the specialist must genuinely redo those steps. Items in stages *before* the destination stage (already fully completed earlier) are not touched. Moving backward does not auto-clear `is_re_onboarding` or `re_onboarding_sequence`.
+  - **Moving backward**: inserts SYSTEM note "Stage moved back from {from} to {to} by {manager} — Reason: {text}"; **resets all checklist items for the destination stage and every stage between destination and current stage back to incomplete** — sets `onboarding_checklist_progress.is_completed = false`, `completed_at = NULL`, `completed_by_id = NULL` (notes preserved so specialist retains prior context); `last_activity_at` updated; `stalled_since` cleared. The intent is that the specialist must genuinely redo those steps. Items in stages *before* the destination stage (already fully completed earlier) are not touched. Moving backward does not auto-clear `is_re_onboarding` or `re_onboarding_sequence`.
 
 **Onboarding Specialist backward movement request**: Specialist cannot drag backward in kanban, but can click [Request Stage Rewind] in the onboarding drawer. This creates an `INTERNAL_NOTE` message on the institution's onboarding record (not a ticket) and sends an F-06 push to Support Manager: "Onboarding Specialist {name} requested stage rewind for {institution} — from {current} to {target}." Support Manager reviews and uses [Override Stage] to action it. This prevents unauthorized stage regression while still enabling self-service recovery requests.
 
@@ -162,6 +162,8 @@ Each card:
 
 STALLED cards: red left border (4px) + steady red "⚠ Stalled 12d" label (matches table view — no pulsing).
 OVERDUE cards (past go-live, not LIVE): amber left border + "Overdue" label.
+
+**Kanban card [Checklist] and [Session] buttons**: clicking either button opens the same right-side Onboarding Drawer as a table row click, but with the respective tab pre-selected. [Checklist] opens the Checklist tab; [Session] opens the Training Sessions tab. The drawer is loaded via `?part=checklist&instance_id={id}` and `?part=sessions&instance_id={id}` respectively.
 
 Drag-and-drop to move cards between stages (Onboarding Specialist; Support Manager). On drag-drop:
 - Validates: all mandatory checklist items for current stage must be completed before moving to next stage
@@ -259,7 +261,7 @@ POST `/support/onboarding/sessions/create/`; creates `onboarding_training_sessio
 Support Manager and Onboarding Specialist only.
 
 Opens a New Onboarding modal:
-1. Institution search (autocomplete; filters to institutions with no existing `onboarding_instance`)
+1. Institution search (autocomplete; filters to institutions with **no currently active onboarding instance** — excludes institutions where `onboarding_instance.stage NOT IN ('COMPLETED')` AND `is_re_onboarding=false` for initial onboardings; institutions with a COMPLETED instance ARE shown and get `is_re_onboarding=true` on the new instance)
 2. Assign specialist (dropdown)
 3. Target go-live date (date picker)
 4. Notes (optional)
@@ -275,7 +277,7 @@ Opens a New Onboarding modal:
 4. **STALLED institution**: Red banner in drawer "⚠ Stalled 12 days. No checklist activity since 3 Nov." [Mark as Active] button resets `stalled_since` to null; adds system note.
 5. **Target go-live in the past and not yet LIVE**: Drawer shows "OVERDUE" banner in red. Celery `flag_stalled_onboarding` handles notification but does not auto-close — specialist must take action.
 6. **Training Coordinator (#52) access**: Can view all onboarding records and training sessions in read-only mode. Cannot modify checklist, progress stages, or schedule sessions directly (sessions go through Onboarding Specialist). Can view recordings from past sessions.
-7. **Kanban with >50 cards per column**: Column shows first 20 cards + "Load more" button. Kanban not suitable for viewing COMPLETED column (2,000+ records) — that column collapses with pagination link to table view filtered by COMPLETED.
+7. **Kanban with >50 cards per column**: Column shows first **50** cards + "Load more" button (load next 50 on click). The ">50" threshold aligns with what is shown before truncation. Kanban not suitable for viewing COMPLETED column (2,000+ records) — that column collapses by default with a pagination link to table view filtered by COMPLETED.
 8. **Backward stage movement in kanban**: Drag-drop to a prior stage is allowed only for Support Manager (with mandatory reason field); blocked for Onboarding Specialist. Backward move: creates a system note "Stage moved back from {current} to {previous} by {manager} — Reason: {text}"; `last_activity_at` updated; `stalled_since` cleared. Use case: institution portal config broke after ADMIN_TRAINED; specialist needs to redo PORTAL_CONFIGURED items.
 9. **Stall detection reliability**: `last_activity_at` is updated by application code (not a trigger) whenever: a checklist item is marked complete, a training session is created or completed, or the stage changes. If `last_activity_at` is accidentally stale (e.g., bug), Support Manager can [Manually Reset Stall] from the drawer (sets `stalled_since=null`, `last_activity_at=now()`); creates audit note.
 8. **Specialist reassignment**: [Reassign Specialist] button in drawer (Support Manager only); reassignment notifies both old and new specialist via F-06.

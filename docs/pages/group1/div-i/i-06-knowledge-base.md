@@ -87,7 +87,7 @@ Each article as a table row (not card — better for scanning many articles):
 |---|---|
 | Title | Article title; links to inline editor (Training Coord) or preview (others) |
 | Category | Badge |
-| Status | DRAFT (grey), PENDING_REVIEW (blue pulsing), PUBLISHED (green), ARCHIVED (grey italic) |
+| Status | DRAFT (grey), PENDING_REVIEW (steady blue), PUBLISHED (green), ARCHIVED (grey italic) |
 | Author | Name |
 | Published | Date or "—" |
 | Views | `view_count` |
@@ -97,8 +97,9 @@ Each article as a table row (not card — better for scanning many articles):
 
 **Training Coordinator (#52) row actions:**
 - [Edit] — opens article editor
-- [Submit for Review] — only for DRAFT articles; changes status to PENDING_REVIEW
+- [Submit for Review] — only for DRAFT articles; changes status to PENDING_REVIEW; clears `review_feedback` field (any prior rejection feedback is removed on re-submission)
 - [Archive] — only for PUBLISHED articles; requires confirmation
+- [Delete Draft] — only for DRAFT articles; hard-delete with confirmation "Delete this draft permanently? This cannot be undone."; article removed from list. Training Coordinator can clean up stale drafts they no longer intend to publish. Cannot delete PUBLISHED or ARCHIVED articles.
 - [Duplicate] — creates DRAFT copy with "(Copy)" prefix
 
 **Support Manager (#47) row actions:**
@@ -107,7 +108,7 @@ Each article as a table row (not card — better for scanning many articles):
 - [Edit] — can edit any article (inline or redirect to full editor)
 - [Archive] — any non-archived article; changes status to ARCHIVED
 - [Restore] — ARCHIVED articles only; returns status to DRAFT
-- [Delete] — ARCHIVED articles only; hard-delete with confirmation modal: "Permanently delete '{title}'? This cannot be undone. The article will be removed from all KB suggestion lists immediately." → POST `/support/knowledge-base/{id}/delete/`; row removed; if article is linked in any `support_ticket_message.kb_article_id` reference, the FK is set to NULL (reference preserved as text in message body). Deletion logged to audit trail.
+- [Delete] — ARCHIVED articles only; hard-delete with confirmation modal: "Permanently delete '{title}'? This cannot be undone. The article will immediately stop appearing in KB suggestion panels." → POST `/support/knowledge-base/{id}/delete/`; row removed. Note: `support_ticket_message` records do NOT store FK references to KB articles — KB suggestions are computed at query time from live PUBLISHED articles, so there are no stored FK references to nullify. The article will no longer appear in I-03 KB suggestion panels on next page load. All `kb_article_vote` records for this article are cascaded-deleted. Deletion logged to audit trail.
 
 **L1/L2/L3 / Onboarding Specialist / Quality Lead row actions:**
 - [View] — opens read-only article preview
@@ -274,6 +275,7 @@ Standalone sessions (`instance_id=null`): `title` and `scheduled_at` are require
 4. **Search returns 0 results**: "No articles found for '{query}'. [Clear search] or [Flag this as a KB gap →]" — second link opens [+ Flag a Gap] form pre-filled with the query text as description.
 5. **Article linked to ticket category auto-suggestion in I-03**: Only PUBLISHED articles appear as suggestions. DRAFT/PENDING_REVIEW articles never surface in I-03.
 6. **Duplicate article detection**: On article save, if another PUBLISHED article has >80% title similarity (checked server-side via trigram similarity in PostgreSQL `pg_trgm`), show warning: "Similar article found: 'How to resolve student login issues'. Review before saving."
+6a. **Slug collision on title**: `kb_article.slug` is auto-generated from the title (`slugify(title)`). On collision with an existing slug, the server appends `-2`, `-3`, etc. (e.g., `student-login-issues-2`). The Training Coordinator does not see the slug during authoring; it is managed server-side. If the auto-generated slug exceeds 200 chars, it is truncated at a word boundary before appending the suffix.
 7. **Archived article still linked in I-03**: If an article is archived while it's still in a ticket's KB suggestion list, the suggestion is removed on the next I-03 KB suggestion load (5-min TTL clears naturally).
 8. **Training session with no-show**: Selecting NO_SHOW status prompts: "Reason for no-show: [text field]"; note saved to session. A follow-up session can be scheduled directly from this modal.
 

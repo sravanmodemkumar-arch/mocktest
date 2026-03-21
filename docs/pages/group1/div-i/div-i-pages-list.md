@@ -193,7 +193,7 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | Column | Type | Notes |
 |---|---|---|
 | id | serial PK | — |
-| institution_id | int FK → institution UNIQUE | One onboarding record per institution |
+| institution_id | int FK → institution | Not UNIQUE at column level — uniqueness enforced by composite constraint `UNIQUE(institution_id, re_onboarding_sequence)` below; allows multiple records per institution when re-onboarding |
 | assigned_specialist_id | int FK → user | Onboarding Specialist (#51) |
 | stage | varchar(30) NOT NULL DEFAULT 'INITIATED' | See stage machine below |
 | started_at | timestamptz DEFAULT now() | — |
@@ -426,10 +426,9 @@ OPEN
 
 **ESCALATED** is a **distinct status** (not just a badge): it means "escalated, waiting for new-tier agent to pick up." It is NOT the same as IN_PROGRESS at the new tier. Filtering by `status=ESCALATED` in I-02 shows tickets pending pickup at L2/L3. Exiting ESCALATED: any action by the new-tier agent (reply, status change, internal note) transitions to IN_PROGRESS. Support Manager can also re-assign from ESCALATED to IN_PROGRESS manually.
 
-**Re-open CLOSED**: Support Manager only → status = IN_PROGRESS; tier preserved from last tier before closure (not reset to L1/MEDIUM); no new escalation record created; new SLA computed from preserved tier + priority + `support_sla_config`; CSAT not re-sent on re-open (prior CSAT score preserved; `csat_link_expires_at` not reset).
+**Re-open CLOSED**: Support Manager only → status = IN_PROGRESS; tier preserved from last tier before closure (not reset to L1/MEDIUM); no new escalation record created; new SLA computed from preserved tier + priority + `support_sla_config`; CSAT not re-sent on re-open (prior CSAT score preserved; `csat_link_expires_at` not reset). An INTERNAL_NOTE with the re-open reason is required and is inserted into the thread.
 
-CSAT survey sent to requester **immediately when status changes to `RESOLVED`** (not on CLOSED). Sets `csat_sent_at` timestamp. Celery Task 3 sends a **reminder** (not a new survey) if `csat_submitted_at IS NULL` and ticket auto-closes after 7 days.
-Support Manager can re-open CLOSED tickets (creates INTERNAL_NOTE with reason). Re-opening CLOSED → status = `IN_PROGRESS`; new SLA computed from L1/MEDIUM as default (Support Manager can adjust).
+CSAT survey sent to requester **immediately when status changes to `RESOLVED`** (not on CLOSED). Sets `csat_sent_at` timestamp. Celery Task 3 sends a **reminder** (not a new survey) if `csat_submitted_at IS NULL` AND `csat_link_expires_at > now()` and ticket auto-closes after 7 days.
 
 ---
 
@@ -471,6 +470,7 @@ This means a ticket that waited 4h for a customer reply effectively gets 4h adde
 | 4 | `flag_stalled_onboarding` | Daily at 08:00 IST | `support` | Marks onboarding instances as `STALLED` if `last_activity_at < now() - interval '7 days'` and stage NOT IN (`LIVE`, `COMPLETED`); notifies assigned Onboarding Specialist and Support Manager via F-06; does not re-notify if `stalled_since` is already set (idempotent) |
 | 5 | `generate_support_weekly_report` | Every Monday 09:00 IST | `support` | Computes all metrics for the prior week (Mon–Sun); upserts into `support_weekly_report` (idempotent on `week_start`); notifies Support Manager via F-06 push with summary stats |
 | 6 | `alert_unassigned_queue` | Every 30 min during business hours (08:00–20:00 IST) | `support` | Counts open tickets WHERE `assigned_to_id IS NULL` AND `created_at < now() - interval '30 min'`; if count > 0, sends F-06 push notification to Support Manager listing unassigned ticket count + longest-waiting ticket number; does NOT auto-assign — assignment is always a human decision to ensure correct tier/skill match |
+| 7 | `aggregate_feature_requests` | Every 1 hour | `support` | Scans `support_ticket` WHERE `category='FEATURE_REQUEST'`; groups tickets by subject using PostgreSQL trigram similarity (`pg_trgm`); if any cluster has ≥3 tickets with similarity >0.8 and no notification sent in the last 24h for that cluster, sends F-06 push to Product Manager (#5): "{N} feature requests about '{subject_cluster_representative}'. Review in Division B." Rate-limit enforced: 1 notification per cluster per 24h (tracked via Redis counter keyed by cluster hash). |
 
 ---
 
@@ -478,15 +478,24 @@ This means a ticket that waited 4h for a customer reply effectively gets 4h adde
 
 | Page | Part | TTL | Bypass |
 |---|---|---|---|
-| I-01 Dashboard | KPI strip | 2 min | Support Manager: `?nocache=true` |
-| I-01 Dashboard | Volume chart | 5 min | — |
+| I-01 Dashboard | KPI strip | No cache | Live SLA timers require fresh data; auto-refreshes every 60s |
+| I-01 Dashboard | Volume chart | 2 min | Support Manager: `?nocache=true` |
+| I-01 Dashboard | SLA compliance gauges | 2 min | `?nocache=true` |
+| I-01 Dashboard | Team workload table | 2 min | `?nocache=true` |
+| I-01 Dashboard | Quality panel | 5 min | `?nocache=true` |
+| I-01 Dashboard | Escalation feed | 1 min | `?nocache=true` |
+| I-01 Dashboard | Onboarding pipeline strip | 5 min | `?nocache=true` |
+| I-01 Dashboard | Exam day banner | No cache | Auto-refreshes every 30s; must be live |
 | I-02 Ticket Queue | Table rows | No cache | Live SLA timers require fresh data |
 | I-03 Ticket Detail | Thread messages | No cache | Must reflect real-time replies |
+| I-04 Institution Profile | Subscription badge | 30 min | `?part=subscription&nocache=true` (Support Manager only) |
 | I-04 Institution Profile | Ticket history table | 5 min | — |
 | I-05 Onboarding Tracker | Stage table | 5 min | — |
 | I-06 KB Manager | Article list | 10 min | — |
 | I-06 KB Manager | Published articles | 60 min | — |
 | I-07 SLA Reports | Charts | 15 min | `?nocache=true` |
+| I-07 SLA Reports | Weekly report snapshot | 60 min | `?nocache=true` |
+| I-07 SLA Reports | Exam day markers (Division F join) | 60 min | — |
 
 ---
 
@@ -496,9 +505,9 @@ This means a ticket that waited 4h for a customer reply effectively gets 4h adde
 |---|---|---|
 | Division F — Exam Day Ops | Inbound + Outbound | Incident Manager (#38) creates `EXAM_DAY_INCIDENT` tickets via `POST /api/support/tickets/` with `source=DIVISION_F_ESCALATION`; auto-tier=L2, auto-priority=CRITICAL; F-06 routes all ticket notifications (breach, escalation, resolution). Outbound: I-07 volume chart shows exam-day markers by joining `support_ticket.linked_exam_id` → Division F `exam` table (read-only via service account); Division F `exam.start_date` used as marker date |
 | Division H — Analytics | Inbound | H-01 anomaly alert webhook calls `POST /api/support/tickets/` with `source=DIVISION_H_ALERT`, category=`TECHNICAL_BUG`, priority=`HIGH`, subject pre-populated from anomaly description; auto-assigned to Support Manager; appears in I-02 with grey "H-01 Alert" badge; Support Manager triages and re-assigns |
-| Division G — BGV | Inbound | BGV_QUERY tickets: on creation (any agent), a post-save signal creates a SYSTEM message: "BGV query detected. Assigning to BGV Manager for resolution." and sets `assigned_to_id` to BGV Manager (#39) user ID; ticket remains in Division I system for tracking; BGV Manager resolves and closes via I-03 |
+| Division G — BGV | Inbound | BGV_QUERY tickets: on creation (any agent), a post-save signal creates a SYSTEM message: "BGV query detected. Assigning to BGV Manager for resolution." and sets `assigned_to_id` to BGV Manager (#39) user ID; ticket remains in Division I system for SLA tracking. **BGV Manager (#39) has limited I-03 access scoped to `BGV_QUERY` tickets only** (similar to Onboarding Specialist's scoped access to ONBOARDING_HELP tickets) — they do NOT access I-01, I-02, I-05, I-06, or I-07. They receive an F-06 direct link, open the ticket in I-03, resolve by adding a REPLY, and change status to RESOLVED. Division I agent then closes. |
 | Division K — Sales | Inbound | When Sales marks a deal as WON in the CRM, a webhook calls `POST /api/support/onboarding/create/` with institution_id and expected_go_live_date; creates `onboarding_instance` with `stage=INITIATED`; notifies all Onboarding Specialists via F-06 for assignment |
-| Division B — Product | Outbound | Background Celery task: every hour, check if any `category=FEATURE_REQUEST` ticket has 3+ tickets with identical/similar subject (trigram similarity >0.8); if so, creates a flag record for Product Manager (#5) (Division B internal system — notification only, no cross-module write) |
+| Division B — Product | Outbound | **Celery Task 7** (`aggregate_feature_requests`): every hour, check if any `category=FEATURE_REQUEST` ticket cluster has 3+ tickets with identical/similar subject (PostgreSQL trigram similarity >0.8); if cluster threshold met, creates a notification record for Product Manager (#5) via F-06 push (notification only — no cross-module DB write); rate-limited to one notification per cluster per 24h to avoid spam |
 | Division M — Billing | Inbound (read-only) | `institution_subscription` table read for I-04 institution header subscription status; fetched via `subscription` service read-only API; cached for 30 min; graceful fallback: if Division M unavailable, subscription badge shows "Status unavailable" grey without blocking page load |
 | AWS SES | Bidirectional | Inbound: SES inbound email handler parses emails to support@eduforge.in → creates ticket with `source=EMAIL`; replies to ticket notification emails are appended as REPLY messages (SES SNS webhook). Outbound: ticket notification emails, CSAT survey emails, training session invites |
 | WhatsApp (Meta API) | Outbound | CSAT surveys sent as WhatsApp message to `requester_phone` if `preferred_contact=WHATSAPP` (from `institution_contact` table); template pre-approved by Meta; managed by Notification Manager (#37); retry: 1 attempt only (no loops) |
@@ -682,3 +691,5 @@ All system-level audit events (PII access, bulk actions, CSAT resends, ticket cl
 | `support_weekly_report` | 3 years | Hard delete after 3 years |
 | `institution_contact` | 5 years post institution offboarding | Cascades on institution deletion |
 | `institution_support_note` | 5 years post institution offboarding | Cascades on institution deletion |
+| `kb_article_vote` | Until article deleted/archived | Cascades on `kb_article` deletion; retained for article lifetime |
+| `support_ticket` (attachments in R2) | 7 years | On ticket archival, R2 objects are moved to S3 cold storage under the same key prefix; signed URL generation stops; objects are not hard-deleted until institution offboarding |

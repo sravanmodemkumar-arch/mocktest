@@ -261,7 +261,7 @@ Visible to: Support Manager, Onboarding Specialist. Hidden for L1/L2/L3/Training
 | Component | Support Manager (#47) | L1 (#48) / L2 (#49) / L3 (#50) | Quality Lead (#90) | Onboarding Spec (#51) |
 |---|---|---|---|---|
 | Exam Day Banner | Full | Full | Full | Hidden |
-| KPI Strip | All 5 tiles | Own-queue tiles only (Open in my tier, My SLA at risk) | All 5 (read-only) | Onboarding count tile only |
+| KPI Strip | All 5 tiles | Own-queue tiles only (Open in my tier, My SLA at risk) | All 5 (read-only) | **Hidden** — Onboarding Specialist has no ticket KPIs; they see the Onboarding Pipeline Strip below instead |
 | Volume Chart | Full + agent filter | Hidden | Full (read-only) | Hidden |
 | SLA Gauges | All 3 tiers | Own tier only | All 3 (read-only) | Hidden |
 | Workload Table | Full team | Own row only | Full team (read-only) | Hidden |

@@ -29,7 +29,7 @@ At scale, this page must handle 5,700+ tickets/month (normal) and 25,000+ during
 |---|---|---|
 | `?status` | `OPEN`, `IN_PROGRESS`, `PENDING_CUSTOMER`, `ESCALATED`, `RESOLVED`, `CLOSED` (comma-sep) | Filter by status |
 | `?priority` | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` (comma-sep) | Filter by priority |
-| `?tier` | `L1`, `L2`, `L3` | Filter by tier; Support Manager only |
+| `?tier` | `L1`, `L2`, `L3` | Filter by tier; Support Manager and Support Quality Lead (#90) only (both see all tiers read-only) |
 | `?category` | Any `support_ticket.category` value | Filter by category |
 | `?assigned` | `me`, `unassigned`, or user_id | Filter by assignee |
 | `?institution_id` | integer | Filter by institution |
@@ -100,7 +100,7 @@ Support Manager sees totals across all tiers. L1/L2/L3 see their tier only.
 **Search bar (full-width):** searches `ticket_number` (prefix match) and `subject` (icontains). Triggers HTMX table reload on input (300ms debounce).
 
 **Quick filter chips (always visible):**
-- [All] [Open] [In Progress] [Pending] [Resolved] — status quick-select
+- [All] [Open] [In Progress] [Pending] [Escalated] [Resolved] — status quick-select
 - [My Tickets] [Unassigned]
 - [CRITICAL] [HIGH] — priority quick-select
 
@@ -165,7 +165,7 @@ Shown on row hover; collapsed into [···] menu:
 
 | Action | Who Sees It | Behaviour |
 |---|---|---|
-| [Assign to me] | Any agent when ticket unassigned or assigned to another | Sets `assigned_to_id`; HTMX row refresh |
+| [Assign to me] | Any agent when ticket unassigned or assigned to another | Sets `assigned_to_id`; HTMX row refresh. **Special case for ESCALATED tickets**: if ticket status is `ESCALATED`, [Assign to me] also transitions status to `IN_PROGRESS` (the agent is accepting the escalation — the ESCALATED state is exited). This matches the state machine: ESCALATED exits when the new-tier agent first acts. |
 | [Quick Reply] | Assigned agent only | Opens inline reply drawer (200-char max; for simple acknowledgements only); full reply in I-03 |
 | [Escalate] | Assigned agent when in their tier | Opens escalation modal; see Workflow 2 in pages-list |
 | [Change Priority] | Support Manager only | Dropdown inline; no modal needed |

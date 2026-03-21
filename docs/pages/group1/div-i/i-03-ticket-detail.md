@@ -3,7 +3,7 @@
 **Route:** `GET /support/tickets/{id}/`
 **Method:** Django CBV (`DetailView`) + HTMX part-loads
 **Primary roles:** L1 (#48), L2 (#49), L3 (#50), Support Manager (#47)
-**Also sees:** Support Quality Lead (#90) — read + quality annotation only; Onboarding Specialist (#51) — read only for `ONBOARDING_HELP` category tickets only (cannot see other categories)
+**Also sees:** Support Quality Lead (#90) — read + quality annotation only; Onboarding Specialist (#51) — read only for `ONBOARDING_HELP` category tickets only; BGV Manager (#39) — read + reply for `BGV_QUERY` category tickets only (accessed via F-06 direct link; no other Division I pages accessible to BGV Manager)
 
 ---
 
@@ -121,7 +121,7 @@ Grey italic, no avatar, centred.
 └──────────────────────────────────────────────────┘
 ```
 
-Purple background; only visible to Quality Lead and Support Manager.
+Purple background. Visible to: Quality Lead and Support Manager always. **Also visible to the ticket's assigned agent** if `support_quality_audit.shared_with_agent=true` (the Quality Lead checked [Share with agent] when submitting). Agents who are NOT the assigned agent cannot see shared annotations.
 
 ---
 
@@ -241,7 +241,7 @@ Vertical list of action buttons on right panel, below institution context:
 | [Escalate to L3] | L2 agents on L2 tickets | Opens escalation modal |
 | [Override Tier] | Support Manager only | Moves to any tier without escalation record |
 | [Change Status] | Assigned agent; Support Manager | Dropdown confirmation |
-| [Link Exam] | Any agent | Autocomplete exam search; sets `linked_exam_id` |
+| [Link Exam] / [Unlink Exam] | Assigned agent; Support Manager | [Link Exam]: autocomplete exam search by exam name; sets `linked_exam_id`; header HTMX refresh after save. If already linked, button shows [Unlink Exam] — clears `linked_exam_id` (Support Manager only; agents cannot unlink once set); confirmation "Unlink exam from this ticket?" |
 | [Merge with…] | Support Manager | Search for duplicate ticket; merges thread |
 | [Mark as Duplicate] | Any agent | Links to canonical ticket; closes this one with note |
 | [Reopen] | Support Manager only | Re-opens CLOSED ticket with required reason |
@@ -291,6 +291,12 @@ Merge direction:
 
 Merged ticket thread is appended to primary ticket; merged ticket closed with "MERGED into #SUP-20241105-000289" note.
 
+**Merge validation guards:**
+- Cannot merge tickets from different institutions — search results are pre-filtered to same `institution_id` only; cross-institution merge is blocked server-side with 400 "Cannot merge tickets from different institutions."
+- Cannot merge a ticket with itself — search excludes the current ticket number.
+- Cannot merge a CLOSED ticket into an open ticket — the closed ticket is not searchable; Support Manager must [Reopen] it first if a merge is needed.
+- Both tickets must be in a tier the current user has access to; Support Manager can merge across tiers.
+
 ---
 
 ### Escalation History
@@ -335,6 +341,31 @@ Shows up to 5 tickets from same institution with status NOT IN (`CLOSED`).
 ```
 
 Links to respective ticket detail pages.
+
+---
+
+### CSAT Panel
+
+Shown on right panel below Related Tickets. Visible to assigned agent and Support Manager; hidden for Quality Lead and Onboarding Specialist.
+
+**Before CSAT sent** (ticket status ≠ RESOLVED): "CSAT survey will be sent when ticket is resolved."
+
+**After CSAT sent, not yet submitted** (`csat_sent_at` set, `csat_submitted_at` null):
+```
+Survey sent: 5 Nov 2024 at 2:45 PM
+Awaiting customer response
+[Resend CSAT ↻]  (Support Manager only)
+```
+
+**After customer submits** (`csat_submitted_at` set):
+```
+CSAT Score: ★★★★☆ (4/5)
+Submitted: 5 Nov 2024 at 5:12 PM
+Comment: "Quick response, thank you."
+[Resend CSAT ↻]  (Support Manager only — score will be lost)
+```
+
+**[Resend CSAT]** — Support Manager only; shown when ticket is RESOLVED or CLOSED; clears `csat_submitted_at`, `csat_score`, `csat_comment`; sets `csat_sent_at=now()`, `csat_link_expires_at=now()+30d`. Requires confirmation: "Resend CSAT? The current score (if any) will be permanently lost." Old score not recoverable; I-07 weekly reports not retroactively corrected.
 
 ---
 

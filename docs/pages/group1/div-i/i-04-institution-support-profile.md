@@ -50,6 +50,7 @@ At scale: some institutions (coaching centres with 10,000–15,000 students) wil
 | Ticket history table | `?part=history&page={n}` | Tab switch + pagination |
 | Onboarding panel | `?part=onboarding` | Tab switch to onboarding |
 | Contacts panel | `?part=contacts` | Tab switch to contacts |
+| Institution notes | `?part=notes` | Page load; after [+ Add Note] POST completes (HTMX swap refreshes the notes section in-place) |
 
 ---
 
@@ -93,7 +94,7 @@ Subscription status badge:
 
 **Near-expiry warning**: If `subscription_expires_at` is within 30 days and status is ACTIVE, show an amber inline label: "⚠ Expires in N days" directly after the expiry date. At ≤7 days: red bold "⚠ Expires in N days — renewal required".
 
-**Subscription data freshness**: Subscription data is fetched from Division M (read-only, 30-min Memcached TTL). A small [↻ Refresh] link appears next to the subscription badge (Support Manager only); clicking calls the Part-Load route `?part=subscription&nocache=true` which bypasses Memcached and re-fetches from Division M. If Division M is unreachable, subscription section shows "Status unavailable — data may be stale" (amber) regardless of cached value.
+**Subscription data freshness**: Subscription data is fetched from Division M (read-only, 30-min Memcached TTL). The subscription line in the header is wrapped in a dedicated `<div id="subscription-badge">` HTMX target (separate from the rest of the static header). A small [↻ Refresh] link appears next to the subscription badge (Support Manager only); clicking triggers `hx-get="?part=subscription&nocache=true"` targeting only `#subscription-badge` — does NOT reload the full header. If Division M is unreachable, subscription section shows "Status unavailable — data may be stale" (amber) regardless of cached value.
 
 [Create Ticket for Inst] opens the New Ticket drawer (from I-02) pre-filled with this institution.
 
@@ -238,6 +239,7 @@ Visible to: all support staff (L1, L2, L3, Support Manager, Quality Lead, Onboar
 4. **Coaching centre with thousands of tickets**: History tab server-side pagination handles scale; default 25 per page with max 100 option.
 5. **Multiple pinned notes**: Shown in reverse chronological order; all pinned notes shown before non-pinned.
 6. **Onboarding record exists but stage=COMPLETED**: Onboarding tab shows completed status in green; no active checklist. Shows `actual_go_live_at` and `completed_at` timestamps.
+6a. **Multiple onboarding instances (re-onboarding)**: When an institution has more than one `onboarding_instance` (original + re-onboarding), Tab 3 shows **the most recent instance** ordered by `started_at DESC`. If the most recent instance is COMPLETED, it shows the COMPLETED view; if there's a newer ACTIVE re-onboarding instance in progress, that takes precedence. A "(Re-onboarding N)" badge is appended to the stage header. A "View previous onboarding →" link at the bottom links to I-05 filtered to all instances for this institution.
 7. **Support Quality Lead access**: Can read all tabs and notes; cannot create tickets, add contacts, or add notes. [Add Note] and [Create Ticket for Inst] buttons hidden.
 8. **L1 agent access**: Can read all tabs. Cannot export ticket history, add contacts, or create institution notes. [Export History] and [Add Note] hidden.
 

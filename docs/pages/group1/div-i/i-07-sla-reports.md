@@ -57,6 +57,8 @@ All caches bypass with `?nocache=true` (Support Manager only).
 | CSAT trend chart | `?part=csat_chart` | Page load + filter change |
 | Escalation chart | `?part=escalation_chart` | Page load + filter change |
 | Quality metrics | `?part=quality_metrics` | Page load + filter change |
+| Weekly snapshot | `?part=weekly_snapshot` | Page load; 60-min TTL; NOT re-triggered by filter changes (uses fixed prior-week data) |
+| SLA config table | `?part=sla_config` | Page load only (static config; only changes when Platform Admin edits Django Admin) |
 
 ---
 
@@ -78,6 +80,10 @@ All caches bypass with `?nocache=true` (Support Manager only).
 │  AGENT PERFORMANCE TABLE                                         │
 ├──────────────────────────────────────────────────────────────────┤
 │  QUALITY AUDIT METRICS (Quality Lead / Support Manager)          │
+├──────────────────────────────────────────────────────────────────┤
+│  WEEKLY SNAPSHOT (collapsible; prior week pre-computed)          │
+├──────────────────────────────────────────────────────────────────┤
+│  SLA CONFIGURATION REFERENCE (Support Manager only; static)      │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -137,9 +143,11 @@ L3 below target: row highlighted red. [View L3 Breached Tickets →] links to I-
 
 **Chart type**: Line chart (Chart.js). X-axis: daily points for ≤30d; weekly points for >30d.
 
+**Dual Y-axis chart**: left Y-axis (1–5) for CSAT score; right Y-axis (0–100%) for response rate. Both axes are labelled. Chart.js `y` and `y1` axes configuration.
+
 Two series:
-- Average CSAT score (primary line, blue, Y-axis 1–5)
-- Ticket response rate: `COUNT(csat_submitted_at IS NOT NULL) / COUNT(status IN ('RESOLVED','CLOSED'))` for the period; secondary line, grey dashed, Y-axis 0–100%
+- Average CSAT score (primary line, blue, left Y-axis 1–5)
+- Ticket response rate: `COUNT(csat_submitted_at IS NOT NULL) / COUNT(status IN ('RESOLVED','CLOSED'))` for the period; secondary line, grey dashed, right Y-axis 0–100%
 
 Target line at 4.0 (dashed red horizontal).
 
@@ -239,9 +247,50 @@ Agents with avg score < 3.0: row highlighted red.
 
 ---
 
+### SLA Configuration Reference Table (Support Manager only)
+
+Static read-only table showing current `support_sla_config` values at the bottom of the page. **Not filterable; not part of the chart period selection.** Shows current live thresholds.
+
+```
+Current SLA Thresholds (as configured in Django Admin)
+────────────────────────────────────────────────────────
+Tier  Priority   First Response   Resolution    Exam-Day Override
+L1    CRITICAL   30 min           120 min       15 min / 60 min ✓
+L1    HIGH        60 min           240 min       —
+L1    MEDIUM     120 min          480 min       —
+L1    LOW        240 min          1,440 min     —
+L2    CRITICAL    60 min           240 min       30 min / 120 min ✓
+...
+```
+
+Each row shows `is_exam_day_override` rows with a "✓" badge. Label: "To change these thresholds, contact Platform Admin." No edit controls.
+
+---
+
+### Weekly Snapshot
+
+Pre-computed data from `support_weekly_report` (Celery Task 5; 60-min Memcached TTL). Shown as a collapsible section at the bottom of the page, always using the prior complete week (Mon–Sun) regardless of the period selector.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Weekly Snapshot (4 Nov – 10 Nov 2024)  [Collapse ▲]    │
+├───────────────────┬──────────────────────────────────────┤
+│  Total tickets: 1,247    SLA compliance: L1 96%, L2 91%, L3 84%  │
+│  Avg CSAT: 4.1 (68% response rate)                      │
+│  Escalation rates: L1→L2 11%, L2→L3 8%                 │
+│  Top categories: LOGIN_ISSUE (312) · OTP_FAILURE (187)  │
+└──────────────────────────────────────────────────────────┘
+```
+
+[Export Weekly CSV] — downloads the `support_weekly_report` row as CSV.
+
+Note: the Weekly Snapshot always reflects the prior full week and is NOT affected by the period selector. For custom period analysis, use the main charts above.
+
+---
+
 ### [Export PDF] Button
 
-Generates a PDF report of the current view with all charts (using server-side chart rendering). Filename: `support_report_{period}_{date}.pdf`. Generated async via Celery `exports` queue; download link emailed to Support Manager when ready.
+Generates a PDF snapshot of the current view with all charts (server-side chart rendering via headless Chromium). Filename: `support_report_{period}_{date}.pdf`. This is an **on-demand Celery task** — dispatched to the `exports` queue when the button is clicked (not a scheduled task). The task renders all active `?part=` chart endpoints and compiles them into a PDF. Download link emailed to Support Manager when ready (typically 30–120s depending on queue depth).
 
 [Export CSV] button below each chart: downloads the raw data for that specific chart.
 
