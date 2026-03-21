@@ -16,12 +16,14 @@ Group-wide registry of all sports teams across every branch for the current acad
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Sports Director | G3, Role 97 | Full — create, edit, deactivate all teams group-wide | Can deactivate any team; sees all branches |
-| Sports Coordinator | G3, Role 98 | Full — create, edit, manage rosters for all branches | Cannot deactivate; sees all branches |
-| Group Cultural Activities Head | G3, Role 99 | View only — read all records | No create, edit, or roster actions |
-| All other roles | — | No access | 403 on direct URL |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Sports Director | 97 | G3 | Full — create, edit, deactivate all teams group-wide | Can deactivate any team; sees all branches |
+| Sports Coordinator | 98 | G3 | Full — create, edit, manage rosters for all branches | Cannot deactivate; sees all branches |
+| Group Cultural Activities Head | 99 | G3 | View only — read all records | No create, edit, or roster actions |
+| All other roles | — | — | No access | 403 on direct URL |
+
+> **Access enforcement:** `@require_role(['sports_director', 'sports_coordinator', 'cultural_head'])` on read endpoints. `@require_role(['sports_director', 'sports_coordinator'])` on create/edit. `@require_role(['sports_director'])` on deactivate.
 
 ---
 
@@ -60,13 +62,17 @@ Stacked above the KPI bar. Each banner is individually dismissible for the sessi
 
 Five cards displayed horizontally below the alert banners. Refreshed every 5 minutes via HTMX polling (`hx-trigger="every 5m"`).
 
-| Card | Metric | Colour Rule | Drill-down |
-|---|---|---|---|
-| Total Teams Registered | Count of all active team records in current AY | Blue (neutral) | Filters table to all active teams |
-| Branches with Full Coverage | Count of branches with teams registered for ≥ 5 distinct sports | Green if all branches qualify; Amber if < 80%; Red if < 50% | Filters table to branches with ≥ 5 sports |
-| Branches with No Teams | Count of branches with zero team records | Red if > 0; Green if 0 | Filters table to show only those branches |
-| Total Athletes Enrolled | Count of distinct students appearing in at least one team roster | Blue (neutral) | Opens branch-wise athlete distribution modal |
-| Teams Without Coach Assigned | Count of teams where coach field is null | Red if > 0; Green if 0 | Filters table to teams with no coach |
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Total Teams Registered | All active team records in current AY | `Team.objects.filter(ay=current_ay, status='active').count()` | Blue (neutral) | `#kpi-total-teams` |
+| 2 | Branches with Full Coverage | Branches with teams in ≥ 5 distinct sports | `Branch.objects.annotate(sport_count=Count('teams__sport', distinct=True)).filter(sport_count__gte=5).count()` | Green if all branches; Amber if < 80%; Red if < 50% | `#kpi-full-coverage` |
+| 3 | Branches with No Teams | Branches with zero team records this AY | `Branch.objects.filter(active=True).exclude(teams__ay=current_ay).count()` | Red if > 0; Green if 0 | `#kpi-no-teams` |
+| 4 | Total Athletes Enrolled | Distinct students in at least one team roster | `RosterEntry.objects.filter(team__ay=current_ay).values('student').distinct().count()` | Blue (neutral) | `#kpi-total-athletes` |
+| 5 | Teams Without Coach | Teams where coach field is null | `Team.objects.filter(ay=current_ay, status='active', coach__isnull=True).count()` | Red if > 0; Green if 0 | `#kpi-no-coach` |
+
+**HTMX:** Each card loads independently via `hx-get` with `hx-trigger="load"` and shows skeleton while loading. AY change triggers all cards to refresh via `hx-swap-oob="true"`.
+
+Auto-refresh: `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/sports/teams/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
 
 ---
 
@@ -320,17 +326,20 @@ All charts use Chart.js 4.x. Rendered in a two-column grid below the main table.
 
 ## 13. HTMX Patterns
 
-| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
-|---|---|---|---|---|
-| Team name/sport/branch search | `input delay:300ms` | GET `/group/{gid}/sports/teams/?q={val}` | `#team-table-body` | `innerHTML` |
-| Filter apply | `change` | GET `/group/{gid}/sports/teams/?filters={encoded}` | `#team-table-section` | `innerHTML` |
-| AY selector change | `change` | GET `/group/{gid}/sports/teams/?ay={val}` | `#page-main-content` | `innerHTML` |
-| Open team drawer | `click` | GET `/group/{gid}/sports/teams/{tid}/drawer/` | `#drawer-body` | `innerHTML` |
-| Drawer tab switch | `click` | GET `/group/{gid}/sports/teams/{tid}/{tab}/` | `#drawer-tab-content` | `innerHTML` |
-| KPI auto-refresh | `every 5m` | GET `/group/{gid}/sports/teams/kpi/` | `#kpi-bar` | `innerHTML` |
-| Add player (inline) | `click` on search result | POST `/group/{gid}/sports/teams/{tid}/roster/` | `#roster-table-body` | `beforeend` |
-| Remove player confirm | `click` | DELETE `/group/{gid}/sports/teams/{tid}/roster/{pid}/` | `#roster-row-{pid}` | `outerHTML` |
-| Pagination page change | `click` | GET `/group/{gid}/sports/teams/?page={n}` | `#team-table-section` | `innerHTML` |
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load | `#kpi-bar` container | GET `/api/v1/group/{gid}/sports/teams/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="load"`; skeleton shimmer per card |
+| KPI auto-refresh | `#kpi-bar` container | GET `/api/v1/group/{gid}/sports/teams/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="every 5m"` |
+| Team search | Search input | GET `/api/v1/group/{gid}/sports/teams/?q={val}` | `#team-table-body` | `innerHTML` | `hx-trigger="input delay:300ms"` |
+| Filter apply | Filter controls | GET `/api/v1/group/{gid}/sports/teams/?filters={encoded}` | `#team-table-section` | `innerHTML` | `hx-trigger="change"` |
+| AY selector change | AY dropdown | GET `/api/v1/group/{gid}/sports/teams/?ay={val}` | `#page-main-content` | `innerHTML` | `hx-trigger="change"`; reloads full page content |
+| Pagination | Pagination controls | GET `/api/v1/group/{gid}/sports/teams/?page={n}` | `#team-table-section` | `innerHTML` | `hx-trigger="click"` |
+| Open team drawer | Team name link / [View] | GET `/api/v1/group/{gid}/sports/teams/{tid}/drawer/` | `#drawer-body` | `innerHTML` | `hx-trigger="click"` |
+| Drawer tab switch | Tab buttons | GET `/api/v1/group/{gid}/sports/teams/{tid}/{tab}/` | `#drawer-tab-content` | `innerHTML` | `hx-trigger="click"`; lazy-loads tab content |
+| Add player (inline) | Search result click | POST `/api/v1/group/{gid}/sports/teams/{tid}/roster/` | `#roster-table-body` | `beforeend` | `hx-trigger="click"`; appends new row |
+| Remove player confirm | [Remove] per row | DELETE `/api/v1/group/{gid}/sports/teams/{tid}/roster/{pid}/` | `#roster-row-{pid}` | `outerHTML` | `hx-trigger="click"`; removes row with fade |
+| Chart 7.1 load | Chart container | GET `/api/v1/group/{gid}/sports/analytics/teams-by-sport/` | `#chart-teams-by-sport` | `innerHTML` | `hx-trigger="load"` |
+| Chart 7.2 load | Chart container | GET `/api/v1/group/{gid}/sports/analytics/roster-health/` | `#chart-roster-health` | `innerHTML` | `hx-trigger="load"` |
 
 ---
 

@@ -24,14 +24,14 @@ Scale: 200–600 event records per academic year across all branches. The regist
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Group Cultural Activities Head | G3, Role 99 | Full CRUD — create, edit, approve, reject, archive, export | Primary owner; approval authority |
-| Group Sports Director | G3, Role 97 | View only — all records visible | Cross-reference awareness; no edit or approval capability |
-| Group NSS/NCC Coordinator | G3, Role 100 | View only — cross-listed events (NSS/NCC Event type) visible | Filtered view; other event types not visible |
-| Group Sports Coordinator | G3, Role 98 | No access | — |
-| Group Library Head | G2, Role 101 | No access | — |
-| All other roles | — | No access | Redirected to own dashboard |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Group Cultural Activities Head | 99 | G3 | Full CRUD — create, edit, approve, reject, archive, export | Primary owner; approval authority |
+| Group Sports Director | 97 | G3 | View only — all records visible | Cross-reference awareness; no edit or approval capability |
+| Group NSS/NCC Coordinator | 100 | G3 | View only — cross-listed events (NSS/NCC Event type) visible | Filtered view; other event types not visible |
+| Group Sports Coordinator | 98 | G3 | No access | — |
+| Group Library Head | 101 | G2 | No access | — |
+| All other roles | — | — | No access | Redirected to own dashboard |
 
 > **Access enforcement:** Django decorator `@require_role(['cultural_head'])` on all write, approval, reject, and archive endpoints. `@require_role(['cultural_head', 'sports_director', 'nss_ncc_coordinator'])` on read; NSS/NCC Coordinator has an additional server-side queryset filter to return only records where `event_type = nss_ncc_event`. Role 97 sees all records read-only with no action buttons other than `[View]`.
 
@@ -70,12 +70,12 @@ AY [academic year]  ·  [N] Total Records  ·  [N] Pending Review  ·  [N] Appro
 
 Four metric cards displayed horizontally. Refreshed on load and every 5 minutes via HTMX polling.
 
-| Card | Metric | Colour Rule |
-|---|---|---|
-| Total Events This AY | Count of all non-Archived records for current AY | Indigo (neutral) |
-| Group-Initiated Events | Count where `record_source = group` and `approval_status = approved` for current AY | Indigo (neutral) |
-| Branch-Reported Pending Review | Count where `approval_status = pending_review` | Red if > 0; Green if 0 |
-| External Events Students Participated | Count where `external_event = true` and `approval_status = approved` for current AY | Indigo (neutral) |
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Total Events This AY | All non-Archived event records for current AY | `CulturalEventRecord.objects.filter(ay=current_ay).exclude(status='archived').count()` | Indigo (neutral) | `#kpi-total-events` |
+| 2 | Group-Initiated Events | Group-created events approved this AY | `CulturalEventRecord.objects.filter(ay=current_ay, record_source='group', approval_status='approved').count()` | Indigo (neutral) | `#kpi-group-initiated` |
+| 3 | Branch-Reported Pending Review | Branch submissions awaiting Cultural Head approval | `CulturalEventRecord.objects.filter(approval_status='pending_review').count()` | Red if > 0; Green if 0 | `#kpi-pending-review` |
+| 4 | External Events Participated | Approved external event participation records this AY | `CulturalEventRecord.objects.filter(ay=current_ay, external_event=True, approval_status='approved').count()` | Indigo (neutral) | `#kpi-external-events` |
 
 ```
 ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐

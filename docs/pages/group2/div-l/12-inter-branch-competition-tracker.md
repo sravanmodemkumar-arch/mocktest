@@ -25,14 +25,14 @@ Scale: 20–60 competitions per academic year; each competition has 5–50 branc
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Group Cultural Activities Head | G3, Role 99 | Full — create, edit, cancel, enter results, generate certificates | Primary owner |
-| Group Sports Director | G3, Role 97 | View only — all competitions visible | Cross-reference joint competitions that involve sports; no edit capability |
-| Group Sports Coordinator | G3, Role 98 | No access | — |
-| Group NSS/NCC Coordinator | G3, Role 100 | No access | Cross-listed NSS events visible on Calendar (Page 11); competition detail not accessible |
-| Group Library Head | G2, Role 101 | No access | — |
-| All other roles | — | No access | Redirected to own dashboard |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Group Cultural Activities Head | 99 | G3 | Full — create, edit, cancel, enter results, generate certificates | Primary owner |
+| Group Sports Director | 97 | G3 | View only — all competitions visible | Cross-reference joint competitions that involve sports; no edit capability |
+| Group Sports Coordinator | 98 | G3 | No access | — |
+| Group NSS/NCC Coordinator | 100 | G3 | No access | Cross-listed NSS events visible on Calendar (Page 11); competition detail not accessible |
+| Group Library Head | 101 | G2 | No access | — |
+| All other roles | — | — | No access | Redirected to own dashboard |
 
 > **Access enforcement:** Django decorator `@require_role(['cultural_head'])` on all write, result-entry, and certificate endpoints. `@require_role(['cultural_head', 'sports_director'])` on read endpoints. Role 97 sees all data read-only; all action buttons (`[Enter Results]`, `[Issue Certificates]`, `[Edit]`, `[Cancel]`) are hidden server-side.
 
@@ -71,13 +71,13 @@ AY [academic year]  ·  [N] Competitions  ·  [N] Registration Open  ·  [N] Res
 
 Five metric cards displayed horizontally. Refreshed on load and every 5 minutes via HTMX polling.
 
-| Card | Metric | Colour Rule |
-|---|---|---|
-| Total Competitions This AY | Count of competition records for current AY excluding Cancelled | Indigo (neutral) |
-| Registration Open Now | Count where `registration_deadline` ≥ today and `status = Registration Open` | Green if > 0; Indigo if 0 |
-| Results Pending Entry | Count of competitions with `date` < today and `results_status = Pending` or `Partially Entered` | Red if > 0; Green if 0 |
-| Certificates Issued This Month | Count of certificate batches generated in current calendar month | Indigo (neutral) |
-| Branches with Zero Competition Participation This AY | Count of branches with no competition registration records for current AY | Red if > 20% of total branches; Amber if > 0; Green if 0 |
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Total Competitions This AY | Competition records for current AY excluding Cancelled | `CompetitionRecord.objects.filter(ay=current_ay).exclude(status='cancelled').count()` | Indigo (neutral) | `#kpi-total-competitions` |
+| 2 | Registration Open Now | Competitions where registration deadline ≥ today and status = Registration Open | `CompetitionRecord.objects.filter(registration_deadline__gte=today, status='registration_open').count()` | Green if > 0; Indigo if 0 | `#kpi-registration-open` |
+| 3 | Results Pending Entry | Competitions held but results not yet entered | `CompetitionRecord.objects.filter(date__lt=today, results_status__in=['pending','partially_entered']).count()` | Red if > 0; Green if 0 | `#kpi-results-pending` |
+| 4 | Certificates Issued This Month | Certificate batches generated in current calendar month | `CertificateBatch.objects.filter(generated_at__month=today.month).count()` | Indigo (neutral) | `#kpi-certs-month` |
+| 5 | Branches — Zero Participation | Branches with no competition registration this AY | `Branch.objects.exclude(competition_registrations__ay=current_ay).count()` | Red if > 20% of branches; Amber if > 0; Green if 0 | `#kpi-zero-participation` |
 
 ```
 ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐

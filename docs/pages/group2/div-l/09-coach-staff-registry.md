@@ -16,12 +16,14 @@ Central registry of all coaches and sports support staff across every branch in 
 
 ## 2. Role Access
 
-| Role | Level | Access | Notes |
-|---|---|---|---|
-| Sports Director | G3, Role 97 | Full CRUD — create, edit, deactivate, flag vacancies, cross-branch reassign | Can flag vacancy and trigger hiring request to HR |
-| Sports Coordinator | G3, Role 98 | Full — create, edit, manage team assignments | Cannot deactivate or flag vacancy |
-| Group Cultural Activities Head | G3, Role 99 | View only — all coach records | No create or edit actions; BGV status visible |
-| All other roles | — | No access | 403 on direct URL |
+| Role | Role ID | Level | Access | Notes |
+|---|---|---|---|---|
+| Sports Director | 97 | G3 | Full CRUD — create, edit, deactivate, flag vacancies, cross-branch reassign | Can flag vacancy and trigger hiring request to HR |
+| Sports Coordinator | 98 | G3 | Full — create, edit, manage team assignments | Cannot deactivate or flag vacancy |
+| Group Cultural Activities Head | 99 | G3 | View only — all coach records | No create or edit actions; BGV status visible |
+| All other roles | — | — | No access | 403 on direct URL |
+
+> **Access enforcement:** `@require_role(['sports_director', 'sports_coordinator', 'cultural_head'])` on read. `@require_role(['sports_director', 'sports_coordinator'])` on create/edit. `@require_role(['sports_director'])` on deactivate and vacancy flag. BGV status field visible to all three roles.
 
 ---
 
@@ -63,13 +65,17 @@ Stacked above the KPI bar. Each banner dismissible for the session.
 
 Five cards displayed horizontally below the alert banners. Auto-refresh every 5 minutes via HTMX polling (`hx-trigger="every 5m"`).
 
-| Card | Metric | Colour Rule | Drill-down |
-|---|---|---|---|
-| Total Coaches | Count of all active coach records | Blue (neutral) | Filters table to all active coaches |
-| Active (With Team Assignment) | Count of coaches who have at least one current team assignment | Green if > 50% of total; Amber if 30–50%; Red if < 30% | Filters table to coaches with active assignments |
-| Vacancies (Branches with Unassigned Sport) | Count of branch-sport pairs with no coach assigned | Red if > 0; Green if 0 | Opens vacancy flags section (5.2) |
-| BGV Pending | Count of coaches where BGV status = Pending or Not Started | Red if > 5; Amber if 1–5; Green if 0 | Filters table to BGV pending/not started |
-| Contract Expiring (30 days) | Count of coaches with contract end date within next 30 days | Red if > 0; Green if 0 | Filters table to expiring contracts |
+| # | Card | Metric | Calculation | Colour Rule | HTMX Target |
+|---|---|---|---|---|---|
+| 1 | Total Coaches | All active coach records | `Coach.objects.filter(status='active').count()` | Blue (neutral) | `#kpi-total-coaches` |
+| 2 | With Team Assignment | Coaches with at least one current team assignment | `Coach.objects.filter(status='active', team_assignments__isnull=False).distinct().count()` | Green if > 50% of total; Amber if 30–50%; Red if < 30% | `#kpi-assigned` |
+| 3 | Coaching Vacancies | Branch-sport pairs with no coach assigned | `CoachVacancy.objects.filter(filled=False).count()` | Red if > 0; Green if 0 | `#kpi-vacancies` |
+| 4 | BGV Pending | Coaches with BGV status = Pending or Not Started | `Coach.objects.filter(bgv_status__in=['pending','not_started']).count()` | Red if > 5; Amber if 1–5; Green if 0 | `#kpi-bgv-pending` |
+| 5 | Contracts Expiring (30d) | Coaches with contract end date within next 30 days | `Coach.objects.filter(contract_end__range=[today, today+30d]).count()` | Red if > 0; Green if 0 | `#kpi-expiring` |
+
+**HTMX:** Each card loads independently via `hx-get` with `hx-trigger="load"` and shows skeleton while loading.
+
+Auto-refresh: `hx-trigger="every 5m"` `hx-get="/api/v1/group/{id}/sports/coaches/kpi/"` `hx-target="#kpi-bar"` `hx-swap="innerHTML"`.
 
 ---
 
@@ -336,16 +342,19 @@ All charts use Chart.js 4.x. Rendered in a two-column grid below the main table.
 
 ## 13. HTMX Patterns
 
-| Interaction | hx-trigger | hx-method + URL | hx-target | hx-swap |
-|---|---|---|---|---|
-| Coach name/sport/branch search | `input delay:300ms` | GET `/group/{gid}/sports/coaches/?q={val}` | `#coach-table-body` | `innerHTML` |
-| Filter apply | `change` | GET `/group/{gid}/sports/coaches/?filters={encoded}` | `#coach-table-section` | `innerHTML` |
-| Include inactive toggle | `change` | GET `/group/{gid}/sports/coaches/?include_inactive={bool}` | `#coach-table-section` | `innerHTML` |
-| Open coach drawer | `click` | GET `/group/{gid}/sports/coaches/{cid}/drawer/` | `#drawer-body` | `innerHTML` |
-| Drawer tab switch | `click` | GET `/group/{gid}/sports/coaches/{cid}/{tab}/` | `#drawer-tab-content` | `innerHTML` |
-| KPI auto-refresh | `every 5m` | GET `/group/{gid}/sports/coaches/kpi/` | `#kpi-bar` | `innerHTML` |
-| Add achievement (inline) | `submit` | POST `/group/{gid}/sports/coaches/{cid}/achievements/` | `#achievements-list` | `beforeend` |
-| Pagination page change | `click` | GET `/group/{gid}/sports/coaches/?page={n}` | `#coach-table-section` | `innerHTML` |
+| Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
+|---|---|---|---|---|---|
+| KPI bar load | `#kpi-bar` container | GET `/api/v1/group/{gid}/sports/coaches/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="load"`; skeleton shimmer per card |
+| KPI auto-refresh | `#kpi-bar` container | GET `/api/v1/group/{gid}/sports/coaches/kpi/` | `#kpi-bar` | `innerHTML` | `hx-trigger="every 5m"` |
+| Coach search | Search input | GET `/api/v1/group/{gid}/sports/coaches/?q={val}` | `#coach-table-body` | `innerHTML` | `hx-trigger="input delay:300ms"` |
+| Filter apply | Filter controls | GET `/api/v1/group/{gid}/sports/coaches/?filters={encoded}` | `#coach-table-section` | `innerHTML` | `hx-trigger="change"` |
+| Include inactive toggle | Toggle switch | GET `/api/v1/group/{gid}/sports/coaches/?include_inactive={bool}` | `#coach-table-section` | `innerHTML` | `hx-trigger="change"` |
+| Pagination | Pagination controls | GET `/api/v1/group/{gid}/sports/coaches/?page={n}` | `#coach-table-section` | `innerHTML` | `hx-trigger="click"` |
+| Open coach drawer | Name link / [View] | GET `/api/v1/group/{gid}/sports/coaches/{cid}/drawer/` | `#drawer-body` | `innerHTML` | `hx-trigger="click"` |
+| Drawer tab switch | Tab buttons | GET `/api/v1/group/{gid}/sports/coaches/{cid}/{tab}/` | `#drawer-tab-content` | `innerHTML` | `hx-trigger="click"`; lazy-loads tab content |
+| Add achievement | Achievement form submit | POST `/api/v1/group/{gid}/sports/coaches/{cid}/achievements/` | `#achievements-list` | `beforeend` | `hx-trigger="submit"`; appends new row |
+| Chart 7.1 load | Chart container | GET `/api/v1/group/{gid}/sports/analytics/coach-bgv-status/` | `#chart-bgv-status` | `innerHTML` | `hx-trigger="load"` |
+| Chart 7.2 load | Chart container | GET `/api/v1/group/{gid}/sports/analytics/coach-coverage-by-branch/` | `#chart-coach-coverage` | `innerHTML` | `hx-trigger="load"` |
 
 ---
 
