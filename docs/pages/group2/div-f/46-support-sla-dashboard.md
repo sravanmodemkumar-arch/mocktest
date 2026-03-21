@@ -31,6 +31,8 @@ All data is aggregated from the tickets table in PostgreSQL — no cached summar
 | Group IT Support Executive (Role 57, G3) | Limited view | View group-level metrics and their own performance; cannot see other executives' individual data |
 | Group IT Admin (Role 54, G4) | Full access | Same as IT Director |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -94,6 +96,8 @@ All KPIs re-fetch when date range changes. `hx-trigger="dateRangeChanged from:bo
 | CSAT Score | Number | Average CSAT (1–5) for this branch's tickets |
 | Actions | Button | `View Branch Tickets` — navigates to ticket manager filtered by this branch |
 
+CSAT Score: shows `—` if no satisfaction ratings have been submitted for that branch's tickets.
+
 ### Filters
 
 - **Date Range:** Inherited from page-level date range selector
@@ -116,6 +120,8 @@ Sortable: Tickets (Period), P1 SLA %, Avg First Response, CSAT Score. Default: T
 ---
 
 ## 6. Drawers
+
+**Note:** This is a read-only analytics dashboard. No create, edit, or delete operations are available. The executive detail drawer provides branch drill-down viewing only.
 
 No create/edit drawers on this analytics page. One read-only drawer:
 
@@ -201,6 +207,8 @@ All charts respond to the page-level date range selector. Charts reload when dat
 | Export complete | Success: `SLA performance report downloaded.` |
 | Date range changed | Info: `Dashboard updated for [selected period].` |
 | No data in range | Warning: `No ticket data found for the selected period. Try a wider date range.` |
+| Export failed | Error: `Failed to generate SLA report. Please try again.` | Error | 5s |
+| Data load failed | Error: `Failed to load dashboard data. Please refresh the page.` | Error | 5s |
 
 ---
 
@@ -244,6 +252,8 @@ All charts respond to the page-level date range selector. Charts reload when dat
 | View Branch Tickets button | Visible (navigates to ticket manager) | Visible | Visible |
 
 > Role 57 can see all group-level aggregated charts but cannot identify individual executive performance data. Their own metrics are shown in their profile/dashboard, not here.
+
+**Note:** Role 55 (DPO) and Role 56 (Cybersecurity Officer) have no access to this page (returns 403).
 
 ---
 

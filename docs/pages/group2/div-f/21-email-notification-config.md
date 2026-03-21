@@ -27,6 +27,8 @@ A critical design principle: the domain verification section must show each requ
 | Group IT Director | G4 | Full read + write | Strategic oversight |
 | Group EduForge Integration Manager | G4 | Read-only + template management | Can view; can create/edit email templates |
 | Group IT Support Executive | G3 | Read-only (Delivery Logs only) | For diagnosing email delivery issues in support tickets |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -105,7 +107,7 @@ No traditional KPI cards. Provider status and domain verification state are disp
 - **If SendGrid / Mailgun:**
   - API Key (masked)
 - **Common fields (all providers):**
-  - From Email Address (required; must match verified domain)
+  - From Email Address (required; must match verified domain; validation error: "Email domain must match verified domain")
   - From Name (text; e.g., "EduForge — [Group Name]")
   - Reply-To Address (optional)
 
@@ -280,9 +282,21 @@ No dedicated chart section. Deliverability metrics in Section 4 serve as the pri
 | Filter templates | `change` | GET `/api/v1/it/notifications/email/templates/?category=...` | `#email-templates-table` | `innerHTML` |
 | Search templates | `input` (300ms debounce) | GET `/api/v1/it/notifications/email/templates/?q=...` | `#email-templates-table` | `innerHTML` |
 | Open preview drawer | `click` on Preview | GET `/api/v1/it/notifications/email/templates/{id}/` | `#email-template-drawer` | `innerHTML` |
+| Open template preview drawer | `click` on Preview | GET `/api/v1/it/notifications/email/templates/{id}/` | `#template-drawer` | `innerHTML` |
+| Open suppression list drawer | `click` on View Suppression List | GET `/api/v1/it/notifications/email/suppression/` | `#suppression-drawer` | `innerHTML` |
 | Save provider config | `click` on Save | PATCH `/api/v1/it/notifications/email/config/` | `#email-provider-section` | `outerHTML` |
 | Archive template confirm | `click` on Confirm Archive | POST `/api/v1/it/notifications/email/templates/{id}/archive/` | `#email-templates-table` | `innerHTML` |
 | Remove from suppression | `click` on Remove | DELETE `/api/v1/it/notifications/email/suppression/{id}/` | `#suppression-list` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- Email provider connection failed: IT Admin + IT Director (in-app red non-dismissible + email) immediately
+- Domain verification failed: IT Admin (in-app amber + email)
+- Bounce rate > 5%: IT Admin + IT Director (in-app amber + email)
+- Suppression list growth > 100 new entries/day: IT Admin (in-app amber + email)
 
 ---
 

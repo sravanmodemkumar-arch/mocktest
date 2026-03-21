@@ -28,6 +28,8 @@ Bulk operations (suspend batch, reset OTP batch, export filtered list) are avail
 | Group Cybersecurity Officer | G1 | Read-only (all columns) | Cannot edit or suspend; view audit purpose |
 | Group Data Privacy Officer | G1 | Read-only (Name, Branch, Status only) | DPDP Act compliance audits only |
 | Group IT Support Executive | G3 | Read-only + OTP Reset only | Cannot change roles or suspend accounts |
+| Group IT Support Executive (Role 57, G3) | Read-only + OTP Reset only | Cannot change roles or suspend accounts |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -176,6 +178,17 @@ No dedicated chart section on this page. KPI cards serve as the primary data vis
 | Bulk OTP reset triggered | "OTP reset initiated for [N] accounts." | Info | 4s |
 | Export triggered | "User directory export is being prepared. You will be notified when ready." | Info | 4s |
 | Role escalation pending approval | "Access level change for [Name] submitted for IT Director approval." | Info | 5s |
+| Suspend failed | Error: `Could not suspend [Name]. Please try again or contact support.` | Error | 5s |
+
+---
+
+## 8.5 Notifications for Critical Actions
+
+| Action | Recipients | Channel | Timing |
+|--------|-----------|---------|--------|
+| Group-level admin (Role 53–56) suspended | IT Director + Group CEO | In-app alert + email | Immediate |
+| OTP reset performed | IT Admin (logged; no active notification) | Audit log only | On action |
+| Bulk suspension (>10 users) | IT Director | In-app alert + email | Immediate |
 
 ---
 

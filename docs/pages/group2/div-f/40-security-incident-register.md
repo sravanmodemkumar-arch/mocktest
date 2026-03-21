@@ -35,6 +35,8 @@ The Cybersecurity Officer (Role 56) can view all incidents and add recommendatio
 | Group Cybersecurity Officer (Role 56, G1) | Read + recommend | View all incidents; can add recommendation notes; cannot create/update status |
 | Group Data Privacy Officer (Role 55, G1) | Read-only | Can view DPDP-notifiable incidents only (filtered view) |
 | All other roles | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -149,6 +151,8 @@ Triggered by `+ Log New Incident` button.
 
 On submit: `hx-post="/api/v1/it/security/incidents/"`. Table refreshes. Toast: `Incident [INC-YYYY-NNN] logged. Handler notified.`
 
+**Audit:** Incident creation is logged to the IT Audit Log. If Severity = 1 (Critical), IT Director (Role 53) is notified immediately via in-app alert + email.
+
 ---
 
 ### B. Update Incident Drawer (640px, right-side — Role 53/54 only)
@@ -230,6 +234,8 @@ Triggered by `View` button. Read-only for Role 56; Role 56 has additional `Add R
 
 On submit: Toast: `Incident [#] escalated to [target].`
 
+**Notifications:** Escalation target receives in-app notification + email immediately upon escalation submission.
+
 ---
 
 ### E. Link to Breach Register Drawer (440px — Role 54/53 only)
@@ -262,6 +268,10 @@ No dedicated chart section on this page (charts are on the Cybersecurity Dashboa
 | Validation error | Error: `Please complete all required fields.` |
 | Severity 1 auto-alert | System alert: `CRITICAL: Severity 1 incident logged. IT Director notified automatically.` |
 | Export complete | Info: `Incident register exported.` |
+
+---
+
+**Audit Trail:** All incident lifecycle actions (create, update, escalate, resolve, close) are logged to the IT Audit Log with actor user ID, timestamp, incident ID, and action details.
 
 ---
 
@@ -319,6 +329,7 @@ No dedicated chart section on this page (charts are on the Cybersecurity Dashboa
 | GET | `/api/v1/it/security/incidents/kpis/` | Fetch KPI counts |
 | GET | `/api/v1/it/security/incidents/summary/type-breakdown/` | Incident type distribution |
 | GET | `/api/v1/it/security/incidents/export/csv/` | Export CSV |
+| GET | `/api/v1/it/security/incidents/{id}/recommendations/` | JWT (G1+) | Fetch recommendations added by Cybersecurity Officer |
 
 ---
 

@@ -29,6 +29,7 @@ Regulatory context: Under DPDP Act 2023, a data breach that is not reported to t
 | Group Cybersecurity Officer | G1 | Read-only (breach incidents only) | Collaborates on breach response |
 | Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 | Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -227,5 +228,9 @@ Group Portal → IT & Technology → Data Privacy Officer Dashboard
 | Save DPO note | `click` on Save Note | POST `/api/v1/it/privacy/branches/{id}/notes/` | `#note-result` | `innerHTML` |
 
 ---
+
+**Audit Trail:** All write operations on this page are logged to the IT Audit Log with actor user ID and timestamp.
+
+**Notifications:** Critical alerts on this page trigger in-app notifications to the relevant role owners as specified in the alert banner conditions above.
 
 *Page spec version: 1.0 · Last updated: 2026-03-21*

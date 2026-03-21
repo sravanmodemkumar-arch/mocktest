@@ -25,6 +25,8 @@ The page follows a similar section structure to the WhatsApp config page (File 1
 | Group IT Director | G4 | Full read + write | Strategic oversight |
 | Group EduForge Integration Manager | G4 | Read-only + template management | Can view; can add/edit DLT templates |
 | Group IT Support Executive | G3 | Read-only (Delivery Logs only) | For support ticket diagnosis |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -90,8 +92,8 @@ No traditional KPI cards. The page header line provides essential provider statu
 **Fields:**
 - SMS Provider (dropdown: MSG91 / Textlocal / AWS SNS / Kaleyra / Other)
 - API Key (masked; show/hide toggle; required)
-- Sender ID (text, exactly 6 uppercase alpha characters; e.g., EDUFRG; required for Indian SMS)
-- DLT Principal Entity ID (text; required — the PE ID registered on TRAI DLT portal)
+- Sender ID (text, exactly 6 uppercase alpha characters; e.g., EDUFRG; required for Indian SMS; required, exactly 6 uppercase letters; validation error: "Sender ID must be exactly 6 uppercase letters")
+- DLT Principal Entity ID (text; required — the PE ID registered on TRAI DLT portal; required, numeric, typically 9 digits)
 - Route (radio: Transactional / Promotional; Transactional for OTP and fee alerts, Promotional for marketing)
 - Country Code Default (dropdown: +91 India / Other; for multi-country groups)
 
@@ -254,6 +256,15 @@ No dedicated chart section. Delivery Logs section provides operational visibilit
 | Save provider config | `click` on Save | PATCH `/api/v1/it/notifications/sms/config/` | `#sms-provider-section` | `outerHTML` |
 | Sync credit balance | `click` on Sync Now | POST `/api/v1/it/notifications/sms/credits/sync/` | `#credit-balance-section` | `innerHTML` |
 | Paginate delivery logs | `click` on page control | GET `/api/v1/it/notifications/sms/delivery-logs/?page=N` | `#sms-delivery-logs-table` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- SMS provider connection failed: IT Admin + IT Director (in-app red non-dismissible + email) immediately
+- DLT template rejected: IT Admin + Integration Manager (in-app amber + email)
+- Low credit balance (< 1000 credits): IT Admin (in-app amber + email daily until topped up)
 
 ---
 

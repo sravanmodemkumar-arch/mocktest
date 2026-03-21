@@ -26,7 +26,9 @@ The delivery log is critical for debugging: every webhook delivery attempt is lo
 | Group EduForge Integration Manager | G4 | Full read + write + test + enable/disable | Sole operator of this page |
 | Group IT Director | G4 | Read-only | Can view outbound and inbound webhook status; no configuration |
 | Group Cybersecurity Officer | G1 | Read-only (endpoint paths and verification method only) | Security audit; no secrets or delivery log content visible |
-| All other Division F roles | — | Hidden | No access |
+| Group IT Admin (Role 54, G4) | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -62,7 +64,7 @@ Group Portal → IT & Technology → Integrations → Webhook Manager
 | Active Outbound | Outbound with status = Active | Green | Filter Active on Outbound tab |
 | Inbound Endpoints | Total configured inbound endpoint definitions | Blue | Switch to Inbound tab |
 | Failed Deliveries (24h) | Count of failed delivery attempts across all outbound webhooks in last 24h | Red if > 0, Green if 0 | Opens delivery log filtered by failures |
-| Pending Retries | Deliveries currently in retry queue | Amber if > 0 | Opens retry queue view |
+| Pending Retries | Deliveries currently in retry queue | Amber if > 0 | Opens retry queue view; Drill-down: Filter delivery log to Status = Retry Pending |
 
 ---
 
@@ -197,6 +199,8 @@ No standalone page-level charts. Delivery success rate trends are visible within
 | Manual retry triggered | "Retry triggered for [N] failed deliveries." | Info | 4s |
 | Retry all triggered | "Retrying all failed deliveries for '[Name]'." | Info | 4s |
 | Test delivery sent | "Test payload sent to '[Target URL]'. Check delivery log for result." | Info | 5s |
+| Manual retry succeeded | Success: `Webhook delivery retry succeeded for event [ID].` | Success | 4s |
+| Manual retry failed | Error: `Webhook retry failed. Check endpoint availability and try again.` | Error | 5s |
 
 ---
 
@@ -240,6 +244,8 @@ No standalone page-level charts. Delivery success rate trends are visible within
 | Manual Retry | Visible | Hidden | Hidden |
 | Test Delivery | Visible | Hidden | Hidden |
 
+> Roles 54 (IT Admin), 55 (DPO), and 57 (IT Support Executive) have no access to this page (returns 403).
+
 ---
 
 ## 12. API Endpoints
@@ -281,6 +287,16 @@ No standalone page-level charts. Delivery success rate trends are visible within
 | Submit create inbound | `click` on Create | POST `/api/v1/it/webhooks/inbound/` | `#inbound-table` | `innerHTML` |
 | Send test payload | `click` on Test | POST `/api/v1/it/webhooks/outbound/{id}/test/` | `#test-result` | `innerHTML` |
 | Paginate outbound | `click` on page control | GET `/api/v1/it/webhooks/outbound/?page=N` | `#outbound-table` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- Webhook delivery failure rate > 20%: Integration Manager (in-app amber + email) immediately
+- Retry queue > 100 items: Integration Manager + IT Admin (in-app amber + email)
+- Inbound webhook authentication failure: Integration Manager (in-app amber + email)
+- SSL certificate for webhook endpoint < 14 days: Integration Manager (in-app amber + email)
 
 ---
 

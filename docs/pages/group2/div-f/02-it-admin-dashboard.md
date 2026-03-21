@@ -271,4 +271,8 @@ Triggered by `+ Create Portal` button in header. Width: 560px.
 
 ---
 
+**Audit Trail:** All write operations on this page are logged to the IT Audit Log with actor user ID and timestamp.
+
+**Notifications:** Critical alerts on this page trigger in-app notifications to the relevant role owners as specified in the alert banner conditions above.
+
 *Page spec version: 1.0 · Last updated: 2026-03-21*

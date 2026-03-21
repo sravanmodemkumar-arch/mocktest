@@ -27,6 +27,8 @@ The non-dismissible red alert banner for provider connection failure is a critic
 | Group IT Director | G4 | Full read + write | Strategic oversight; can also configure |
 | Group EduForge Integration Manager | G4 | Read-only + template management | Can view all; can create/edit/test templates |
 | Group IT Support Executive | G3 | Read-only (Delivery Logs section only) | For diagnosing delivery failures in support tickets |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -92,7 +94,7 @@ No traditional KPI cards. The page header status line (Connected / Disconnected)
 
 **Fields:**
 - WhatsApp Business API Provider (dropdown: 360dialog / Gupshup / Meta Direct / Other)
-- API Key (masked input; show/hide toggle; required)
+- API Key (masked input; show/hide toggle; required, min 32 characters, alphanumeric + special characters)
 - Phone Number ID (text; required — the WABA phone number ID from Meta Business Manager)
 - WhatsApp Business Account ID / WABA ID (text; required)
 - Webhook URL (read-only, auto-generated: `https://api.eduforge.in/webhooks/whatsapp/`)
@@ -206,6 +208,7 @@ No dedicated chart section. Delivery Logs table provides operational visibility.
 | Template imported | "Template '[Name]' imported successfully. Status: [Approved/Pending]." | Success | 4s |
 | Template validation failed | "Template '[Name]' not found in Meta Business Manager or not yet approved." | Error | 6s |
 | Delivery settings saved | "Delivery settings updated." | Success | 3s |
+| Test connection failed | Error: `WhatsApp provider test failed: [error code]. Check API credentials.` | Error | 6s |
 
 ---
 
@@ -229,6 +232,8 @@ No dedicated chart section. Delivery Logs table provides operational visibility.
 | Template view drawer open | 480px drawer skeleton |
 | Test template send | Modal send button spinner; inline result appears within modal |
 | Section save (any) | Section-level Save button spinner only |
+| Import template drawer open | Drawer skeleton while form loads |
+| Template validation (Validate & Fetch button) | Button spinner: "Fetching template…" |
 
 ---
 
@@ -281,6 +286,15 @@ No dedicated chart section. Delivery Logs table provides operational visibility.
 | Save provider config | `click` on Save | PATCH `/api/v1/it/notifications/whatsapp/config/` | `#provider-config-section` | `outerHTML` |
 | Save delivery settings | `click` on Save | PATCH `/api/v1/it/notifications/whatsapp/delivery-settings/` | `#delivery-settings-section` | `outerHTML` |
 | Paginate delivery logs | `click` on page control | GET `/api/v1/it/notifications/whatsapp/delivery-logs/?page=N` | `#delivery-logs-table` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- Provider API connection failed: IT Admin + IT Director (in-app red non-dismissible + email) immediately
+- OTP template inactive/not approved: IT Admin + IT Director (in-app red non-dismissible + email) immediately
+- Template rejected by Meta: IT Admin + Integration Manager (in-app amber + email)
 
 ---
 

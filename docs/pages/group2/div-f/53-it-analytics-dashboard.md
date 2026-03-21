@@ -32,6 +32,9 @@ All data sourced from PostgreSQL. All charts have export (PNG) functionality. Pa
 | Group EduForge Integration Manager (Role 58, G4) | Limited view | View integration-related charts only (Charts 1, 4) |
 | Group IT Admin (Role 54, G4) | Read access | View all; no export of raw data |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -93,6 +96,8 @@ However, below the charts there is a **Branch Performance Summary Table** — a 
 - No actions column (read-only analytics)
 - Pagination: Server-side, 15 rows per page
 - Sorting: By any column; default: Adoption Rate ascending (lowest first)
+
+**Note:** No action column — this table is read-only. Branch drill-down detail is available by clicking the branch name row.
 
 ---
 
@@ -183,6 +188,10 @@ Six charts in a 2-column responsive grid (1-column on mobile). Each chart card h
 | PDF ready | Success: `Analytics report PDF downloaded.` |
 | Chart data CSV export | Info: `Exporting chart data.` |
 | No data for filter combination | Warning: `No data available for the selected branch and date range. Try a wider selection.` |
+| Filter application failed | Error: `Failed to apply filters. Please try again.` | Error | 5s |
+| Chart data load failed | Error: `Failed to load chart data. Try refreshing the page.` | Error | 5s |
+| PDF export failed | Error: `Failed to generate PDF. Please try again.` | Error | 5s |
+| CSV export failed | Error: `Failed to export data. Please try again.` | Error | 5s |
 
 ---
 
@@ -245,6 +254,7 @@ Six charts in a 2-column responsive grid (1-column on mobile). Each chart card h
 | GET | `/api/v1/it/analytics/charts/storage-trend/` | R2 storage trend + projection |
 | GET | `/api/v1/it/analytics/charts/{chart_id}/export/csv/` | Export chart data as CSV |
 | GET | `/api/v1/it/analytics/export/pdf/` | Export all charts as PDF |
+| GET | `/api/v1/it/analytics/reload/` | JWT (G4) | Reload all dashboard content with applied filters |
 
 **Common Query Parameters (all chart endpoints):**
 - `date_range` (3m/6m/12m) or `date_from` + `date_to`

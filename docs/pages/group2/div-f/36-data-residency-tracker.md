@@ -25,6 +25,9 @@ The Data Privacy Officer uses this tracker to identify data assets that are non-
 | Group IT Admin | G4 | Full read + update residency status | Maintains technical accuracy of records |
 | Group IT Director | G4 | Read-only | Governance oversight |
 | All other Division F roles | — | Hidden | No access |
+| Group Cybersecurity Officer (Role 56, G1) | Read-only | Security posture assessment of data residency |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -127,6 +130,8 @@ Group Portal → IT & Technology → Data Privacy → Data Residency Tracker
   - Review Notes (textarea — what was assessed and by whom)
 - On save: last_reviewed timestamp updated; DPO notified if status changed to Non-Compliant
 
+**Audit Trail:** All residency status updates are automatically logged to the IT Audit Log, including previous status, new status, justification changes, and timestamp.
+
 ### 6.3 Drawer: `asset-create` — Add Data Asset (IT Admin only)
 - **Trigger:** `+ Add Data Asset`
 - **Width:** 560px
@@ -166,6 +171,8 @@ Group Portal → IT & Technology → Data Privacy → Data Residency Tracker
 | Status updated to Non-Compliant | "Data asset '[Name]' marked Non-Compliant. DPO notified. Justification logged." | Warning | 5s |
 | Status updated to Review Required | "Data asset '[Name]' flagged for review." | Info | 3s |
 | Export triggered | "Data residency register export prepared." | Info | 3s |
+| Data asset creation failed | Error: `Failed to add data asset. Verify storage location and residency status.` | Error | 5s |
+| Data asset update failed | Error: `Failed to update data asset. Ensure all required fields are valid.` | Error | 5s |
 
 ---
 
@@ -240,6 +247,7 @@ Group Portal → IT & Technology → Data Privacy → Data Residency Tracker
 | Submit create | `click` on Add Asset | POST `/api/v1/it/privacy/residency/` | `#residency-table` | `innerHTML` |
 | Load compliance chart | `load` | GET `/api/v1/it/privacy/residency/charts/compliance-distribution/` | `#compliance-chart` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/privacy/residency/?page=N` | `#residency-table` | `innerHTML` |
+| Export residency register | `click` on Export | GET `/api/v1/it/privacy/residency/export/` | `#export-result` | `innerHTML` |
 
 ---
 

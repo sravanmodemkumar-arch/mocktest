@@ -28,6 +28,8 @@ The IT Director and IT Admin can create and update incidents (they are on the op
 | Group IT Director | G4 | Full read + create + update + file notification | Incident command; notified for Severity 1 |
 | Group Cybersecurity Officer | G1 | Read-only | Incident awareness for security posture |
 | All other Division F roles | — | Hidden | No access |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -126,6 +128,8 @@ Group Portal → IT & Technology → Data Privacy → Breach Incident Register
     - Subject Responses Received (count and brief notes on any responses/complaints)
     - **Actions (IT Admin / IT Director only):** "Mark Notifications Sent" button (records date + method); "Upload Notification Evidence" button (upload notification dispatch report to Cloudflare R2)
 
+**Audit Trail:** All incident creations, status updates, and 72h notification filings are automatically logged to the IT Audit Log with actor user ID, timestamp, and action details.
+
 ### 6.2 Drawer: `breach-create` — Report New Incident (IT Admin / IT Director)
 - **Trigger:** `+ Report New Incident` button
 - **Width:** 560px
@@ -192,6 +196,7 @@ No standalone charts. Trend data shown on the Compliance Dashboard (page 31).
 | Resolved | "Incident BRK-[N] resolved. Resolution summary logged." | Success | 4s |
 | 72h notification filed | "72h Board notification filed for BRK-[N]. Filing reference recorded." | Success | 5s |
 | Export triggered | "Breach incident register export prepared." | Info | 3s |
+| 72h notification filing failed | Error: `Failed to file 72h notification for BRK-[N]. Verify document and Board details.` | Error | 6s |
 
 ---
 
@@ -264,6 +269,7 @@ No standalone charts. Trend data shown on the Compliance Dashboard (page 31).
 | Submit update | `click` on Save Update | PATCH `/api/v1/it/privacy/breaches/{id}/` | `#breach-drawer` | `innerHTML` |
 | File notification | `click` on Confirm File | POST `/api/v1/it/privacy/breaches/{id}/file-notification/` | `#breach-drawer` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/privacy/breaches/?page=N` | `#breach-table` | `innerHTML` |
+| Export incident register | `click` on Export | GET `/api/v1/it/privacy/breaches/export/` | `#export-result` | `innerHTML` |
 
 ---
 

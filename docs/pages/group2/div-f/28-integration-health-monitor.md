@@ -26,9 +26,9 @@ The page does not stream data via WebSockets. Auto-refresh is implemented via HT
 | Group EduForge Integration Manager | G4 | Full read + trigger health checks | Can trigger "Test Now" manually |
 | Group IT Director | G4 | Read-only | Can view all health data; cannot trigger tests |
 | Group IT Admin | G4 | Read-only | Informational access for operational awareness |
-| Group Cybersecurity Officer | G1 | Read-only (status and uptime only) | Error log content not visible |
-| Group Data Privacy Officer | G1 | Hidden | No access |
-| Group IT Support Executive | G3 | Hidden | No access |
+| Group Cybersecurity Officer (Role 56, G1) | G1 | Read-only (status and uptime only) | Error log content not visible |
+| Group Data Privacy Officer (Role 55, G1) | G1 | Hidden | No access |
+| Group IT Support Executive (Role 57, G3) | G3 | Hidden | No access |
 
 ---
 
@@ -70,7 +70,7 @@ One status card per integration type, showing the health of the most critical in
 | Auth API (Google/SSO) | Identity | Status + Uptime (7d) % | Green/Amber/Red |
 | Government APIs | Gov/Compliance | Status + Uptime (7d) % | Green/Amber/Red |
 
-Each card is a coloured circle (green = operational, amber = degraded, red = down) with the integration name, uptime %, and current latency in ms. Cards are ordered by criticality (Payment Gateway first as its failure has highest operational impact).
+Each card is a coloured circle (green = operational, amber = degraded, red = down) with the integration name, uptime %, and current latency in ms. Cards are ordered by criticality (Payment Gateway first as its failure has highest operational impact). Clicking a status card filters the main table to show only that integration type.
 
 ---
 
@@ -243,6 +243,16 @@ A dedicated section below the charts showing the last 20 incidents across ALL in
 | Load latency history tab | `click` on tab | GET `/api/v1/it/health/{id}/latency-history/` | `#drawer-tab-content` | `innerHTML` |
 | Load charts | `load` | GET `/api/v1/it/health/charts/latency-trend/` | `#latency-chart` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/health/?page=N` | `#health-table` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- Integration status changes to DOWN: Integration Manager + IT Admin (in-app red non-dismissible + email) immediately
+- Latency > 500ms for any integration: Integration Manager (in-app amber + email)
+- Incident severity escalated to Critical: Integration Manager + IT Director (in-app red non-dismissible + email + WhatsApp)
+- Integration auto-recovered: Integration Manager (in-app green info + email)
 
 ---
 

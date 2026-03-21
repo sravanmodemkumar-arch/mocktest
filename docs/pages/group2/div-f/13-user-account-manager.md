@@ -17,6 +17,8 @@ A key governance feature is the Account History audit trail: every action taken 
 
 Deactivation is handled with deliberate friction: the admin must specify a reason, an effective date, and a "transfer outstanding tasks to" designee, ensuring no operational orphan tasks are left behind when an account is deactivated.
 
+**Account Deletion Policy:** Account deletion is not supported. Accounts are deactivated (marked inactive) to preserve audit trail history. Once deactivated, an account cannot be reactivated — a new account must be created if the user returns.
+
 ---
 
 ## 2. Role Access
@@ -26,6 +28,10 @@ Deactivation is handled with deliberate friction: the admin must specify a reaso
 | Group IT Admin | G4 | Full read + write (create, edit, deactivate all accounts) | Primary operator of this page |
 | Group IT Director | G4 | Full read + write | Can approve escalated role assignments |
 | Group IT Support Executive | G3 | Read-only | For support reference; cannot create or modify |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -144,7 +150,7 @@ Group Portal → IT & Technology → User Management → Account Manager
   - Access Level Change (old G-level → new G-level, approved by, timestamp)
   - Status Change (Active → Suspended, etc., reason, changed by, timestamp)
   - OTP Reset (triggered by, timestamp)
-  - Login Events summary (count of successful/failed logins in last 30 days; link to full session audit)
+  - Login Events summary: count of successful/failed logins in last 30 days; link navigates to Page 17 (Session & Login Audit) filtered by this user
 - Each event row is non-editable and non-deletable
 
 ---
@@ -173,6 +179,9 @@ Group Portal → IT & Technology → User Management → Account Manager
 | Access level change submitted for approval | "Access level change for [Name] submitted for IT Director approval." | Info | 5s |
 | Duplicate mobile number | "An account with this mobile number already exists. Each mobile number must be unique." | Error | 6s |
 | Username conflict | "Username '[username]' is already taken. A suggested alternative: '[suggestion]'." | Error | 5s |
+| Deactivation failed | Error: `Could not deactivate [Name]. Please try again.` | Error | 5s |
+| Designee not found | Error: `The selected designee could not be found. Select a different user.` | Error | 5s |
+| Escalation rejected | Error: `Access level escalation for [Name] was rejected. Review rejection notes.` | Error | 5s |
 
 ---
 

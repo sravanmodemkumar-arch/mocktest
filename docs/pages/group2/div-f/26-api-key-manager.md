@@ -24,7 +24,9 @@ Security is paramount here. Raw API key values are shown exactly once — immedi
 | Group EduForge Integration Manager | G4 | Full read + write + rotate + revoke | Sole operator of this page |
 | Group IT Director | G4 | Read-only (no key values visible) | Governance oversight; can see key names and statuses |
 | Group Cybersecurity Officer | G1 | Read-only (status and expiry only) | Security audit visibility; no key hints visible |
-| All other Division F roles | — | Hidden | No access |
+| Group IT Admin (Role 54, G4) | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -59,7 +61,7 @@ Group Portal → IT & Technology → Integrations → API Key Manager
 | Total API Keys | Count of all non-deleted key records | Blue | No filter |
 | Active | Keys with status = Active and not expired | Green | Filter by Active |
 | Expiring <30 Days | Keys where expiry_date is within next 30 days | Amber if > 0 | Filter by expiring soon |
-| Revoked (Last 30 Days) | Keys revoked in the last 30 calendar days | Red if > 0, Grey otherwise | Filter by Revoked + date range |
+| Revoked (Last 30 Days) | Keys revoked in the last 30 calendar days | Red if > 0, Grey otherwise | Filter by Status = Revoked AND Created Date >= 30 days ago |
 
 ---
 
@@ -112,7 +114,7 @@ Group Portal → IT & Technology → Integrations → API Key Manager
     - Admission Data Read (`/api/v1/admissions/` GET only)
     - Custom Endpoints (text input — comma-separated endpoint patterns)
   - Expiry Date (required, date picker — minimum 1 day, maximum 2 years; default 1 year from today)
-  - IP Allowlist (optional, textarea — comma-separated IPs or CIDR ranges; leave blank for no IP restriction)
+  - IP Allowlist (optional, comma-separated IPv4 addresses or CIDR ranges; each entry validated; error shown for invalid format)
 - **On Submit:**
   - Full page overlay with key reveal UI:
     - Header: "API Key Created — Store This Securely"
@@ -212,6 +214,8 @@ No standalone charts on this page. Usage metrics are shown within the View drawe
 | IP Allowlist | Visible | Visible | Hidden |
 | Export | Visible | Hidden | Hidden |
 
+> Roles 54 (IT Admin), 55 (DPO), and 57 (IT Support Executive) have no access to this page (returns 403).
+
 ---
 
 ## 12. API Endpoints
@@ -245,6 +249,15 @@ No standalone charts on this page. Usage metrics are shown within the View drawe
 | Confirm revoke | `click` on Confirm Revoke | POST `/api/v1/it/api-keys/{id}/revoke/` | `#api-keys-table` | `innerHTML` |
 | Dismiss reveal overlay | `click` on Dismiss (after checkbox) | — | `#key-reveal-overlay` | Remove element |
 | Paginate table | `click` on page control | GET `/api/v1/it/api-keys/?page=N` | `#api-keys-table` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- API key expiring < 7 days: Integration Manager (in-app amber + email) at 7 days, 1 day, and expiry
+- Revoked key still generating requests: Integration Manager + IT Admin (in-app amber + email) immediately
+- API key used from unallowlisted IP: Integration Manager + IT Director (in-app amber + email) immediately
 
 ---
 

@@ -31,6 +31,10 @@ The report replaces the need for the IT Director to manually assemble metrics fr
 | Group IT Director (Role 53, G4) | Full access | Build, preview, publish, re-send reports |
 | Group IT Admin (Role 54, G4) | View history only | Can view past published reports; cannot build or publish |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -186,6 +190,8 @@ Each section pulls data from PostgreSQL for the selected report month.
 
 ## 6. Drawers
 
+**Note:** Published reports cannot be edited. To create a new version, use "+ Build New Report". Draft configurations auto-expire after 30 days of inactivity.
+
 ### A. View Past Report Drawer (720px, right-side)
 
 Triggered by `View` in history table.
@@ -239,6 +245,13 @@ These charts render as live HTML in the preview pane and are converted to static
 | PDF ready | Success: `PDF ready. Download starting.` |
 | Validation — no sections selected | Error: `Please select at least one section before generating the report.` |
 | Section data unavailable | Warning: `No data available for [Section Name] in the selected month. Section will show "No data available".` |
+| Preview generation failed | Error: `Failed to generate report preview. Please try again.` | Error | 5s |
+| Report publish failed | Error: `Failed to publish report. Check email recipients and try again.` | Error | 5s |
+| Report resend failed | Error: `Failed to re-send report. Please try again.` | Error | 5s |
+
+---
+
+**Audit Trail:** Report publish and resend actions are logged to the IT Audit Log with actor, timestamp, recipients, and sections included.
 
 ---
 
@@ -362,6 +375,8 @@ These charts render as live HTML in the preview pane and are converted to static
   View
 </button>
 ```
+
+| Report month selector change | `change` on month select | POST `/group/it/reports/mis/preview/` | `#report-preview` | `innerHTML` |
 
 ---
 

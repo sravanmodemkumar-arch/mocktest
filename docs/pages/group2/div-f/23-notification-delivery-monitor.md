@@ -24,9 +24,9 @@ The monitor covers the last 90 days of notifications by default. Older records a
 | Group IT Admin | G4 | Full — view all delivery logs, export, investigate failures | Primary owner |
 | Group IT Director | G4 | Read-only view | Oversight and auditing |
 | Group EduForge Integration Manager | G4 | Read — integration-related notifications only | Useful for debugging webhook vs. notification issues |
-| Group Cybersecurity Officer | G1 | No access | Not applicable |
-| Group Data Privacy Officer | G1 | No access | PII in delivery logs is IT Admin scope only |
-| Group IT Support Executive | G3 | Read — for ticket investigation only | Can view delivery status for a specific user when resolving a support ticket |
+| Group Cybersecurity Officer (Role 56, G1) | G1 | No access | Not applicable |
+| Group Data Privacy Officer (Role 55, G1) | G1 | No access | PII in delivery logs is IT Admin scope only |
+| Group IT Support Executive (Role 57, G3) | G3 | Read — for ticket investigation only | Can view delivery status for a specific user when resolving a support ticket |
 
 ---
 
@@ -156,6 +156,7 @@ Active filter chips: Yes — dismissible. "Clear All" link. Count badge on filte
 | Flag saved | "Notification flagged for investigation." | Info | 4s |
 | Table refreshed | "Delivery log refreshed." | Info | 3s |
 | Export error | "Export failed. Please try again." | Error | 6s |
+| Export failed | Error: `Failed to export delivery data. Please try again.` | Error | 5s |
 
 ---
 
@@ -228,6 +229,15 @@ Active filter chips: Yes — dismissible. "Clear All" link. Count badge on filte
 | Manual refresh button | `click` | GET `/api/v1/it/notifications/delivery/` | `#delivery-table` | `innerHTML` |
 | Load success-rate chart | `load` | GET `/api/v1/it/notifications/delivery/charts/success-rate/` | `#chart-success-rate` | `innerHTML` |
 | Load volume chart | `load` | GET `/api/v1/it/notifications/delivery/charts/volume/` | `#chart-volume` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- OTP delivery failure rate > 10%: IT Admin + IT Director (in-app red non-dismissible + email) immediately
+- Channel delivery failure rate > 20%: IT Admin (in-app amber + email)
+- Notification volume spike > 200% normal: IT Admin (in-app amber)
 
 ---
 

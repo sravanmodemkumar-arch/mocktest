@@ -23,7 +23,10 @@ The wizard uses HTMX polling in Step 4 (DNS verification) to check propagation a
 |---|---|---|---|
 | Group EduForge Integration Manager | G4 | Full access to run wizard and view history | Sole operator |
 | Group IT Director | G4 | Read-only (history table only) | Can view past setup sessions; cannot run wizard |
-| All other Division F roles | — | Hidden | No access |
+| Group IT Admin (Role 54, G4) | Full access | Configure and verify custom domains |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -89,7 +92,7 @@ Step 1: Select Branch → Step 2: Enter Domain → Step 3: DNS Configuration →
   - Domain resolves in DNS (NXDOMAIN check — warns if domain doesn't exist in DNS at all, meaning the registrar hasn't created it yet)
 - **Error states:**
   - Invalid format → inline error "Please enter a valid fully-qualified domain name"
-  - Already in use → inline error "This domain is already configured for [Branch Name]"
+  - Already in use → inline error "This domain is already configured for [Other Branch Name]. Each domain can only be assigned to one branch."
   - Domain not found in DNS → amber warning "This domain does not currently have any DNS records. Please create the domain at your registrar first, then continue."
 - **Next button:** Active once domain passes validation
 
@@ -256,14 +259,16 @@ No charts on this page.
 
 ## 12. Role-Based UI Visibility
 
-| Element | Integration Manager (G4) | IT Director (G4) |
-|---|---|---|
-| Full wizard (all 5 steps) | Visible + interactive | Hidden |
-| History table | Visible + Resume action | Visible (view only) |
-| View setup session drawer | Visible | Visible (read-only) |
-| Go Live button | Visible | Hidden |
-| DNS records copy buttons | Visible | Visible |
-| Alert banners | Visible | Visible |
+| Element | Integration Manager (G4) | IT Director (G4) | IT Admin (G4) |
+|---|---|---|---|
+| Full wizard (all 5 steps) | Visible + interactive | Hidden | Visible + interactive |
+| History table | Visible + Resume action | Visible (view only) | Visible + Resume action |
+| View setup session drawer | Visible | Visible (read-only) | Visible |
+| Go Live button | Visible | Hidden | Visible |
+| DNS records copy buttons | Visible | Visible | Visible |
+| Alert banners | Visible | Visible | Visible |
+
+> Roles 55 (DPO), 56 (Cybersecurity Officer), and 57 (IT Support Executive) have no access to this page (returns 403).
 
 ---
 
@@ -297,6 +302,16 @@ No charts on this page.
 | Load history table | `load` | GET `/api/v1/it/domains/setup/history/` | `#setup-history-table` | `innerHTML` |
 | Paginate history | `click` on page control | GET `.../history/?page=N` | `#setup-history-table` | `innerHTML` |
 | Open session view drawer | `click` on View | GET `.../session/{id}/` | `#domain-drawer` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- Domain setup session stalled > 24h: IT Admin + IT Director (in-app amber + email)
+- SSL certificate expiry < 30 days: IT Admin + Branch Primary Contact (email daily)
+- Domain go-live completed: IT Admin + Branch Principal (in-app success + email)
+- DNS verification failed after 48h: IT Admin (in-app amber + email)
 
 ---
 

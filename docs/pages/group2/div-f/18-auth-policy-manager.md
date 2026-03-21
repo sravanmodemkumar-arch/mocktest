@@ -15,6 +15,8 @@ The page covers five security domains. OTP Settings govern the nature of the one
 
 All settings are persisted in a `group_auth_policy` table in PostgreSQL (single row per group, versioned). Changes are written only after the form section is saved explicitly — there is no auto-save. Sensitive settings (session timeout, IP allowlist changes) require IT Director confirmation via an in-page approval prompt. Every change is logged to the IT Audit Log with full before/after diff.
 
+Audit log entry includes: timestamp, section changed (OTP/Session/Lockout/IP Allowlist/Device Trust), operator name, before value, after value, IT Director approval status if applicable.
+
 ---
 
 ## 2. Role Access
@@ -25,6 +27,8 @@ All settings are persisted in a `group_auth_policy` table in PostgreSQL (single 
 | Group IT Director | G4 | Full read + confirm sensitive changes | Also has full edit rights |
 | Group Cybersecurity Officer | G1 | Read-only (all sections) | Security posture review |
 | Group Data Privacy Officer | G1 | Read-only (OTP and IP Allowlist sections only) | DPDP compliance review |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -119,6 +123,8 @@ There is no data table on this page. The layout is a single-column stack of form
 - Validation: must be valid IPv4/CIDR
 - Save button within mini-drawer
 
+Each IP Allowlist entry records: IP/CIDR, Branch, Status (Enabled/Disabled), Last Modified timestamp, Modified By.
+
 **Warning shown when Allowlist enabled:** "Only users logging in from the listed IP addresses will be able to access [Branch] portal. Ensure you include all valid school IP addresses before enabling."
 
 **This section requires IT Director confirmation before any IP Allowlist is enabled or disabled (not just modified).**
@@ -161,6 +167,8 @@ No charts on this page. The settings form is the entirety of the interface.
 | Device trust settings saved | "Device trust settings updated." | Success | 3s |
 | All trusted devices revoked | "All device trust tokens have been revoked group-wide. Users must re-authenticate on all devices." | Warning | 5s |
 | Save failed (validation) | "Could not save: [specific validation error message]." | Error | 5s |
+| Device token revoke failed | Error: `Could not revoke device tokens. Please try again.` | Error | 5s |
+| Policy save failed (validation) | Error: `Failed to save policy. Please review required fields and try again.` | Error | 5s |
 
 ---
 
@@ -192,6 +200,7 @@ Not applicable — this is a settings page that always has values (system defaul
 | IT Director approval prompt | Sees "Notify IT Director" | Sees "Approve" button | Hidden | Hidden |
 | IP Allowlist Edit IPs action | Visible | Visible | Hidden | Hidden |
 | Revoke All Trusted Devices | Visible | Visible | Hidden | Hidden |
+| Revoke All Trusted Devices button | Visible | Visible | Hidden | Hidden |
 | View Change History | Visible | Visible | Visible | Hidden |
 
 ---

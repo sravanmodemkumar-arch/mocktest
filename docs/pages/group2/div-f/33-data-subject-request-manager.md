@@ -31,6 +31,9 @@ All DSRs must be logged here from the moment of receipt. The IT Admin assigns ea
 | Group IT Admin | G4 | Full access — create, assign, process, resolve, reject | Operational management |
 | Group IT Director | G4 | Read-only | Oversight for escalated or sensitive DSRs |
 | All other Division F roles | — | Hidden | No access |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -185,6 +188,12 @@ No standalone charts on this page. Trend data is visible on the Compliance Dashb
 | DSR rejected | "DSR #[N] rejected. Reason logged. Data Privacy Officer notified." | Warning | 5s |
 | Overdue alert | "DSR #[N] is now overdue. Immediate action required." | Error | 8s |
 | Export triggered | "DSR register export is being prepared." | Info | 3s |
+| DSR assignment failed | Error: `Failed to assign DSR #[N]. Verify handler role permissions.` | Error | 5s |
+| DSR resolution failed | Error: `Failed to resolve DSR #[N]. Ensure all required fields are completed.` | Error | 5s |
+
+---
+
+**Audit Trail:** All DSR state transitions (create, assign, process, complete, reject) are logged to the IT Audit Log with actor user ID, timestamp, DSR ID, and previous/new status.
 
 ---
 

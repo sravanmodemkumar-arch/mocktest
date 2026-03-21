@@ -26,7 +26,7 @@ Health status is not real-time streamed — it is pulled on page load and refres
 | Group EduForge Integration Manager | G4 | Full read + write + test + disable | Primary owner; can create, edit, test, disable integrations |
 | Group IT Director | G4 | Full read + test + disable | Cannot create or edit configuration details; governance oversight |
 | Group IT Admin | G4 | Read-only | Can view integration list and status; no configuration access |
-| Group Cybersecurity Officer | G1 | Read-only (status and type only) | No credentials or config visible |
+| Group Cybersecurity Officer (Role 56, G1) | G1 | Read-only (status and type only) | No credentials or config visible |
 | Group Data Privacy Officer | G1 | Hidden | No access to this page |
 | Group IT Support Executive | G3 | Hidden | No access to this page |
 
@@ -64,7 +64,7 @@ Group Portal → IT & Technology → Integrations → Integration Registry
 | Active | Integrations with status = Active and last health check passed | Green | Filter by Active status |
 | Degraded | Integrations with elevated latency or error rate above warning threshold | Amber | Filter by Degraded |
 | Failed | Integrations where last health check returned failure or error | Red if > 0, Green if 0 | Filter by Failed |
-| Untested (>7 Days) | Integrations where last health check timestamp > 7 days ago | Amber if > 0 | Filter by untested |
+| Untested (>7 Days) | Integrations where last health check timestamp > 7 days ago | Amber if > 0 | Filter by untested; Drill-down: Filter table by integrations where last health check > 7 days ago |
 
 ---
 
@@ -181,6 +181,7 @@ Group Portal → IT & Technology → Integrations → Integration Registry
 | Integration updated | "Integration '[Name]' configuration updated." | Success | 3s |
 | Test passed | "Health check passed for '[Name]'. Latency: [N]ms." | Success | 4s |
 | Test failed | "Health check FAILED for '[Name]'. Error: [message]. Check error log." | Error | 6s |
+| Integration test passed (elevated latency) | Warning: `Health check passed but latency is elevated ([N]ms). Monitor closely.` | Warning | 4s |
 | Integration disabled | "Integration '[Name]' has been disabled. IT Director notified." | Warning | 5s |
 | Run all checks triggered | "Running health checks for all [N] integrations. Results will update in a few minutes." | Info | 5s |
 | Export triggered | "Integration registry export is being prepared." | Info | 3s |
@@ -255,10 +256,20 @@ Group Portal → IT & Technology → Integrations → Integration Registry
 | Open view drawer | `click` on integration name | GET `/api/v1/it/integrations/{id}/` | `#integration-drawer` | `innerHTML` |
 | Load Health History tab | `click` on tab | GET `/api/v1/it/integrations/{id}/health-history/` | `#tab-content` | `innerHTML` |
 | Load Error Log tab | `click` on tab | GET `/api/v1/it/integrations/{id}/error-log/` | `#tab-content` | `innerHTML` |
+| Load usage metrics tab | `click` on Usage Metrics tab | GET `/api/v1/it/integrations/{id}/usage/` | `#usage-tab-content` | `innerHTML` |
 | Run Test Now | `click` on Test button in drawer | POST `/api/v1/it/integrations/{id}/test/` | `#test-result` | `innerHTML` |
 | Submit Create form | `click` on Submit | POST `/api/v1/it/integrations/` | `#integrations-table` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/integrations/?page=N` | `#integrations-table` | `innerHTML` |
 | Confirm Disable | `click` on Confirm Disable | POST `/api/v1/it/integrations/{id}/disable/` | `#integrations-table` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- Integration status changes to Failed: IT Admin + Integration Manager (in-app red + email) immediately
+- Integration untested > 7 days: Integration Manager (in-app amber + email)
+- Health check timeout: Integration Manager (in-app amber + email)
 
 ---
 

@@ -43,6 +43,7 @@ The IT Audit Log is used by:
 | Group Cybersecurity Officer (Role 56, G1) | Read-only | View all entries; cannot export |
 | Super Admin (G5) | Read-only | Cannot delete or modify entries |
 | All other roles | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 | No one | Mutation | The audit log table is write-protected at the database level — INSERT only, no UPDATE/DELETE |
 
 ---
@@ -206,6 +207,7 @@ Two charts below the main table in a 2-column grid.
 | No high-risk actions today | KPI card: `0` (green) |
 | Drawer — no before/after data | `No before/after values recorded for this event type.` |
 | Drawer — no related entities | Related Entities section: `No linked records.` |
+| Filter returns no entries | `No audit entries match the selected filters. Try adjusting the date range or category.` | — |
 
 ---
 
@@ -283,6 +285,7 @@ Two charts below the main table in a 2-column grid.
 <!-- Date range filter apply -->
 <button hx-get="/group/it/audit/table/"
         hx-target="#audit-table"
+        hx-swap="outerHTML"
         hx-include="#audit-filter-form">
   Apply Filters
 </button>

@@ -29,6 +29,9 @@ This page enforces the principle that staff accessing student data must do so fr
 | Group IT Director (Role 53, G4) | Read + export | Can view but cannot edit policy |
 | Group Cybersecurity Officer (Role 56, G1) | Read-only | Can view policy and table; cannot modify |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -218,6 +221,23 @@ The `+ Register Device` button (IT Admin only, top-right of Device Register tabl
 - **Footer:** Register Device / Cancel
 - **On submit:** Device record created with status based on Compliance Status field; audit log entry written; toast: "Device registered for [User Name]."
 
+### F. Edit Device Drawer (440px, right-side — Role 54 only)
+
+Triggered by `Edit` button on a registered device row (Role 54 only).
+
+**Fields:**
+- Device Name / Label (text, editable)
+- OS Version (text, editable)
+- Branch (dropdown, editable)
+- Compliance Status (radio: Compliant / Non-Compliant)
+- Notes (textarea, optional)
+
+**Footer:** `Update Device` / `Cancel`
+
+**On submit:** `hx-put="/api/v1/it/security/devices/{device_id}/"` — device record updated. Toast: `Device [ID] updated.`
+
+**Audit:** Device record edits are logged to the IT Audit Log.
+
 ---
 
 ## 7. Charts
@@ -246,13 +266,24 @@ Two charts rendered below the main table in a 2-column grid.
 
 | Action | Toast |
 |--------|-------|
-| Policy saved successfully | Success: `Device access policy updated and saved.` |
+| Policy saved successfully | Success: `Device access policy updated and saved. Change logged to IT Audit Log.` |
 | Policy save failed (validation) | Error: `Please complete all required policy fields.` |
 | Device registered (manual) | Success: `Device registered for [User Name]. Compliance status: [Compliant/Non-Compliant].` |
 | Device flagged | Success: `Device [ID] flagged. User notified via [channel].` |
 | Device deregistered | Success: `Device [ID] deregistered. Portal access blocked.` |
 | CSV export initiated | Info: `Exporting device register — please wait.` |
 | Flag failed | Error: `Failed to flag device. Please try again.` |
+| Device updated | Success: `Device [ID] updated successfully.` | Success | 3s |
+| Device update failed | Error: `Failed to update device record. Please try again.` | Error | 5s |
+
+---
+
+**Audit Trail:** All device policy changes, device registrations, flagging actions, and deregistrations are logged to the IT Audit Log with IT Admin user ID and timestamp.
+
+**Notifications for Critical Events:**
+- Device flagged (Suspicious Activity): Cybersecurity Officer (in-app amber + email) + IT Director (email)
+- Large number of unregistered devices (> 20): IT Admin (in-app amber + email)
+- Device deregistered: Branch contact notified via email (if "Action to Take = Block device access")
 
 ---
 
@@ -306,6 +337,7 @@ Two charts rendered below the main table in a 2-column grid.
 | GET | `/api/v1/it/security/devices/export/csv/` | Export device register as CSV |
 | GET | `/api/v1/it/security/devices/charts/os-distribution/` | OS distribution data |
 | GET | `/api/v1/it/security/devices/charts/compliance-trend/` | Compliance trend (6 months) |
+| PUT | `/api/v1/it/security/devices/{device_id}/` | JWT (G4) | Update device record (name, OS, branch, compliance status) |
 
 **Query Parameters (device table):**
 - `page`, `page_size` (default 25)

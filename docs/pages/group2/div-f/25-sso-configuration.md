@@ -23,7 +23,10 @@ The Integration Manager is responsible for the full lifecycle: obtaining client 
 |---|---|---|---|
 | Group EduForge Integration Manager | G4 | Full read + write + configure + test + enable/disable | Sole operator of this page |
 | Group IT Director | G4 | Read-only | Can view SSO status per branch; no configuration access |
-| All other Division F roles | — | Hidden | No access |
+| Group IT Admin (Role 54, G4) | Read-only | Can view SSO config; cannot edit |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -59,7 +62,7 @@ Group Portal → IT & Technology → Integrations → SSO Configuration
 | SSO Enabled | Branches with SSO Status = Enabled and at least one successful SSO login | Green | Filter by Enabled |
 | Pending Configuration | Branches with SSO Status = Pending Config | Amber | Filter by Pending |
 | SSO Disabled | Branches where SSO was previously configured but is currently Disabled | Grey | Filter by Disabled |
-| No SSO (OTP Only) | Branches with SSO Type = None | Blue | Filter by None |
+| No SSO (OTP Only) | Branches with SSO Type = None | Blue | Filter by None; Drill-down: Filter table by Status = OTP Only |
 
 ---
 
@@ -200,17 +203,19 @@ Group Portal → IT & Technology → Integrations → SSO Configuration
 
 ## 11. Role-Based UI Visibility
 
-| Element | Integration Manager (G4) | IT Director (G4) |
-|---|---|---|
-| Configure SSO Button | Visible | Hidden |
-| Configure Action | Visible | Hidden |
-| Test Action | Visible | Hidden |
-| Enable / Disable Actions | Visible | Hidden |
-| Client Secret Fields | Editable (masked) | Hidden entirely |
-| SP Entity ID / ACS URL (copy) | Visible | Visible |
-| SSO Test Results | Visible | Visible (read-only history) |
-| Adoption Chart | Visible | Visible |
-| Export | Visible | Visible |
+| Element | Integration Manager (G4) | IT Director (G4) | IT Admin (G4) |
+|---|---|---|---|
+| Configure SSO Button | Visible | Hidden | Hidden |
+| Configure Action | Visible | Hidden | Hidden |
+| Test Action | Visible | Hidden | Hidden |
+| Enable / Disable Actions | Visible | Hidden | Hidden |
+| Client Secret Fields | Editable (masked) | Hidden entirely | Hidden entirely |
+| SP Entity ID / ACS URL (copy) | Visible | Visible | Visible |
+| SSO Test Results | Visible | Visible (read-only history) | Visible (read-only) |
+| Adoption Chart | Visible | Visible | Hidden |
+| Export | Visible | Visible | Hidden |
+
+> Roles 55 (DPO), 56 (Cybersecurity Officer), and 57 (IT Support Executive) have no access to this page (returns 403).
 
 ---
 
@@ -228,6 +233,7 @@ Group Portal → IT & Technology → Integrations → SSO Configuration
 | GET | `/api/v1/it/sso/kpis/` | JWT (G4) | KPI card values |
 | GET | `/api/v1/it/sso/charts/adoption/` | JWT (G4) | SSO vs OTP login ratio chart data per branch |
 | GET | `/api/v1/it/sso/{id}/test-history/` | JWT (G4) | Last 20 SSO test results for a branch |
+| GET | `/api/v1/it/sso/form-fields/?type={type}` | JWT (G4) | Dynamic form fields for SSO type selection |
 
 ---
 
@@ -247,6 +253,15 @@ Group Portal → IT & Technology → Integrations → SSO Configuration
 | Confirm Disable | `click` on Confirm Disable | POST `/api/v1/it/sso/{id}/disable/` | `#sso-table` | `innerHTML` |
 | Load adoption chart | `load` | GET `/api/v1/it/sso/charts/adoption/` | `#adoption-chart` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/sso/?page=N` | `#sso-table` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- SSO configuration broken (test fails after previously passing): Integration Manager + IT Director (in-app red non-dismissible + email + WhatsApp) immediately + affected Branch Principal (email)
+- SSO certificate expiry < 30 days: Integration Manager (in-app amber + email) daily
+- Zero SSO authentications for > 7 days (for enabled branches): Integration Manager (in-app amber)
 
 ---
 

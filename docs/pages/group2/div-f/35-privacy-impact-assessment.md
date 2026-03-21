@@ -26,6 +26,8 @@ The DPO is not a rubber stamp — they have authority to reject a PIA, which eff
 | Group EduForge Integration Manager | G4 | Create + edit + submit | For integration-related PIAs |
 | Group IT Director | G4 | Read + approve high-risk PIAs | Co-approver for high-risk PIAs only |
 | All other Division F roles | — | Hidden | No access |
+| Group Cybersecurity Officer (Role 56, G1) | Read-only | Can review high-risk PIAs for security assessment input |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -185,6 +187,8 @@ On Submit: PIA status → Submitted; DPO notified via in-app notification; email
 - Detailed rejection comments (required, textarea — min 100 characters; specific guidance for revision)
 - Buttons: Confirm Reject · Cancel
 
+**Audit Trail:** All PIA lifecycle events (creation, submission, DPO review, approval, rejection, IT Director sign-off) are automatically logged to the IT Audit Log with actor, timestamp, and reason.
+
 ---
 
 ## 7. Charts
@@ -203,6 +207,8 @@ No standalone charts. PIA statistics are reflected in KPI cards.
 | PIA rejected | "PIA '[Name]' rejected. Rejection reason documented. Initiator notified." | Warning | 5s |
 | High-risk sign-off required | "High-risk PIA '[Name]' approved by DPO. IT Director sign-off required before deployment." | Info | 5s |
 | Export triggered | "PIA register export prepared." | Info | 3s |
+| PIA submission failed | Error: `Failed to submit PIA. Ensure all required sections are complete.` | Error | 5s |
+| PIA approval failed | Error: `Failed to approve PIA. Please try again.` | Error | 5s |
 
 ---
 
@@ -277,6 +283,8 @@ No standalone charts. PIA statistics are reflected in KPI cards.
 | Confirm approve | `click` on Confirm Approve | POST `/api/v1/it/privacy/pia/{id}/approve/` | `#pia-table` | `innerHTML` |
 | Confirm reject | `click` on Confirm Reject | POST `/api/v1/it/privacy/pia/{id}/reject/` | `#pia-table` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/privacy/pia/?page=N` | `#pia-table` | `innerHTML` |
+| IT Director sign-off | `click` on Sign Off button | POST `/api/v1/it/privacy/pia/{id}/director-sign-off/` | `#pia-table` | `innerHTML` |
+| Export PIA register | `click` on Export | GET `/api/v1/it/privacy/pia/export/` | `#export-result` | `innerHTML` |
 
 ---
 

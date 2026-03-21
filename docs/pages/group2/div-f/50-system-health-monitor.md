@@ -27,7 +27,7 @@ Real-time overview of all EduForge system components' health and operational sta
 
 The page auto-refreshes every 2 minutes via HTMX polling to reflect the latest service status. Metrics are sourced from health check endpoints and stored in PostgreSQL (not cached).
 
-IT Director (Role 53) and Integration Manager (Role 58) use this page during incidents, for daily operational checks, and for reporting uptime to management.
+IT Director (Role 53), IT Admin (Role 54), and Integration Manager (Role 58) use this page during incidents, for daily operational checks, and for reporting uptime to management.
 
 ---
 
@@ -40,6 +40,8 @@ IT Director (Role 53) and Integration Manager (Role 58) use this page during inc
 | Group IT Admin (Role 54, G4) | View + acknowledge | Can view and acknowledge alerts |
 | Group Cybersecurity Officer (Role 56, G1) | Read-only | View current status; cannot acknowledge |
 | All other roles | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | View-only | Can view health status; cannot acknowledge alerts or create incidents |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
 
 ---
 
@@ -83,6 +85,8 @@ No traditional KPI cards on this page. Instead, the top section is the **Status 
 **Aggregate status line (above status grid):**
 - `All Services Operational` (green chip) OR `[X] Services DOWN, [Y] Degraded` (red/amber chips)
 - `Overall Uptime (30d): [X]%`
+
+Clicking the "[X] Services DOWN" or "[Y] Degraded" chips filters the Service Health History table to show only DOWN or DEGRADED entries respectively.
 
 ---
 
@@ -164,6 +168,8 @@ Alert banners have an `Acknowledge` button (Role 53/54 only). Acknowledgement re
 
 Acknowledged alerts collapse to a smaller warning state but are not dismissed until the service is restored.
 
+**Audit:** Alert acknowledgments are logged to the IT Audit Log with actor user ID, timestamp, service affected, and acknowledgement note.
+
 ---
 
 ## 7. Status Grid
@@ -238,6 +244,9 @@ Two charts below the health history table in a 2-column grid.
 | Export report initiated | Info: `Generating uptime report — please wait.` |
 | Incident auto-created on DOWN | System: `Service DOWN detected. Incident [INC-#] auto-created and IT Admin notified.` |
 | Service restored (auto) | Success: `[Service Name] is back to Operational status. (Auto-detected)` |
+| Alert acknowledge failed | Error: `Failed to acknowledge alert. Please try again.` | Error | 5s |
+| Manual refresh failed | Error: `Failed to refresh health data. Please try again.` | Error | 5s |
+| Incident creation failed | Error: `Failed to create incident. Please try again.` | Error | 5s |
 
 ---
 

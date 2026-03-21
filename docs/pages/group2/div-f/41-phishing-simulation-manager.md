@@ -31,6 +31,9 @@ The Cybersecurity Officer (Role 56, G1) can view all campaign results and add re
 | Group IT Director (Role 53, G4) | Read + export | View all campaigns and results |
 | Group Cybersecurity Officer (Role 56, G1) | Read + recommend | View campaigns and anonymised results; add recommendations |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -164,6 +167,8 @@ Triggered by `+ Create Campaign` button.
 
 On submit: `hx-post="/api/v1/it/security/phishing/"`. Toast: `Campaign "[Name]" scheduled for [Date]. [X] recipients across [Y] branches.`
 
+**Audit:** Campaign creation and scheduling are logged to the IT Audit Log.
+
 ---
 
 ### B. Edit Campaign Drawer (640px — Role 54, Scheduled status only)
@@ -261,6 +266,16 @@ Three charts below the main table in a responsive layout (first full width, seco
 | Export initiated | Info: `Generating results export — please wait.` |
 | Validation error | Error: `Please complete all required fields before scheduling.` |
 | Schedule too soon | Error: `Campaign must be scheduled at least 48 hours in advance.` |
+| Campaign creation failed | Error: `Failed to schedule phishing campaign. Please check inputs and try again.` | Error | 5s |
+
+---
+
+**Audit Trail:** All campaign lifecycle actions (create, launch, pause, stop, results viewed) are logged to the IT Audit Log.
+
+**Notifications for Critical Events:**
+- Phishing click rate > 30% for any campaign: Cybersecurity Officer (in-app amber + email) + IT Director (email)
+- Campaign completed: Cybersecurity Officer (in-app info notification)
+- Staff member clicks phishing link: Staff member sees training redirect page immediately; no separate notification sent
 
 ---
 

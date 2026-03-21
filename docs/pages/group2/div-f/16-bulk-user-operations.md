@@ -21,6 +21,8 @@ Four operations are available:
 
 All bulk operations are atomic within PostgreSQL transactions — either all rows succeed or the entire batch is rolled back with a per-row error report. No partial commits without explicit admin acknowledgement of the error rows.
 
+All bulk operations are logged to the IT Audit Log, including operator name, timestamp, operation type (Import/Deactivate/Role Change), number of rows affected, and any error counts.
+
 ---
 
 ## 2. Role Access
@@ -30,6 +32,9 @@ All bulk operations are atomic within PostgreSQL transactions — either all row
 | Group IT Admin | G4 | Full access (all four operations) | Primary operator |
 | Group IT Director | G4 | Full access + bulk role change approval gate | Must approve bulk role changes > 50 accounts |
 | Group IT Support Executive | G3 | Bulk Export only | Read-only export for support audit |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -90,6 +95,14 @@ This page uses no slide-out drawers. All interaction is within the main wizard a
 - Required columns: Full Name, Mobile Number, Email (optional), Branch Code, Role/Designation, Access Level (G0–G5)
 - File upload dropzone (accepts .csv only, max 5 MB)
 - HTMX: file selection triggers immediate upload to validation endpoint
+
+**CSV Column Format Validation:**
+- Full Name: 1–100 characters, no special characters
+- Mobile Number: 10 digits, numeric only
+- Email: valid email format (optional)
+- Branch Code: must match configured branch codes (e.g., BR001)
+- Role/Designation: max 50 characters; must match predefined role list
+- Access Level: G0, G1, G2, G3, G4, or G5 only
 
 **Step 2 — Validation Results**
 - Preview table with per-row validation status
@@ -192,6 +205,8 @@ No charts on this page. The wizard interface is the primary interaction surface.
 | Bulk role change submitted for approval | "Role change request for [N] accounts submitted for IT Director approval." | Info | 5s |
 | Bulk export ready | "Export ready. [Download CSV]." | Success | 10s (with download link) |
 | CSV upload rejected (wrong format) | "Upload failed: only .csv files are accepted. Please use the provided template." | Error | 5s |
+| CSV file too large | Error: `File exceeds 5MB limit. Please reduce file size and re-upload.` | Error | 5s |
+| CSV file corrupt | Error: `Uploaded file appears corrupt. Re-download the template and try again.` | Error | 5s |
 
 ---
 
@@ -246,6 +261,7 @@ No charts on this page. The wizard interface is the primary interaction surface.
 | GET | `/api/v1/it/users/bulk/import/status/{job_id}/` | JWT (G4) | Poll import job progress |
 | GET | `/api/v1/it/users/bulk/export/` | JWT (G3+) | Generate and return filtered user export |
 | GET | `/api/v1/it/users/bulk/import/{job_id}/errors/` | JWT (G4) | Download error report for a completed import job |
+| GET | `/api/v1/it/users/bulk/import/is-processing/` | JWT (G4) | Check if a bulk import job is currently running |
 
 ---
 

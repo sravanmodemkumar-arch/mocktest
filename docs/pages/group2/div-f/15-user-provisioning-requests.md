@@ -26,6 +26,9 @@ The provisioning flow connects directly to the Account Manager (File 13): when a
 | Group IT Admin | G4 | Full read + write (review, approve, reject, provision) | Primary operator |
 | Group IT Director | G4 | Full read + escalation visibility | Can view all requests; approves escalated cases |
 | Group IT Support Executive | G3 | Read-only | Can view status of requests for support purposes |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -133,7 +136,7 @@ Group Portal → IT & Technology → User Management → Provisioning Requests
 - **Type:** Centered modal (440px)
 - **Fields:**
   - Rejection Reason (required, dropdown: Inappropriate Access Level Requested / Duplicate Account Exists / Insufficient Justification / Role Not Recognised / Other)
-  - Additional Notes (required if "Other", textarea)
+  - Additional Notes (required if "Other", textarea) (required if Rejection Reason = "Other"; min 20 characters)
   - Notify Requesting Branch (checkbox, default checked)
 - **Buttons:** Confirm Rejection (red) · Cancel
 
@@ -161,6 +164,8 @@ No dedicated chart on this page. KPI cards provide the essential metrics. The IT
 | Clarification sent | "Clarification requested from [Branch]. Request status updated to Pending Clarification." | Info | 4s |
 | Duplicate account detected on approval | "Approval blocked: an account for this mobile number already exists. Review in User Directory." | Error | 6s |
 | Export triggered | "Provisioning requests export is being prepared." | Info | 3s |
+| Approval failed | Error: `Could not approve PRQ-[N]. Review request details and try again.` | Error | 5s |
+| Rejection failed | Error: `Could not reject PRQ-[N]. Please try again.` | Error | 5s |
 
 ---
 
@@ -230,6 +235,7 @@ No dedicated chart on this page. KPI cards provide the essential metrics. The IT
 | Confirm approval | `click` on Confirm Approval | POST `/api/v1/it/provisioning/{id}/approve/` | `#requests-table` | `innerHTML` |
 | Confirm rejection | `click` on Confirm Rejection | POST `/api/v1/it/provisioning/{id}/reject/` | `#requests-table` | `innerHTML` |
 | Send clarification | `click` on Send | POST `/api/v1/it/provisioning/{id}/clarify/` | `#clarification-thread` | `afterbegin` |
+| Poll clarification thread | `every 30s` (when drawer open) | GET `/api/v1/it/provisioning/{id}/clarification-thread/` | `#clarification-thread` | `innerHTML` |
 
 ---
 

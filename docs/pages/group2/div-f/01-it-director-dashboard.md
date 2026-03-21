@@ -29,6 +29,8 @@ From a technology-strategy perspective, the feature adoption rate KPI allows the
 | Group Data Privacy Officer | G1 | Read-only (DPDP KPI only) | Cannot view portal config or integration details |
 | Group IT Support Executive (Role 57, G3) | No access | Returns 403 — dashboard for IT Director only |
 | Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 — dashboard for IT Director only |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -255,5 +257,9 @@ Group Portal → IT & Technology → IT Director Dashboard
 | Donut chart segment click filters table | `click` on chart segment (JS → hx-trigger programmatic) | GET `/api/v1/it/director/branch-health/?status={segment}` | `#branch-table` | `innerHTML` |
 
 ---
+
+**Audit Trail:** All write operations on this page are logged to the IT Audit Log with actor user ID and timestamp.
+
+**Notifications:** Critical alerts on this page trigger in-app notifications to the relevant role owners as specified in the alert banner conditions above.
 
 *Page spec version: 1.0 · Last updated: 2026-03-21*

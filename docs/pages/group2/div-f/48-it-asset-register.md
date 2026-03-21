@@ -38,6 +38,9 @@ All purchase invoices and warranty documents are stored in Cloudflare R2.
 | Group IT Director (Role 53, G4) | Full CRUD | Same as IT Admin |
 | Group Cybersecurity Officer (Role 56, G1) | Read-only | Can view device register subset (filtered to security-relevant devices) — via their own page (Page 39) |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -123,6 +126,8 @@ Sortable: Asset Tag, Category, Branch, Warranty Expiry, Status, Last Audit Date.
 ---
 
 ## 6. Drawers
+
+**Note:** Asset deletion is not supported. Use the Dispose action to retire assets while retaining historical records for audit compliance.
 
 ### A. Add Asset Drawer (640px, right-side)
 
@@ -271,6 +276,14 @@ Three charts below the main table in a responsive 2-column layout (first full wi
 | Export initiated | Info: `Exporting asset register.` |
 | Validation error | Error: `Please complete all required fields.` |
 | Duplicate asset tag | Error: `Asset tag [Tag] already exists. Use a unique tag.` |
+| Asset add failed | Error: `Failed to add asset. Please check your connection and try again.` | Error | 5s |
+| Asset edit failed | Error: `Failed to save changes. Please try again.` | Error | 5s |
+| Transfer failed | Error: `Failed to transfer asset. Verify the branch exists and try again.` | Error | 5s |
+| Disposal failed | Error: `Failed to mark asset as disposed. Please try again.` | Error | 5s |
+
+---
+
+**Audit Trail:** All asset mutations (add, edit, transfer, dispose) are automatically logged to the IT Audit Log with actor user ID, timestamp, asset ID, and full before/after values.
 
 ---
 
@@ -313,6 +326,8 @@ Three charts below the main table in a responsive 2-column layout (first full wi
 | Export CSV | Visible | Visible |
 | Purchase Cost field | Visible | Visible |
 | All filters | Visible | Visible |
+
+**Note:** Role 56 (Cybersecurity Officer, G1) has read-only access — can view all assets but cannot add, edit, transfer, or dispose. Export CSV hidden. All edit/action buttons hidden.
 
 ---
 

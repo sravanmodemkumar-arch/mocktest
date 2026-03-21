@@ -27,6 +27,8 @@ All data is pulled directly from PostgreSQL — no caching layer. This ensures t
 | Group IT Director | G4 | Full read + actions | Strategic oversight |
 | Group Cybersecurity Officer | G1 | Read-only (all columns) + export | Cannot take actions; monitoring and audit only |
 | Group IT Support Executive | G3 | Read-only (limited — own-branch users only) | For resolving login-related support tickets |
+| Group Data Privacy Officer (Role 55, G1) | Read-only (limited columns) | DPDP Act compliance review only |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -117,6 +119,7 @@ Group Portal → IT & Technology → User Management → Session & Login Audit
 - **Content:** "Force logging out [User Name] will immediately terminate all active sessions for this user. They will need to log in again. Proceed?"
 - **Field:** Reason for Force Logout (required, dropdown: Security Investigation / Suspicious Activity / Account Policy Enforcement / User Request / Other)
 - **Buttons:** Confirm Force Logout (red) · Cancel
+- **On confirm:** On confirm: session terminated; user notified via email (optional) that their session was terminated for security reasons; IT Admin receives audit log entry. **Audit:** Force logout logged to IT Audit Log with IT Admin user ID, timestamp, target user, and reason.
 
 ### 6.3 Modal: Lock Account
 - **Trigger:** Actions → Lock Account
@@ -145,6 +148,7 @@ No dedicated chart on this page. KPI cards provide the essential security metric
 | Account unlocked (from User Directory) | "[User Name]'s account has been unlocked. User can now log in." | Success | 4s |
 | Export initiated | "Session audit log export is being prepared." | Info | 3s |
 | Brute-force auto-lock triggered (system) | "Account [Username] has been auto-locked after 10 consecutive failed OTP attempts." | Error | 7s (persistent) |
+| Force logout failed | Error: `Could not force logout [User Name]. Please try again.` | Error | 5s |
 
 ---
 

@@ -29,6 +29,9 @@ This page is the primary daily-check page for Role 56 and is accessible 24/7. Al
 | Group IT Director (Role 53, G4) | Read + export | Can also view this page |
 | Group IT Admin (Role 54, G4) | Read + export | Can also view this page |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 > G1 = read-only across the entire division. No action buttons are rendered for Role 56 anywhere on this page.
 
@@ -204,6 +207,16 @@ No create/edit/delete operations exist on this page (read-only for all users). T
 
 ---
 
+**Audit Trail:** Alert acknowledgments from this dashboard are logged to the IT Audit Log with actor user ID and timestamp.
+
+**Notifications for Critical Events:**
+- Severity 1 incident open: Cybersecurity Officer (in-app non-dismissible + email + WhatsApp) + IT Director (in-app + email) + IT Admin (email) immediately
+- Device compliance < 80%: Cybersecurity Officer (in-app amber) + IT Admin (email)
+- Phishing click rate > 20%: Cybersecurity Officer (in-app amber) + IT Director (email) + IT Admin (email)
+- Training completion < 70%: Cybersecurity Officer (in-app amber) + IT Admin (email)
+
+---
+
 ## 9. Empty States
 
 | Condition | Message |
@@ -256,6 +269,7 @@ All loaders use Tailwind `animate-pulse` for skeleton states. HTMX `hx-indicator
 | GET | `/api/v1/it/security/overview/charts/incident-severity/` | Incident severity breakdown (6 months) |
 | GET | `/api/v1/it/security/overview/charts/training-by-role/` | Training completion by role category |
 | GET | `/api/v1/it/security/overview/export/pdf/` | Generate and return PDF report |
+| GET | `/api/v1/it/security/overview/alerts/` | JWT (G1+) | Fetch active alert banners (Severity 1 incidents, training status, phishing rate) |
 
 **Query Parameters (branches table):**
 - `page` (int), `page_size` (int, default 20)

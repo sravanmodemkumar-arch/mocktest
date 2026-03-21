@@ -142,6 +142,12 @@ Group Portal → IT & Technology → Branch Portal Manager → Domain Manager
 - **Content:** "You are about to remove the custom domain [Domain] from [Branch Name]. The branch portal will revert to its default EduForge URL ({slug}.eduforge.in). This action takes effect immediately." · Confirm Remove · Cancel
 - **On confirm:** Domain record deleted from PostgreSQL; portal reverts to default URL
 
+**Audit Trail:** All domain configuration changes are logged to IT Audit Log: user ID, timestamp, action (add/edit/remove/renew-ssl), domain name, old and new values, branch identifier.
+
+**Notifications:**
+- SSL certificates expiring < 30 days: daily email to IT Admin + branch primary contact with renewal link
+- SSL expiring < 7 days: additional in-app notification badge added
+
 ---
 
 ## 7. Charts

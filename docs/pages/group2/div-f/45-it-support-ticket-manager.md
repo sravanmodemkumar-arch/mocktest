@@ -28,6 +28,8 @@ The IT Support Executive (Role 57, G3) manages day-to-day ticket work — viewin
 | Group IT Admin (Role 54, G4) | Full access | All ticket operations, reassignment, escalation |
 | Group IT Director (Role 53, G4) | Read + escalation | View all; can escalate; cannot edit ticket details |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -253,6 +255,19 @@ No dedicated chart section on this operational tickets page. Charts are on the S
 | Export complete | Info: `Ticket export ready.` |
 | Validation error | Error: `Please complete all required fields.` |
 | File too large | Error: `File exceeds 10MB limit. Please compress and re-upload.` |
+| Ticket creation failed | Error: `Failed to create ticket. Please check your connection and try again.` | Error | 5s |
+| Escalation failed | Error: `Failed to escalate ticket. Please try again.` | Error | 5s |
+| Assignment failed | Error: `Failed to assign ticket. Please try again.` | Error | 5s |
+| Attachment upload failed | Error: `Attachment upload failed. File may be too large or connection lost.` | Error | 5s |
+
+---
+
+**Audit Trail:** All ticket lifecycle actions (create, reply, status change, escalate, assign, close, re-open) are logged to the IT Audit Log with actor user ID and timestamp.
+
+**Notifications for Critical Events:**
+- P1 ticket open > 1h without first response: Assigned Support Executive (in-app red + email)
+- SLA breached: Support Executive (in-app red) + IT Admin (email cc IT Director)
+- Ticket auto-closed after 7 days resolved: Reporter notified via email
 
 ---
 
@@ -295,6 +310,8 @@ No dedicated chart section on this operational tickets page. Charts are on the S
 | Export CSV | Hidden | Visible | Visible |
 | Resolution tab | Visible | Visible | Visible (read-only) |
 | Priority override (escalation) | Not applicable | Visible | Visible |
+
+**Note:** Role 55 (DPO) and Role 56 (Cybersecurity Officer) have no access to this page (returns 403). All UI elements are hidden.
 
 ---
 
@@ -362,10 +379,13 @@ No dedicated chart section on this operational tickets page. Charts are on the S
   View
 </button>
 
+<!-- For any form that accepts file attachments, use hx-encoding="multipart/form-data" -->
+
 <!-- Add thread update -->
 <form hx-post="/api/v1/it/support/tickets/{{ ticket.id }}/updates/"
       hx-target="#thread-{{ ticket.id }}"
-      hx-swap="beforeend">
+      hx-swap="beforeend"
+      hx-encoding="multipart/form-data">
   <textarea name="content" placeholder="Add an update..."></textarea>
   <select name="new_status">...</select>
   <button type="submit">Add Update</button>

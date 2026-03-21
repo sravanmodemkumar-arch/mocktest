@@ -27,6 +27,8 @@ The page is read-heavy — most visits are lookups to verify what a role can and
 | Group IT Director | G4 | Full read + approve/reject permission change requests | Can also edit and self-approve if no conflict of interest |
 | Group Cybersecurity Officer | G1 | Read-only (entire matrix) | Security audit purpose |
 | Group Data Privacy Officer | G1 | Read-only (entire matrix) | DPDP compliance review |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -145,7 +147,7 @@ The left pane is a collapsible tree list, not a traditional paginated table.
 - **Type:** Centered modal (480px)
 - **Content:** "You are submitting permission changes for [Role Name] (Draft v[N]) for IT Director approval. Changes will not take effect until approved. Summary of changes: [diff list showing which module/action checkboxes changed]."
 - **Fields:**
-  - Change Summary / Justification (required, textarea)
+  - Change Summary / Justification (required, textarea, min 20 characters)
   - Urgency (radio: Standard / Urgent)
 - **Buttons:** Submit for Approval · Cancel
 
@@ -179,6 +181,7 @@ No charts on this page. The permission matrix grid itself is the primary visuali
 | New role created | "New role '[Role Name]' created as Draft. Submit permissions for IT Director approval." | Success | 4s |
 | Role archived | "Role '[Role Name]' archived. Users previously assigned this role must be reassigned." | Warning | 5s |
 | Export triggered | "Permission matrix export is being prepared." | Info | 3s |
+| Submit for approval failed | Error: `Could not submit draft. Review and correct the permission set before resubmitting.` | Error | 5s |
 
 ---
 

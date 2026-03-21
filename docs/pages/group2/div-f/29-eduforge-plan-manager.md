@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-The EduForge Plan Manager is the group's administrative interface for managing its subscription to the EduForge SaaS platform itself. It is the place where the group views what plan it is on, how much of its allocated capacity it has consumed, when the subscription renews, what add-on modules are active, and how billing has gone historically. It also provides the channel for raising support tickets with the EduForge support team and tracking open issues.
+The EduForge Plan Manager is the group's administrative interface for managing its subscription to the EduForge SaaS platform itself. Plan creation and major upgrades are initiated via the Request Plan Upgrade workflow but finalized by EduForge support team. It is the place where the group views what plan it is on, how much of its allocated capacity it has consumed, when the subscription renews, what add-on modules are active, and how billing has gone historically. It also provides the channel for raising support tickets with the EduForge support team and tracking open issues.
 
 This page is distinct from the financial billing managed in Division D — it is not about the group's own fee collections, but about what the group pays to EduForge for the platform. The Integration Manager maintains visibility over usage against plan limits to preempt overages. When student count approaches the plan limit, the system raises an alert so the Integration Manager can request an upgrade before branches face access denial.
 
@@ -24,7 +24,9 @@ The page is structured as a VIEW/MANAGE page rather than a table-and-drawer layo
 | Group EduForge Integration Manager | G4 | Full read + manage add-ons + raise tickets | Cannot finalise plan upgrades without IT Director |
 | Group IT Director | G4 | Full read + approve upgrade requests | Has authority to approve plan changes |
 | Group IT Admin | G4 | Read-only | Can view plan and usage; cannot manage |
-| All other Division F roles | — | Hidden | No access |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
 
 ---
 
@@ -252,6 +254,8 @@ No standalone charts on this page. Usage progress bars in Section 2 serve the vi
 | Account Manager contact | Visible | Visible | Hidden |
 | Add Reply to ticket | Visible | Visible | Hidden |
 
+> Roles 55 (DPO), 56 (Cybersecurity Officer), and 57 (IT Support Executive) have no access to this page (returns 403).
+
 ---
 
 ## 12. API Endpoints
@@ -290,6 +294,16 @@ No standalone charts on this page. Usage progress bars in Section 2 serve the vi
 | Submit upgrade request | `click` on Submit | POST `/api/v1/it/plan/upgrade-request/` | `#upgrade-result` | `innerHTML` |
 | Module activate request | `click` on Confirm Activate | POST `/api/v1/it/plan/addons/{id}/activate/` | `#addons-section` | `innerHTML` |
 | Module deactivate | `click` on Confirm Deactivate | POST `/api/v1/it/plan/addons/{id}/deactivate/` | `#addons-section` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- Usage approaching plan limit (> 80%): IT Admin + IT Director (in-app amber + email)
+- Plan renewal < 30 days: IT Admin + IT Director (in-app amber + email) at 30, 14, and 7 days
+- Plan upgrade request approved: IT Admin + IT Director (in-app success + email)
+- Support ticket status change: IT Admin (in-app notification)
 
 ---
 

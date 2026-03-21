@@ -37,6 +37,8 @@ The Cybersecurity Officer (Role 56, G1) monitors completion rates and recommends
 | Group Cybersecurity Officer (Role 56, G1) | Read + recommend | View with masked staff names; add recommendations |
 | Group Training & Dev Manager | View only | Read-only access — view completion rates by branch/role |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -152,6 +154,10 @@ Triggered by `View Details` button. Read-only.
 **Add Exception Note (Role 54 only):**
 - Reason for exemption (e.g., long-term leave) + Apply Exception button
 
+**Audit:** Exceptions are logged to the IT Audit Log with reason and actor.
+
+**Training Record Lifecycle:** Training records are immutable for audit purposes. Exceptions cannot be deleted — they can only be superseded by new exceptions.
+
 **Footer:** `Close` | `Send Reminder` (Role 54 only)
 
 ---
@@ -212,13 +218,22 @@ Three charts below the main table, responsive 2-column grid (first chart full wi
 
 | Action | Toast |
 |--------|-------|
-| Reminder sent (single) | Success: `Security training reminder sent to [Name/Masked].` |
+| Reminder sent (single) | Success: `Security training reminder sent to [Name/Masked] via [channel].` |
 | Bulk reminder sent | Success: `Reminder sent to [X] staff members.` |
 | Exception applied | Success: `Training exception recorded for [Name]. Reason logged.` |
 | Export initiated | Info: `Generating training report — please wait.` |
 | Recommendation submitted (Role 56) | Success: `Recommendation submitted to IT Admin.` |
 | Reminder failed | Error: `Failed to send reminder to [X] staff. Check contact details.` |
 | Exception saved | Success: `Exception saved for [staff member].` |
+
+---
+
+**Audit Trail:** All training module assignments, reminder sends, exception grants, and completion records are logged to the IT Audit Log.
+
+**Notifications for Critical Events:**
+- Training deadline approaching (< 7 days) and staff incomplete: Individual staff (WhatsApp/email reminder — channel per notification config)
+- Training overdue (deadline passed): Branch Principal (email) + Cybersecurity Officer (in-app amber)
+- Training completion rate < 70% group-wide: Cybersecurity Officer (in-app amber + email) + IT Admin (email)
 
 ---
 

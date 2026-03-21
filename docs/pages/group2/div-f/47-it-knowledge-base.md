@@ -37,6 +37,8 @@ Branch staff can search the knowledge base from their branch portal (read-only v
 | Group IT Director (Role 53, G4) | Read + export | View all articles and stats |
 | Branch staff (via branch portal) | Public read | Can search and read published articles only — no management access |
 | All other roles (Group portal) | No management access | Cannot access this management page |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
 
 ---
 
@@ -131,13 +133,14 @@ Single drawer used for both Create (empty form) and Edit (pre-populated form).
 | Category | Dropdown | Yes | Login Issues / Portal Navigation / Feature Guides / Troubleshooting / Integration Guides |
 | Sub-Category | Text input | Yes | More specific topic within category |
 | Tags | Tag input | No | Comma-separated tags for better search; e.g., "password, login, 2FA" |
-| Related Articles | Search/select | No | Link to other KB articles that are related (multi-select; searches by title) |
+| Related Articles | Search/select | No | Link to other KB articles that are related (multi-select; searches by title) — optional, multi-select, search by title to link related KB articles. |
 
 **Article Body:**
 - Rich text editor (TipTap or similar Django-compatible)
 - Toolbar: Bold, Italic, Heading 1/2/3, Bullet list, Ordered list, Blockquote, Code block, Link, Image upload
 - Image upload → Cloudflare R2 (max 5MB per image, 10 images per article)
 - Embedded images served via Cloudflare CDN (public read, signed write)
+- Article Body: required when publishing (not required for draft); rich text; no raw script tags.
 
 **SEO / Search Optimisation:**
 - Meta description (optional, 160 chars max — used in branch portal search snippets)
@@ -146,6 +149,8 @@ Single drawer used for both Create (empty form) and Edit (pre-populated form).
 - `Publish` — saves and sets status = Published immediately
 - `Save as Draft` — saves as Draft, not visible to branch staff yet
 - `Cancel`
+
+On Publish: Title, Category, Sub-Category, and Article Body are all required. If any missing, error shown: "Please complete title, category, and article body before publishing."
 
 **Edit mode additional option:**
 - `Archive Article` (Role 54 only) — sets status = Archived
@@ -225,6 +230,8 @@ Two charts below the main table in a 2-column grid.
 | Export initiated | Info: `Exporting article list.` |
 | Validation error | Error: `Please enter a title, category, and article body before publishing.` |
 | Article too long | Warning: `Article body is very long (>5,000 words). Consider splitting into multiple articles.` |
+| Article publish failed | Error: `Failed to publish article. Check for unsaved changes and try again.` | Error | 5s |
+| Image upload failed (too large) | Error: `Image exceeds 5MB limit. Please compress and try again.` | Error | 5s |
 
 ---
 
@@ -289,6 +296,7 @@ Two charts below the main table in a 2-column grid.
 | GET | `/api/v1/it/knowledge-base/charts/by-category/` | Category distribution |
 | GET | `/api/v1/it/knowledge-base/export/csv/` | Export article list |
 | GET | `/api/v1/it/knowledge-base/search/` | Full-text search (used by branch portal) |
+| GET | `/api/v1/it/knowledge-base/search/?q={query}` | JWT (G3+) | Full-text search on title, category, and tags |
 | POST | `/api/v1/it/knowledge-base/{id}/rate/` | Submit helpfulness rating (branch portal only) |
 
 ---

@@ -25,6 +25,8 @@ The Data Privacy Officer holds a G1 (read-only) role for a deliberate reason: th
 | Group IT Admin | G4 | Read-only | Can view for operational awareness; manages data in other pages |
 | Group IT Director | G4 | Read-only | Senior oversight |
 | All other Division F roles | — | Hidden | No access |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -151,6 +153,12 @@ Score is stored in a compliance_score_snapshot PostgreSQL table, updated nightly
 |---|---|---|---|
 | Report export triggered | "Compliance report export is being prepared. Download will begin shortly." | Info | 4s |
 | Review note saved | "Compliance review note saved for [Branch Name]." | Success | 3s |
+| Report export failed | Error: `Failed to generate compliance report. Please try again.` | Error | 5s |
+| Review note save failed | Error: `Failed to save note for [Branch Name]. Please try again.` | Error | 4s |
+
+---
+
+**Audit Trail:** DPO notes saved via this dashboard are logged to the IT Audit Log with DPO user ID, timestamp, and branch identifier. Export actions are also logged.
 
 ---
 

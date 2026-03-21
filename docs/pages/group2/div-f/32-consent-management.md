@@ -27,6 +27,9 @@ The IT Admin (G4) may update consent records in limited circumstances: when a pa
 | Group IT Admin | G4 | Full read + process withdrawals + manual entry | Operational management of consent records |
 | Group IT Director | G4 | Read-only | Governance visibility |
 | All other Division F roles | — | Hidden | No access |
+| Group Cybersecurity Officer (Role 56, G1) | Read-only | Security awareness of consent processing practices |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -169,6 +172,11 @@ Group Portal → IT & Technology → Data Privacy → Consent Management
 | Manual consent recorded | "Consent record CNS-[N] created successfully." | Success | 3s |
 | Withdrawal processed | "Withdrawal for CNS-[N] processed. Record status updated to Withdrawn." | Success | 4s |
 | Export triggered | "Consent register export is being prepared." | Info | 3s |
+| Withdrawal processing failed | Error: `Failed to process withdrawal for CNS-[N]. Contact IT Support.` | Error | 5s |
+
+---
+
+**Audit Trail:** All consent record changes (withdrawals, re-consent, flagging) are logged to the IT Audit Log with actor user ID, timestamp, and consent record ID.
 
 ---
 
@@ -240,6 +248,7 @@ Group Portal → IT & Technology → Data Privacy → Consent Management
 | Load purpose chart | `load` | GET `/api/v1/it/privacy/consent/charts/purpose-distribution/` | `#purpose-chart` | `innerHTML` |
 | Load withdrawal chart | `load` | GET `/api/v1/it/privacy/consent/charts/withdrawal-trend/` | `#withdrawal-chart` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/privacy/consent/?page=N` | `#consent-table` | `innerHTML` |
+| Export consent register | `click` on Export | GET `/api/v1/it/privacy/consent/export/` | `#export-result` | `innerHTML` |
 
 ---
 

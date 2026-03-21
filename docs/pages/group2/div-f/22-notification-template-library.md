@@ -64,6 +64,8 @@ Group Portal → IT & Technology → Notifications → Template Library
 | SMS Templates | Templates with channel = SMS | Blue | Filtered by SMS |
 | Email Templates | Templates with channel = Email | Blue | Filtered by Email |
 
+**KPI Colour Rules:** Total Templates — Blue (informational); WhatsApp Templates — Blue if > 0, Grey if none; SMS Templates — Blue if > 0, Grey if none; Email Templates — Blue if > 0, Grey if none.
+
 ---
 
 ## 5. Main Table — Notification Template Library
@@ -184,6 +186,7 @@ Group Portal → IT & Technology → Notifications → Template Library
 - **Content:** "Archive '[Template Name]'? Archived templates will no longer be sent. If this template is currently linked to an active notification trigger, those notifications will silently fail. Confirm all triggers have been reassigned before archiving."
 - **Fields:** Reason for archiving (optional textarea)
 - **Buttons:** Confirm Archive · Cancel
+- **Note:** Archives are permanent. To restore, duplicate the archived template and activate the copy.
 
 ---
 
@@ -204,6 +207,8 @@ No dedicated chart section. The Usage Count (30d) column in the main table provi
 | Template archived | "Template '[Name]' archived and removed from active use." | Warning | 4s |
 | Test message sent | "Test [Channel] notification sent to [recipient]." | Info | 4s |
 | Test message failed | "Test failed: [error message]." | Error | 6s |
+| Template test failed (SMS) | Error: `SMS test failed: [error message].` | Error | 5s |
+| Template test failed (Email) | Error: `Email test failed: [error message].` | Error | 5s |
 | Duplicate template name conflict | "A template named '[Name]' already exists for this channel. Choose a different name." | Error | 5s |
 | Export triggered | "Template library export is being prepared." | Info | 3s |
 
@@ -283,6 +288,14 @@ No dedicated chart section. The Usage Count (30d) column in the main table provi
 | Confirm duplicate | `click` on Duplicate | POST `/api/v1/it/notifications/templates/{id}/duplicate/` | `#templates-table` | `innerHTML` |
 | Confirm archive | `click` on Confirm Archive | POST `/api/v1/it/notifications/templates/{id}/archive/` | `#templates-table` | `innerHTML` |
 | Send test notification | `click` on Send Test | POST `/api/v1/it/notifications/templates/{id}/test/` | `#test-result` | `innerHTML` |
+
+---
+
+**Audit Trail:** All write operations on this page (configuration saves, creates, updates, deletes, activations) are logged to the IT Audit Log with actor user ID, timestamp, and changed values.
+
+**Notifications for Critical Events:**
+- OTP template set Inactive: IT Admin + IT Director (in-app red non-dismissible) immediately
+- All templates for a channel inactive: IT Admin (in-app amber + email)
 
 ---
 

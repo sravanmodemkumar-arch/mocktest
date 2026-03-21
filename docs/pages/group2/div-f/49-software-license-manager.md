@@ -40,6 +40,9 @@ Key use cases:
 | Group IT Director (Role 53, G4) | Full CRUD | Same as IT Admin |
 | Group Finance (CFO, etc.) | Read-only | View license costs for budgeting (future phase) |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -129,6 +132,8 @@ Sortable: Software Name, Expiry Date, Cost, Used Seats %. Default sort: Expiry D
 
 ## 6. Drawers
 
+**Note:** License deletion is not supported. Use the Terminate action to deactivate licenses while retaining records for compliance.
+
 ### A. Add License Drawer (640px, right-side)
 
 Triggered by `+ Add License` button.
@@ -142,7 +147,7 @@ Triggered by `+ Add License` button.
 | Software Name | Text input | Yes | Full software name including edition |
 | Vendor | Text input | Yes | Software vendor/publisher |
 | License Type | Dropdown | Yes | Per Seat / Site License / Concurrent / Subscription |
-| Total Seats / Units | Number | Conditional | Required for Per Seat/Concurrent; N/A for Site License |
+| Total Seats / Units | Number | Conditional | Required for Per Seat/Concurrent; N/A for Site License — Total Seats / Units: required if License Type = Per Seat or Concurrent; not applicable for Site License or Open Source. |
 | License Key / Agreement # | Text input | No | For reference; stored securely |
 | Purchase Date | Date | Yes | |
 | Expiry Date | Date | Yes | |
@@ -260,6 +265,14 @@ No dedicated full charts section. An inline visual strip below the KPI bar shows
 | Export initiated | Info: `Exporting license register.` |
 | Validation error | Error: `Please complete all required fields.` |
 | Overuse detected on save | Warning: `Used seats exceed total licensed seats. Purchase additional seats.` |
+| License add failed | Error: `Failed to add license. Please check your details and try again.` | Error | 5s |
+| License edit failed | Error: `Failed to update license. Please try again.` | Error | 5s |
+| License renewal failed | Error: `Failed to renew license. Verify the expiry date and try again.` | Error | 5s |
+| License termination failed | Error: `Failed to terminate license. Please try again.` | Error | 5s |
+
+---
+
+**Audit Trail:** All license mutations (add, edit, renew, terminate) are automatically logged to the IT Audit Log with actor user ID, timestamp, license ID, and full before/after values.
 
 ---
 

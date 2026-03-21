@@ -33,6 +33,9 @@ The Data Privacy Officer has read-only access to review policy content and track
 | Group Data Privacy Officer | G1 | Read-only — view policies and acknowledgement status | Reviews for legal adequacy; provides feedback via comment |
 | Group IT Director | G4 | Read-only | Governance oversight |
 | All other Division F roles | — | Hidden | No access |
+| Group Cybersecurity Officer (Role 56, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -173,6 +176,8 @@ Group Portal → IT & Technology → Data Privacy → Privacy Policy Manager
   - Acknowledgement summary: N branches acknowledged / Total
 - **DPO Review Notes:** DPO can add a comment on the policy content (text area, visible to IT Admin)
 
+**Audit Trail:** All policy lifecycle events (creation, publication, archival, DPO review comments, reminder sends) are automatically logged to the IT Audit Log with actor and timestamp.
+
 ---
 
 ## 7. Charts
@@ -192,6 +197,9 @@ No standalone charts on this page.
 | Bulk reminder sent | "Reminder sent to [N] pending branch principals for '[Policy Name]'." | Info | 4s |
 | DPO comment saved | "Review comment saved on policy '[Name]'." | Success | 3s |
 | All branches acknowledged | "All [N] branches have acknowledged '[Policy Name]' v[X]." | Success | 4s |
+| Policy publish failed | Error: `Failed to publish policy. Ensure policy body has content and version is valid.` | Error | 5s |
+| Policy archive failed | Error: `Failed to archive policy. Verify replacement policy selection.` | Error | 5s |
+| Reminder send failed | Error: `Failed to send acknowledgement reminder to [Branch Name].` | Error | 5s |
 
 ---
 
@@ -222,19 +230,19 @@ No standalone charts on this page.
 
 ## 11. Role-Based UI Visibility
 
-| Element | IT Admin (G4) | Data Privacy Officer (G1) | IT Director (G4) |
-|---|---|---|---|
-| + Create Policy | Visible | Hidden | Hidden |
-| Edit Action | Visible | Hidden | Hidden |
-| Publish Action | Visible | Hidden | Hidden |
-| Archive Action | Visible | Hidden | Hidden |
-| Track Acknowledgements | Visible | Visible (read-only) | Visible (read-only) |
-| Send Reminder buttons | Visible | Hidden | Hidden |
-| Policy Body (view) | Visible | Visible | Visible |
-| Version History | Visible | Visible | Visible |
-| DPO Review Notes | Visible (read) | Visible + editable | Visible (read) |
-| Internal Notes for DPO | Visible (read + edit) | Visible (read) | Hidden |
-| Export | Visible | Hidden | Visible |
+| Element | IT Admin (G4) | Data Privacy Officer (G1) | IT Director (G4) | Cybersecurity Officer (G1) | IT Support Executive (G3) |
+|---|---|---|---|---|---|
+| + Create Policy | Visible | Hidden | Hidden | Hidden | Hidden |
+| Edit Action | Visible | Hidden | Hidden | Hidden | Hidden |
+| Publish Action | Visible | Hidden | Hidden | Hidden | Hidden |
+| Archive Action | Visible | Hidden | Hidden | Hidden | Hidden |
+| Track Acknowledgements | Visible | Visible (read-only) | Visible (read-only) | Hidden | Hidden |
+| Send Reminder buttons | Visible | Hidden | Hidden | Hidden | Hidden |
+| Policy Body (view) | Visible | Visible | Visible | Hidden | Hidden |
+| Version History | Visible | Visible | Visible | Hidden | Hidden |
+| DPO Review Notes | Visible (read) | Visible + editable | Visible (read) | Hidden | Hidden |
+| Internal Notes for DPO | Visible (read + edit) | Visible (read) | Hidden | Hidden | Hidden |
+| Export | Visible | Hidden | Visible | Hidden | Hidden |
 
 ---
 
@@ -276,6 +284,7 @@ No standalone charts on this page.
 | Confirm archive | `click` on Confirm Archive | POST `/api/v1/it/privacy/policies/{id}/archive/` | `#policies-table` | `innerHTML` |
 | Save DPO comment | `click` on Save Comment | POST `.../dpo-comment/` | `#dpo-comment-result` | `innerHTML` |
 | Paginate table | `click` on page control | GET `/api/v1/it/privacy/policies/?page=N` | `#policies-table` | `innerHTML` |
+| Export policies | `click` on Export | GET `/api/v1/it/privacy/policies/export/` | `#export-result` | `innerHTML` |
 
 ---
 

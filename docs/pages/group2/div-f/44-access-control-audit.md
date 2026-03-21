@@ -31,6 +31,9 @@ Access reviews feed into the group's DPDP Act 2023 compliance programme — the 
 | Group IT Director (Role 53, G4) | Read + override | Can view all results; can override any action |
 | Group Cybersecurity Officer (Role 56, G1) | Read-only | View review register and results; no action buttons |
 | All other roles | No access | Returns 403 |
+| Group Data Privacy Officer (Role 55, G1) | No access | Returns 403 |
+| Group IT Support Executive (Role 57, G3) | No access | Returns 403 |
+| Group EduForge Integration Manager (Role 58, G4) | No access | Returns 403 |
 
 ---
 
@@ -116,6 +119,8 @@ Sortable: Review Period, Branch, Status, Completed Date. Default sort: Status (O
 
 ## 6. Drawers
 
+**Note:** Completed access reviews cannot be deleted (audit trail requirement). Results are immutable after completion.
+
 ### A. Start Access Review Drawer (560px, right-side — Role 54 only)
 
 Triggered by `+ Start New Access Review` or `Start Review` button.
@@ -172,6 +177,8 @@ Triggered by `Start Review` or `Continue Review` button. This is the working int
 
 On Complete: `hx-post="/api/v1/it/security/access-audit/{review_id}/complete/"`. All actions applied (suspensions/role downgrades written to user records and IT Audit Log). Toast: `Access review completed for [Branch] [Period]. X suspended, Y downgraded, Z approved.`
 
+**Audit:** All review actions (suspend/downgrade/approve per user) and the overall review completion are logged to the IT Audit Log with actor, timestamp, and actions taken.
+
 ---
 
 ### C. View Past Review Results Drawer (640px — all roles)
@@ -221,6 +228,15 @@ No dedicated charts section (this is a procedural/operational page). An inline m
 | User approved | Info: `[User] access approved for continued access.` |
 | Export initiated | Info: `Exporting review results.` |
 | Validation error | Error: `Complete reviewer action for all users before finalising the review.` |
+
+---
+
+**Audit Trail:** All access review lifecycle events (start, individual actions, completion) are logged to the IT Audit Log. Suspended and downgraded users are also reflected in the IT Audit Log entry for the review.
+
+**Notifications for Critical Events:**
+- Access review overdue (scheduled date passed without completion): IT Admin (in-app amber + email) + IT Director (email)
+- Severity 1 over-privileged access found during review: Cybersecurity Officer + IT Director (in-app amber + email) immediately
+- Access review completed: IT Director (in-app info notification)
 
 ---
 
