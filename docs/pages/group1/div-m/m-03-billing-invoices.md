@@ -297,6 +297,8 @@ Triggered by [+ Generate Invoice]. Requires Billing Admin (#70) or FM (#69).
 
 **Invoice number auto-generation:** Format is `INV-{YYYY}-{NNNNN}` (e.g., `INV-2026-00841`). Sequence is global per calendar year, zero-padded to 5 digits. Implementation uses PostgreSQL sequence `finance_invoice_number_seq_{year}` (created at first invoice of each year). Concurrency-safe: number assigned at INSERT using `nextval('finance_invoice_number_seq_{year}')` inside the transaction; no application-level locking needed. Year rollover: sequence name includes year, so `INV-2027-00001` resets automatically. VOID invoices do NOT release their sequence number back (gaps acceptable for audit trail integrity).
 
+**Invoice PDF template:** Server-side WeasyPrint render. Template: `finance/templates/invoice.html`. Fields: invoice_number, issue_date, due_date, institution_name, institution_gstin, billing_address, line_items_json (rendered as table: description, HSN/SAC 9993, quantity, rate, amount), subtotal, CGST 9% + SGST 9% (intra-state) **OR** IGST 18% (inter-state) — never both, total, payment_instructions, EduForge bank details, terms & conditions. PDF filename: `INV-{number}.pdf`.
+
 **[Save Draft]:** POST `/finance/invoices/create/?action=draft`. Creates DRAFT invoice. No email sent. Toast: "Invoice saved as draft — INV-YYYY-NNNNN."
 
 **[Generate & Send]:** POST `/finance/invoices/create/?action=send`. Creates SENT invoice. Triggers email to institution billing contact (via F-06 Notification Manager). Toast: "Invoice INV-YYYY-NNNNN generated and sent to [email]."
@@ -312,10 +314,12 @@ Triggered by [+ Generate Invoice]. Requires Billing Admin (#70) or FM (#69).
 | Payment date* | Date picker | Required; ≤ today |
 | Payment mode* | Select | NEFT / IMPS / UPI / RAZORPAY / CHEQUE / OTHER |
 | Reference #* | Text | Required; min 4 chars |
-| Notes | Textarea | Optional; max 500 chars |
+| Notes | Textarea | Optional; max 500 chars; HTML-escaped on display |
 | 2FA code* | TOTP input | Required |
 
-**Submit:** PATCH `/finance/invoices/{id}/status/`. Updates `paid_amount_paise`, `status`, `paid_date`, `payment_reference`, `payment_mode`. Creates `finance_payment` record. If amount < total: status = PARTIALLY_PAID. If amount ≥ total: status = PAID.
+**Partial payment accumulation:** `paid_amount_paise` is **accumulated** across multiple payments, not replaced. Example: Invoice total ₹2L → first payment ₹1L sets `paid_amount_paise=100000`; second payment ₹0.8L sets `paid_amount_paise=180000`; third payment ₹0.2L sets `paid_amount_paise=200000` and `status=PAID`. The "Amount paid" input on this modal is validated against `invoice.total_paise - invoice.paid_amount_paise` (current outstanding), not invoice total.
+
+**Submit:** PATCH `/finance/invoices/{id}/status/`. Updates `paid_amount_paise` (appended), `status`, `paid_date`, `payment_reference`, `payment_mode`. Creates `finance_payment` record. If `paid_amount_paise < total_paise`: status = PARTIALLY_PAID. If `paid_amount_paise >= total_paise`: status = PAID.
 
 Toast (on success): "Payment of ₹[amount] recorded for INV-[number]. Status updated to [PAID/PARTIALLY_PAID]."
 

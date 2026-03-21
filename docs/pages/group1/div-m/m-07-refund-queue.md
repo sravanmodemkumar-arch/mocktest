@@ -253,9 +253,61 @@ All checks must pass before [Process Refund] button is enabled.
 
 **[Lookup →]:** POST to `/finance/refunds/lookup-payment/` with payment_id. Returns amount, capture date, method, institution match, and remaining refundable amount. Auto-populates Refund Amount (editable). Validates institution_id matches the payment's institution.
 
+**Institution mismatch validation:** If `finance_payment.institution_id ≠ selected institution_id`, lookup returns error inline below the Payment ID field: "Payment ID [pay_Ixxxxxx] does not belong to [selected institution]. Please verify the correct institution." The [Submit Refund Request] button remains disabled until the mismatch is resolved.
+
 **Remaining refundable:** `finance_payment.amount_paise - SUM(finance_refund.amount_paise WHERE payment_id=this AND status NOT IN ('REJECTED','FAILED'))`. Validated server-side.
 
 **On submit:** Creates `finance_refund` with status=PENDING_REVIEW. If `approval_required=TRUE`: sends in-app notification to FM (#69).
+
+---
+
+## Retry Failed Refund Modal (480px — Refund Exec #73 + FM #69, with 2FA)
+
+```
+  Retry Refund
+  ────────────────────────────────────────────────────────
+  REF-2026-00041  ·  Delhi Coaching Hub  ·  ₹12,000
+  Original Payment: pay_IxxxxF  ·  ₹1,89,000  (UPI)
+  ────────────────────────────────────────────────────────
+  Previous failure reason:
+  [Displayed from finance_refund.failed_reason, e.g.:
+   "Razorpay error BAD_REQUEST_ERROR: The payment does
+    not belong to this merchant."]
+  ────────────────────────────────────────────────────────
+  Speed: NORMAL  (INSTANT not available for retries)
+  ────────────────────────────────────────────────────────
+  2FA code*  [      ]
+  [Cancel]                              [Retry Refund]
+```
+
+**On submit:** POST `/finance/refunds/{id}/retry/`. Calls Razorpay Refund API again with same parameters.
+- On API success: status → PROCESSED (same cascade as Process — see Post-Refund cascade section)
+- On API failure: status remains FAILED; `failed_reason` updated with new error message; `retry_count` incremented
+- Maximum 3 retries allowed (`finance_refund.retry_count ≤ 3`). Beyond 3: retry button disabled; FM must manually investigate with Razorpay support.
+
+Schema addition needed: `retry_count INTEGER NOT NULL DEFAULT 0` on `finance_refund`.
+
+---
+
+## Download Refund Receipt
+
+For PROCESSED refunds. Generates a PDF receipt for the institution's records.
+
+**Template:** `finance/templates/refund_receipt.html` (WeasyPrint server-side).
+
+**Content:**
+- EduForge header, logo, address
+- Refund receipt number: `RFD-{YYYY}-{NNNNN}` (sequential, same scheme as invoice numbers)
+- Date of processing (`processed_at`)
+- Institution name, GSTIN, billing address
+- Original invoice number and period
+- Original payment: Razorpay payment ID, amount, date
+- Refund amount (₹)
+- Razorpay refund ID (`razorpay_refund_id`)
+- Refund reason
+- "This receipt confirms that EduForge Technologies Private Limited has processed the above refund. Please allow 5–7 business days for the amount to reflect in your account."
+
+**Download:** GET `/finance/refunds/{id}/receipt/`. Streams PDF. Cached after first generation (S3 key stored in `finance_refund.receipt_pdf_path`).
 
 ---
 

@@ -111,9 +111,11 @@ Subscription plan configuration table.
 | ARR (₹) | 100px | SUM ARR of those subscriptions |
 | Effective From | 90px | Date; "Current" badge if `effective_until IS NULL` |
 | Status | 80px | ACTIVE / ARCHIVED badge |
-| Actions | 48px | 3-dot menu |
+| Actions | 48px | 3-dot menu: [View Details], [Edit] (Pricing Admin), [Archive] (Pricing Admin — active plans only), [View History] |
 
 **[+ New Plan] button:** Opens Plan modal. Pricing Admin only.
+
+**[Archive] action:** Sets `finance_plan.is_active = FALSE`; plan version becomes read-only. Confirmation: "Archive [Plan Name]? Existing subscriptions are unaffected. No new subscriptions can use this plan." POST `/finance/pricing/plans/{id}/archive/`. Only available if plan has no active subscriptions (`finance_subscription.plan_id = this AND status = 'ACTIVE'` must be 0); if subscriptions exist, button is disabled with tooltip "Cannot archive plan with active subscriptions."
 
 **Version management:** Each plan tier can have multiple versions. Only the version with `effective_until IS NULL` is "current". Creating a new plan version auto-sets the old version's `effective_until = new_version.effective_from - 1 day`. All existing subscriptions on the old version remain; new subscriptions get the latest version.
 
@@ -220,8 +222,9 @@ Institution-specific and global discounts.
 ```
 
 **20% threshold logic:**
-- On the `discount_value` field: if discount_type=PERCENTAGE and value > 20, the form shows: "⚠ Discounts > 20% require Finance Manager approval. This discount will be created in PENDING_APPROVAL status until approved."
+- On the `discount_value` field: real-time validation on keystroke — if `discount_type = PERCENTAGE` and value > 20, inline message appears immediately below the field: "⚠ Discounts > 20% require Finance Manager approval. This discount will be created in PENDING_APPROVAL status until approved."
 - If FM (#69) is the actor: no pending step; discount immediately ACTIVE.
+- The inline message disappears if the user lowers the value to ≤ 20%.
 
 **ARR Impact preview:** Real-time computation as value changes: "This discount reduces [institution]'s ARR from ₹X.XL to ₹Y.YL (−₹ZZ,ZZZ/month)."
 
@@ -271,15 +274,22 @@ Marketing promo codes for discount campaigns.
 | Plan Restriction | Select from active plans | Optional; NULL = any plan |
 | Institution Type Restriction | Select: all/school/college/coaching/group | Optional; NULL = any |
 
-**[Generate Random]:** Suggests a code like `LAUNCH24XKQR` — prefix "LAUNCH" + current month/year + 4 random alphanum chars.
+**[Generate Random]:** Generates a code using `secrets.token_hex(3).upper()` (6 random hex chars) prefixed with a context string. Format: `{PREFIX}{MMYYYY}{6_random_hex}`. Default prefix = "EDU"; example: `EDU0320261A4F9C`. User can edit the generated code before saving. The prefix field (3–6 uppercase letters) is editable in the modal when using Generate Random, allowing custom campaigns like "SCHOOL", "LAUNCH", "DIWALI".
 
-**Code uniqueness:** Checked server-side on submit. Error: "Promo code [code] already exists." — inline error below code field.
+**Code uniqueness:** Checked server-side on submit (not on keystroke — avoids race conditions on concurrent creation). Error displayed inline below the Code field: "Promo code [CODE] already exists. Choose a different code or click [Generate Random] again."
 
 ---
 
 ## ARR Impact Analysis (Finance Analyst + FM toggle)
 
-When Finance Analyst (#101) or FM (#69) clicks **[Show ARR Impact]**, an overlay panel appears below the relevant tab showing:
+When Finance Analyst (#101) or FM (#69) clicks **[Show ARR Impact]**, an overlay panel appears below the relevant tab.
+
+**Toggle button:** `[Show ARR Impact]` (green, right-aligned above active tab). Visible only to FM (#69) and Analyst (#101).
+- HTMX: `GET ?part=arr_impact&tab={plans|discounts|promos}` — target `#pricing-impact-panel` (rendered inline below tab content)
+- Cache: 60-min TTL; `?nocache=true` supported
+- Close: `[×]` button on panel; hides without reload (hx-swap="delete")
+
+**Content varies by active tab:**
 
 **For Plans tab:** "If you change [STANDARD] plan price by +₹10,000/year, applying to all 890 current Standard subscribers would generate +₹8.9Cr additional ARR — assuming 0% churn from the increase." Modelling assumes no churn (optimistic) and a 5% churn scenario (pessimistic) side by side.
 

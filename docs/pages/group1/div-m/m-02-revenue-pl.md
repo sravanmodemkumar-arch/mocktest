@@ -232,6 +232,37 @@ Line chart — actual ARR vs forecast for the next 6 months (backward 6 months a
 
 ---
 
+## Forecast Update Drawer (560px — FM #69 only)
+
+```
+  Update ARR Forecast
+  ──────────────────────────────────────────────────────────
+  Set monthly ARR targets for the next 6 months.
+  ──────────────────────────────────────────────────────────
+  Apr 2026  Forecast ARR (₹Cr) [ 4.20 ]  Confidence (%)  [ 80 ]
+  May 2026  Forecast ARR (₹Cr) [ 4.40 ]  Confidence (%)  [ 75 ]
+  Jun 2026  Forecast ARR (₹Cr) [ 4.60 ]  Confidence (%)  [ 70 ]
+  Jul 2026  Forecast ARR (₹Cr) [ 4.80 ]  Confidence (%)  [ 65 ]
+  Aug 2026  Forecast ARR (₹Cr) [ 5.00 ]  Confidence (%)  [ 60 ]
+  Sep 2026  Forecast ARR (₹Cr) [ 5.20 ]  Confidence (%)  [ 55 ]
+  ──────────────────────────────────────────────────────────
+  Notes  [Optional context for this forecast revision...]
+  ──────────────────────────────────────────────────────────
+  [Cancel]                              [Save Forecast]
+```
+
+| Field | Validation |
+|---|---|
+| Forecast ARR (₹Cr) | Required; ≥ 0; stored as paise (× 10,000,000) |
+| Confidence (%) | Integer; 10–100; default 80; displayed as ±band on chart |
+| Notes | Optional; max 500 chars; HTML-escaped on display |
+
+**On submit:** POST `/finance/revenue/forecast/` with array of `{period_year, period_month, forecast_arr_paise, confidence_pct, notes}`. Upserts rows in `analytics_revenue`. Writes `finance_audit_log` entry. Chart auto-refreshes to reflect new values.
+
+Toast: "Forecast updated for 6 months."
+
+---
+
 ### Cohort Revenue Table
 
 Matrix showing ARR contribution by institution cohort (year of first subscription) × current month.

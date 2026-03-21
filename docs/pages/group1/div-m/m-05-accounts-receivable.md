@@ -247,7 +247,7 @@ Used by AR Exec (#71) and Collections Exec (#102).
 
 **Validation:**
 - Type: required
-- Notes: required; min 10 chars; max 2000 chars
+- Notes: required; min 10 chars; max 2000 chars; HTML-escaped on display
 - Next Follow-up Date: optional; must be > today
 - Promise Date (if type=PROMISE_TO_PAY): required; must be > today
 - Promise Amount (if type=PROMISE_TO_PAY): required; > 0 paise; ≤ total_outstanding_paise
@@ -277,8 +277,8 @@ Right-side panel showing all active promise-to-pay records.
 
 - "Due today" rows: amber row tint, pulsing clock icon
 - "Broken promise" rows: red row tint; [Escalate] button → assigns to Collections Exec (#102) and logs ESCALATED follow-up
-- [Mark Paid]: shortcut to M-03 Mark Paid modal pre-filled
-- [Verify]: AR Exec confirms whether payment was received
+- [Mark Paid]: opens M-03 Mark Paid modal in a side drawer, pre-filled with `invoice_id` from the promise record, `amount_paid` = `promise_amount_paise`, `payment_date` = today. URL: `GET /finance/invoices/{invoice_id}/mark-paid/?from=promise_panel` — `from` param triggers "Return to AR" breadcrumb after save.
+- [Verify]: AR Exec confirms whether payment was received — opens a confirmation dialog: "Has payment been received for this promise? [Yes, received] [No, still pending]". On "Yes": logs PHONE_CALL follow-up note "Payment verified as received." On "No": no change.
 
 ---
 

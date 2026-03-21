@@ -136,7 +136,7 @@ Server-side paginated, 25 rows per page.
 | Billing Cycle | 80px | MONTHLY or ANNUAL badge |
 | Start Date | 95px | Date |
 | End Date | 95px | Date; red if ≤ 14 days and auto_renew=OFF |
-| Auto-Renew | 80px | Toggle switch (toggle action inline PATCH for Billing Admin) |
+| Auto-Renew | 80px | Toggle switch; inline PATCH to `/finance/subscriptions/{id}/` (no confirmation dialog); immediate effect; toast: "Auto-renew [enabled/disabled] for [institution]." Available to Billing Admin (#70) and FM (#69) only. |
 | Status | 110px | ACTIVE=green · SUSPENDED=red · EXPIRED=amber · CANCELLED=slate |
 | Actions | 48px | 3-dot menu |
 
@@ -222,7 +222,14 @@ Used for both creating new subscriptions (post-CLOSED_WON handoff) and editing e
 
 **ARR change > 20% warning (edit mode):** "This change increases/decreases ARR by ₹X.XL ([N]%). Finance Manager approval required for ARR changes > 20%." — if FM (#69) is not the actor, creates a pending approval request; FM receives in-app notification.
 
-**On save:** POST/PATCH `/finance/subscriptions/` or `/finance/subscriptions/{id}/`. Toast: "Subscription [created/updated] for [institution]." Task M-2 is notified to skip auto-generation for this institution's next billing period (since we just created/updated manually).
+**ARR > 20% Approval Flow:**
+1. Billing Admin submits change. If ARR delta > 20%, subscription saved with `status = 'PENDING_APPROVAL'` (subscription is held, not yet active).
+2. Toast to Billing Admin: "ARR change of ₹[delta] sent to Finance Manager for approval."
+3. FM sees PENDING_APPROVAL row in subscription table (amber badge). Kebab menu shows [Approve ARR Change] / [Reject ARR Change].
+4. On Approve: PATCH `/finance/subscriptions/{id}/approve-arr/` → status → ACTIVE; Billing Admin notified; invoice generation proceeds.
+5. On Reject: FM adds rejection note; Billing Admin notified; subscription returned to previous state.
+
+**On save (non-pending):** POST/PATCH `/finance/subscriptions/` or `/finance/subscriptions/{id}/`. Toast: "Subscription [created/updated] for [institution]." Task M-2 is notified to skip auto-generation for this institution's next billing period (since we just created/updated manually).
 
 ---
 
@@ -297,6 +304,46 @@ Used for both creating new subscriptions (post-CLOSED_WON handoff) and editing e
 Toast: "[institution] account reactivated. Platform access restored."
 
 **Authorization:** Available to FM (#69) and Billing Admin (#70) only. Both require 2FA.
+
+---
+
+## Cancel Subscription Modal (480px — FM #69 only, with 2FA)
+
+```
+  Cancel Subscription
+  ─────────────────────────────────────────────────────────
+  Delhi Coaching Hub · ENTERPRISE · ₹12.4L ARR
+  Active since: 01 Apr 2025 · End date: 31 Mar 2026
+  ─────────────────────────────────────────────────────────
+  Reason*  [INSTITUTION_REQUEST ▼]
+           (INSTITUTION_REQUEST / CHURNED / BANKRUPT /
+            CONTRACT_VIOLATION / MERGED_CONSOLIDATED)
+  Notes*   [Institution confirmed non-renewal in writing...]
+  Effective Date*  [31 Mar 2026]
+  ─────────────────────────────────────────────────────────
+  ⚠ Cancelling will:
+  • Set subscription status to CANCELLED
+  • Stop future invoice auto-generation (Task M-2 skip)
+  • Notify Division J Account Manager and CSM
+  • Notify institution billing contact via email
+  ─────────────────────────────────────────────────────────
+  2FA code*  [      ]
+  [Cancel]                        [Confirm Cancellation]
+```
+
+**Validation:**
+- Reason: required
+- Notes: required; min 20 chars; max 2000 chars; HTML-escaped on display
+- Effective Date: required; ≥ today; ≤ `finance_subscription.end_date`
+- 2FA: required
+
+**On confirm:** POST `/finance/subscriptions/{id}/cancel/`.
+- `finance_subscription.status → CANCELLED`; `cancelled_at` = now; reason + notes stored
+- Division J: in-app + email to Account Manager (#54) and CSM (#53)
+- Institution billing contact: email "Your EduForge subscription has been cancelled effective [date]."
+- `finance_audit_log` entry (action=CANCELLED)
+
+Toast: "[institution] subscription cancelled effective [effective date]."
 
 ---
 

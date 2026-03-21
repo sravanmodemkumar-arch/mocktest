@@ -114,12 +114,43 @@ finance_invoice (
 
 Indexes:
 ```sql
+-- finance_invoice
 CREATE INDEX idx_invoice_institution    ON finance_invoice(institution_id);
 CREATE INDEX idx_invoice_status         ON finance_invoice(status);
 CREATE INDEX idx_invoice_due_date       ON finance_invoice(due_date) WHERE status NOT IN ('PAID','VOID','WRITTEN_OFF');
 CREATE INDEX idx_invoice_period         ON finance_invoice(billing_period_year, billing_period_month);
 CREATE UNIQUE INDEX idx_invoice_inst_period ON finance_invoice(institution_id, billing_period_year, billing_period_month)
   WHERE status NOT IN ('VOID');
+
+-- finance_subscription
+CREATE INDEX idx_subscription_status   ON finance_subscription(status);
+CREATE INDEX idx_subscription_plan     ON finance_subscription(plan_id);
+CREATE INDEX idx_subscription_end_date ON finance_subscription(end_date) WHERE status = 'ACTIVE';
+
+-- finance_payment
+CREATE INDEX idx_payment_institution   ON finance_payment(institution_id);
+CREATE INDEX idx_payment_settlement    ON finance_payment(settlement_id, status);
+CREATE INDEX idx_payment_unmatched     ON finance_payment(settlement_id) WHERE settlement_id IS NULL AND status = 'CAPTURED';
+
+-- finance_refund
+CREATE INDEX idx_refund_status         ON finance_refund(status);
+CREATE INDEX idx_refund_payment        ON finance_refund(payment_id);
+CREATE INDEX idx_refund_approval       ON finance_refund(approval_required) WHERE approval_required = TRUE;
+CREATE INDEX idx_refund_created        ON finance_refund(created_at DESC);
+
+-- finance_ar_aging
+CREATE INDEX idx_ar_aging_institution  ON finance_ar_aging(institution_id);
+CREATE INDEX idx_ar_aging_collections  ON finance_ar_aging(bucket_61_90_paise, bucket_91plus_paise)
+  WHERE (bucket_61_90_paise > 0 OR bucket_91plus_paise > 0);
+
+-- finance_ar_followup
+CREATE INDEX idx_ar_followup_institution ON finance_ar_followup(institution_id);
+CREATE INDEX idx_ar_followup_type      ON finance_ar_followup(followup_type);
+
+-- finance_razorpay_settlement
+CREATE INDEX idx_settlement_payout_date ON finance_razorpay_settlement(payout_date DESC);
+CREATE INDEX idx_settlement_unmatched  ON finance_razorpay_settlement(reconciliation_status)
+  WHERE reconciliation_status = 'UNMATCHED';
 ```
 
 ### `finance_subscription`
@@ -136,11 +167,14 @@ finance_subscription (
   mrr_paise           BIGINT GENERATED ALWAYS AS (arr_paise / 12) STORED,
   seats               INTEGER NOT NULL DEFAULT 0,
   auto_renew          BOOLEAN NOT NULL DEFAULT TRUE,
-  status              VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',   -- ACTIVE/SUSPENDED/EXPIRED/CANCELLED
+  status              VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',   -- ACTIVE/SUSPENDED/CANCELLED/EXPIRED/PENDING_APPROVAL
   discount_id         INTEGER REFERENCES finance_discount(id),
   activated_at        TIMESTAMPTZ,
   suspended_at        TIMESTAMPTZ,
   suspended_reason    TEXT,
+  reactivated_at      TIMESTAMPTZ,
+  reactivated_by_id   INTEGER REFERENCES auth_user(id),
+  reactivation_reason TEXT,
   cancelled_at        TIMESTAMPTZ,
   created_by_id       INTEGER NOT NULL REFERENCES auth_user(id),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -184,6 +218,7 @@ finance_payment (
   payment_date            DATE NOT NULL,
   payment_method          VARCHAR(30),                         -- card/netbanking/upi/bank_transfer
   status                  VARCHAR(20) NOT NULL,                -- CAPTURED/FAILED/REFUNDED/PARTIALLY_REFUNDED
+  refunded_amount_paise   BIGINT NOT NULL DEFAULT 0,           -- accumulated refund total; updated on each PROCESSED refund
   settlement_id           INTEGER REFERENCES finance_razorpay_settlement(id),
   reconciled_at           TIMESTAMPTZ,
   reconciled_by_id        INTEGER REFERENCES auth_user(id),
@@ -232,6 +267,8 @@ finance_refund (
   razorpay_refund_id      VARCHAR(50) UNIQUE,
   processed_at            TIMESTAMPTZ,
   failed_reason           TEXT,
+  retry_count             INTEGER NOT NULL DEFAULT 0,          -- max 3 retries before FM manual investigation
+  receipt_pdf_path        VARCHAR(500),                        -- S3 key for generated refund receipt PDF
   created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 )
@@ -249,6 +286,7 @@ finance_ar_followup (
   next_followup_date  DATE,
   promise_to_pay_date DATE,
   promise_amount_paise BIGINT,
+  notice_pdf_path     VARCHAR(500),                            -- S3 key for generated demand notice PDF (DEMAND_NOTICE type only)
   created_by_id       INTEGER NOT NULL REFERENCES auth_user(id),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 )
@@ -270,7 +308,13 @@ finance_ar_aging (
   oldest_invoice_days     INTEGER NOT NULL DEFAULT 0,
   last_payment_date       DATE,
   last_followup_date      DATE,
-  assigned_collector_id   INTEGER REFERENCES auth_user(id)     -- NULL = AR Exec; #102 if escalated to Collections
+  promise_to_pay_date     DATE,                               -- latest active promise date (synced from finance_ar_followup)
+  promise_amount_paise    BIGINT,                             -- latest promise amount
+  entered_0_30_date       DATE,                               -- when institution first entered 0–30d bucket this cycle
+  entered_31_60_date      DATE,                               -- when institution first entered 31–60d bucket
+  entered_61_90_date      DATE,                               -- when institution first entered 61–90d bucket (SLA clock start)
+  entered_91plus_date     DATE,                               -- when institution first entered 90+ bucket (escalation clock start)
+  assigned_collector_id   INTEGER REFERENCES auth_user(id)    -- NULL = AR Exec; #102 if escalated to Collections
 )
 ```
 
@@ -315,6 +359,33 @@ finance_promo_code (
 )
 ```
 
+### `finance_config`  *(key-value configuration store for Finance domain settings)*
+
+```
+finance_config (
+  id                  SERIAL PRIMARY KEY,
+  key                 VARCHAR(100) UNIQUE NOT NULL,
+  value               TEXT NOT NULL,
+  value_type          VARCHAR(20) NOT NULL DEFAULT 'STRING',  -- STRING/BIGINT/BOOLEAN/JSON
+  description         TEXT,
+  updated_by_id       INTEGER REFERENCES auth_user(id),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+)
+```
+
+Seed rows (managed via Django migration or admin):
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `arr_target_paise` | BIGINT | `1800000000` | Target ARR in paise for dashboard ARR trend target line (M-01) |
+| `settlement_sync_manual_count_today` | BIGINT | `0` | Counter reset daily at midnight; max 3 manual Razorpay syncs per day (M-06) |
+| `fm_signature_path` | STRING | `s3://eduforge-assets/signatures/fm_default.png` | S3 path to FM signature image for demand notices (M-05) |
+| `refund_approval_threshold_paise` | BIGINT | `1000000` | Refund amount (paise) above which FM approval is required (M-07; default = ₹10,000) |
+| `ar_sla_0_30_hours` | BIGINT | `24` | SLA: first reminder within N hours of invoice becoming overdue |
+| `ar_sla_31_60_hours` | BIGINT | `48` | SLA: follow-up within N hours of entering 31–60d bucket |
+
+---
+
 ### `finance_gst_return`
 
 ```
@@ -339,6 +410,26 @@ finance_gst_return (
   UNIQUE (return_type, period)
 )
 ```
+
+### `finance_tds_log`  *(manual TDS deduction entries — Section 194J)*
+
+```
+finance_tds_log (
+  id                  SERIAL PRIMARY KEY,
+  institution_id      INTEGER NOT NULL REFERENCES institution(id),
+  invoice_id          INTEGER REFERENCES finance_invoice(id),   -- NULL = not invoice-specific
+  amount_paise        BIGINT NOT NULL CHECK (amount_paise > 0),
+  tds_rate            NUMERIC(5,2) NOT NULL,                    -- e.g. 10.00 for 10%
+  form_16b_ref        VARCHAR(50),
+  quarter             VARCHAR(10) NOT NULL,                     -- Q1/Q2/Q3/Q4 + year e.g. 'Q4-2026'
+  deduction_date      DATE NOT NULL,
+  notes               TEXT,
+  created_by_id       INTEGER NOT NULL REFERENCES auth_user(id),
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+)
+```
+
+---
 
 ### `finance_plan_feature`  *(master feature registry — drives checkbox list in M-09 Create/Edit Plan)*
 
@@ -461,23 +552,36 @@ POST  /finance/invoices/bulk-remind/     → BulkReminderView
 GET   /finance/subscriptions/            → SubscriptionManagerView
 POST  /finance/subscriptions/create/     → SubscriptionCreateView
 PATCH /finance/subscriptions/{id}/       → SubscriptionUpdateView
-POST  /finance/subscriptions/{id}/suspend/    → SubscriptionSuspendView
-POST  /finance/subscriptions/{id}/reactivate/ → SubscriptionReactivateView
-GET   /finance/ar/                       → AccountsReceivableView
-POST  /finance/ar/followup/              → ARFollowupCreateView
-GET   /finance/settlements/              → SettlementsView
-POST  /finance/settlements/{id}/match/   → SettlementMatchView
-GET   /finance/refunds/                  → RefundQueueView
-POST  /finance/refunds/create/           → RefundCreateView
-PATCH /finance/refunds/{id}/review/      → RefundReviewView
-POST  /finance/refunds/{id}/process/     → RefundProcessView
-GET   /finance/gst/                      → GSTTaxView
-POST  /finance/gst/returns/{id}/file/    → GSTReturnFileView
-GET   /finance/pricing/                  → PricingDiscountsView
-POST  /finance/pricing/plans/            → PlanCreateView
-PATCH /finance/pricing/plans/{id}/       → PlanUpdateView
-POST  /finance/pricing/discounts/        → DiscountCreateView
-POST  /finance/pricing/promos/           → PromoCodeCreateView
+POST  /finance/subscriptions/{id}/suspend/         → SubscriptionSuspendView
+POST  /finance/subscriptions/{id}/reactivate/      → SubscriptionReactivateView
+POST  /finance/subscriptions/{id}/cancel/          → SubscriptionCancelView       (FM #69 only, 2FA required)
+PATCH /finance/subscriptions/{id}/approve-arr/     → SubscriptionARRApproveView   (FM #69 only; approves >20% ARR change)
+GET   /finance/ar/                                 → AccountsReceivableView
+POST  /finance/ar/followup/                        → ARFollowupCreateView
+GET   /finance/settlements/                        → SettlementsView
+POST  /finance/settlements/sync/                   → SettlementSyncView           (FM #69 only; rate-limited 3/day)
+POST  /finance/settlements/{id}/match/             → SettlementMatchView
+GET   /finance/refunds/                            → RefundQueueView
+POST  /finance/refunds/create/                     → RefundCreateView
+POST  /finance/refunds/lookup-payment/             → RefundLookupPaymentView      (validates payment_id; returns amount + institution)
+PATCH /finance/refunds/{id}/review/                → RefundReviewView
+POST  /finance/refunds/{id}/process/               → RefundProcessView            (2FA required)
+POST  /finance/refunds/{id}/retry/                 → RefundRetryView              (2FA required; FAILED status only)
+GET   /finance/gst/                                → GSTTaxView
+POST  /finance/gst/returns/{id}/file/              → GSTReturnFileView
+PATCH /finance/gst/returns/{id}/confirm/           → GSTReturnConfirmView         (FM #69 only; confirms GST Consultant's filing)
+POST  /finance/gst/tds/                            → TDSLogCreateView             (GST Consultant #72 only)
+GET   /finance/pricing/                            → PricingDiscountsView
+POST  /finance/pricing/plans/                      → PlanCreateView
+PATCH /finance/pricing/plans/{id}/                 → PlanUpdateView
+POST  /finance/pricing/plans/{id}/archive/         → PlanArchiveView              (Pricing Admin #74 only)
+POST  /finance/pricing/discounts/                  → DiscountCreateView
+PATCH /finance/pricing/discounts/{id}/             → DiscountUpdateView
+POST  /finance/pricing/discounts/{id}/approve/     → DiscountApproveView          (FM #69 only)
+POST  /finance/pricing/discounts/{id}/reject/      → DiscountRejectView           (FM #69 only)
+POST  /finance/pricing/promos/                     → PromoCodeCreateView
+POST  /finance/pricing/promos/{id}/deactivate/     → PromoCodeDeactivateView      (Pricing Admin #74 only)
+POST  /finance/revenue/forecast/                   → RevenueForecastUpdateView    (FM #69 only)
 ```
 
 HTMX partial loads: all routes accept `?part=<partial_name>` and return HTML fragments.
@@ -492,9 +596,11 @@ HTMX partial loads: all routes accept `?part=<partial_name>` and return HTML fra
 - Mark Invoice as Paid
 - Write Off Invoice
 - Approve Refund > ₹10K
-- Trigger Razorpay Refund API call
+- Trigger Razorpay Refund API call (Process + Retry)
 - Issue Demand Notice
 - Suspend Institution Account
+- Reactivate Institution Account
+- Cancel Subscription
 
 **Financial data isolation:**
 - All paise values stored as `BIGINT` — no float arithmetic anywhere in the stack.
@@ -502,6 +608,8 @@ HTMX partial loads: all routes accept `?part=<partial_name>` and return HTML fra
 - Invoice PDFs generated server-side (WeasyPrint); never computed client-side.
 - Razorpay API keys (Key ID + Key Secret) stored in AWS KMS; never in environment variables or code.
 - Razorpay webhook signatures verified using HMAC-SHA256 before processing any payment event.
+
+**CSRF Protection:** All POST/PATCH/DELETE endpoints validate Django CSRF tokens. HTMX includes `X-CSRFToken` header automatically via base template meta tag (`{% csrf_token %}`). Webhook endpoints (`/finance/settlements/webhook/`) are exempt from CSRF; they use Razorpay HMAC-SHA256 signature verification instead.
 
 **Audit log:** Every state-changing operation on `finance_invoice`, `finance_subscription`, `finance_refund` writes to `finance_audit_log` (id, table_name, record_id, action, old_value_json, new_value_json, actor_id, actor_ip, created_at). Immutable — no UPDATE or DELETE on audit records.
 
@@ -530,3 +638,11 @@ HTMX partial loads: all routes accept `?part=<partial_name>` and return HTML fra
 | Payment plan agreed with institution | #71 AR Exec + #69 Finance Manager | In-app | On `finance_ar_followup` PAYMENT_PLAN_AGREED creation |
 | Discount > 20% created (pending approval) | #69 Finance Manager | In-app | Immediate |
 | Discount > 20% approved/rejected | #74 Pricing Admin | In-app | Immediate |
+| Account reactivated | #54 Account Manager (Div J), #53 CSM (Div J), institution billing contact | In-app + email | On reactivation action |
+| Subscription cancelled | #54 Account Manager (Div J), #53 CSM (Div J), institution billing contact | In-app + email | On cancel action |
+| AR SLA breach (0–30d: >24h without followup) | #71 AR Exec + #69 Finance Manager | In-app | Task M-1 daily digest |
+| AR SLA breach (61–90d: no demand notice within 5 biz days) | #69 Finance Manager | Email + in-app | Task M-1 daily digest |
+| ARR change > 20% pending approval | #69 Finance Manager | In-app | Immediate on PENDING_APPROVAL subscription creation |
+| ARR change approved by FM | #70 Billing Admin | In-app | On approval action |
+| GST return filing confirmed by FM | #72 GST Consultant | In-app | On FM confirm action |
+| Promise-to-Pay broken (due date passed, not paid) | #71 AR Exec + #102 Collections Exec | In-app | Task M-1 run |

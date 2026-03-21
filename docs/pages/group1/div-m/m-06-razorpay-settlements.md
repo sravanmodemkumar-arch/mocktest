@@ -118,7 +118,7 @@ At ₹4Cr+ ARR, approximately 15–25 settlements per month land from Razorpay. 
 |---|---|---|
 | View Settlement Details | Always | All |
 | Match to Payments | UNMATCHED | FM (#69), Billing Admin (#70) |
-| Download Razorpay Report | Always | FM (#69) |
+| Download Razorpay Report | Always | FM (#69) — CSV of raw Razorpay settlement data: settlement_id, payout_date, gross, fees, tax_on_fees, tcs, net, status; optional `?format=json` for JSON |
 | Mark as Reviewed | AUTO_MATCHED | FM (#69) |
 | Export Settlement CSV | Always | FM (#69), Analyst (#101), GST Consultant (#72) |
 
@@ -184,7 +184,7 @@ For UNMATCHED settlements — allows Finance Manager or Billing Admin to manuall
 ```
 
 - Search: finds `finance_payment` records WHERE settlement_id IS NULL AND status='CAPTURED' AND amount matches ±5% of settlement amount
-- Checkboxes: multi-select; running total shown; [Confirm] enabled only when selected total = settlement gross ± ₹0 (exact match required)
+- Checkboxes: multi-select; running total shown; [Confirm] enabled only when selected total = settlement gross ± ₹0 (exact match, zero tolerance — no rounding permitted). If payments don't sum exactly to settlement gross, the user must find the missing/extra transaction rather than accepting a partial match.
 - Match reason: required; max 500 chars; stored in `finance_razorpay_settlement.notes`
 - On confirm: PATCH `/finance/settlements/{id}/match/`. Sets `reconciliation_status=MANUALLY_MATCHED`, `reconciled_by_id`, `reconciled_at`. Links payment records to this settlement. Writes audit log.
 

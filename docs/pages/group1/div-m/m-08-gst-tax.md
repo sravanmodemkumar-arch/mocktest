@@ -153,6 +153,72 @@ Actions per row:
 
 ---
 
+## FM Confirm Filing Modal (480px — FM #69 only)
+
+FM receives in-app notification: "GSTR-[1/3B/9] for [period] submitted by [GST Consultant name] — pending your confirmation."
+
+```
+  Confirm GST Filing — GSTR-1  Mar 2026
+  ──────────────────────────────────────────────────
+  Filed by:        Priya Sharma (GST Consultant)
+  ARN:             AA12345678901234
+  Filing Date:     10 Apr 2026
+  ──────────────────────────────────────────────────
+  Taxable Turnover:   ₹38,00,000
+  CGST:               ₹3,42,000
+  SGST:               ₹3,42,000
+  IGST:               ₹0
+  Total Tax Paid:     ₹6,84,000
+  ──────────────────────────────────────────────────
+  Consultant Notes:
+  [All invoices reconciled; 1,756 B2B + 86 B2C filed]
+  ──────────────────────────────────────────────────
+  Rejection reason (if rejecting):
+  [______________________________________]
+  ──────────────────────────────────────────────────
+  [Reject Filing]              [Confirm Filing]
+```
+
+**On Confirm:** PATCH `/finance/gst/returns/{id}/confirm/` with `{action: 'CONFIRM'}`. Status → `FILED`. `filed_by_id = FM`, `filing_date` finalized. Toast: "GSTR-1 for Mar 2026 confirmed."
+
+**On Reject:** PATCH with `{action: 'REJECT', rejection_notes: '...'}`. Status → `UPCOMING` (reopens for correction). GST Consultant notified: "FM has rejected the GSTR-1 filing for Mar 2026. Please review and resubmit. Reason: [rejection_notes]."
+
+**Rejection reason:** Required when rejecting; min 10 chars.
+
+---
+
+## TDS Entry Modal (480px — GST Consultant #72 only)
+
+```
+  Log TDS Deduction (Section 194J)
+  ──────────────────────────────────────────────────
+  Institution*      [Search institution...]
+  Invoice #         [INV-2026-NNNNN or leave blank]
+  ──────────────────────────────────────────────────
+  TDS Amount (₹)*   [12,000]
+  TDS Rate (%)*     [10.00]   (default 10%; range 1–20%)
+  Form 16B Ref      [16B-XXXXXXXX]   (optional)
+  Quarter*          [Q4 (Jan–Mar 2026) ▼]
+  Date of Deduction* [31 Mar 2026]
+  Notes             [Optional context...]
+  ──────────────────────────────────────────────────
+  [Cancel]                      [Log TDS Entry]
+```
+
+| Field | Validation |
+|---|---|
+| Institution | Required |
+| TDS Amount | Required; > 0 |
+| TDS Rate | Required; 1–20%; stored as decimal (e.g., 10.00) |
+| Form 16B Ref | Optional; max 50 chars |
+| Quarter | Required; Q1–Q4 picker |
+| Date | Required; ≤ today |
+| Notes | Optional; max 500 chars; HTML-escaped |
+
+**On submit:** POST `/finance/gst/tds/`. Records in `finance_tds_log` table (schema: id, institution_id, invoice_id, amount_paise, tds_rate, form_16b_ref, quarter, deduction_date, notes, created_by_id, created_at). Toast: "TDS entry logged: ₹[amount] from [institution]."
+
+---
+
 ## Tab: B2B Invoices (GSTR-1 Preparation)
 
 Invoice list for B2B supplies (institution GST-registered customers) for the selected period.
@@ -188,9 +254,37 @@ Showing 1,842 invoices (B2B: 1,756 · Unregistered: 86)
 
 **Place of Supply logic:** If institution.state == 'Telangana' (EduForge's state): CGST+SGST. All other states: IGST. This should be consistent with the CGst/SGST columns in the invoice.
 
-**Unregistered supplies:** Institutions without a GSTIN are "B2C" supplies. GSTR-1 reports these aggregated (not per-invoice) if each invoice < ₹2.5L. Over ₹2.5L: must be reported per-invoice even for B2C.
+**Unregistered supplies (B2C):** Institutions without a GSTIN are "B2C" supplies. The table filters these out of the B2B view (they show in the "Unregistered: 86" count in the filter row). GSTR-1 B2CS (B2C small) reporting: invoices < ₹2.5L are aggregated by state in the JSON export. B2CL (B2C large, ≥ ₹2.5L): reported per-invoice even without GSTIN. The system auto-classifies: if `institution.gstin IS NULL AND total_paise >= 25000000`: type = B2CL (included in export individually). If `total_paise < 25000000`: type = B2CS (aggregated by state in export). B2C rows are shown in the table with a "B2C" type badge; "Unregistered" GSTIN column shows state name instead.
 
-**[Export for GSTN Upload (JSON)]:** Generates a GSTN-compatible JSON file for the selected period in the format required by the GSTN offline utility. Available to GST Consultant (#72) only.
+**[Export for GSTN Upload (JSON)]:** Generates a GSTN-compatible JSON file (GSTR-1 format) for the selected period. Available to GST Consultant (#72) only.
+
+**GSTN JSON Export Schema:**
+```json
+{
+  "return_type": "GSTR1",
+  "gstin": "36AABCE1234F1ZX",
+  "period": "032026",
+  "b2b": [
+    {
+      "ctin": "27AABCT1234C1Z0",
+      "inv": [
+        {
+          "inum": "INV-2026-00841",
+          "idt": "01-03-2026",
+          "val": 177000.00,
+          "pos": "TG",
+          "rchrg": "N",
+          "itms": [{ "num": 1, "itm_det": { "txval": 150000.00, "rt": 18, "camt": 13500.00, "samt": 13500.00, "iamt": 0 }}]
+        }
+      ]
+    }
+  ],
+  "b2cs": [{ "pos": "MH", "rt": 18, "txval": 84960, "iamt": 15293 }],
+  "b2cl": [{ "pos": "KA", "inv": [{ "inum": "INV-2026-00999", "idt": "05-03-2026", "val": 295000, "itms": [{ "num": 1, "itm_det": { "txval": 250000, "rt": 18, "iamt": 45000 }}]}]}],
+  "hsn": { "data": [{ "hsn_sc": "9993", "desc": "Education & Exam Services", "uqc": "NOS", "cnt": 2050, "val": 3800000, "txval": 3800000, "iamt": 342000, "camt": 342000, "samt": 342000 }]}
+}
+```
+Field names follow the GSTN offline utility v2.x schema. Decimal values in INR (not paise). `pos` = 2-letter state code.
 
 ---
 
