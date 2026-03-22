@@ -6,7 +6,7 @@
 | 01 | Auth & Identity — Login, OTP, JWT, Sessions, Devices | ✅ Done |
 | 02 | Multi-Tenancy — Sharding, Subdomains, Tenant Config | ✅ Done |
 | 03 | Roles & Permissions — RBAC, All 11 Groups | ✅ Done |
-| 04 | Institution Onboarding — Setup Wizard, Branding, Config | ⬜ |
+| 04 | Institution Onboarding — Setup Wizard, Branding, Config | ✅ Done |
 | 05 | Academic Year & Calendar — Sessions, Holidays, Terms | ⬜ |
 | 06 | Branch & Campus Management | ⬜ |
 | 07 | Student Enrolment & Profile | ⬜ |
