@@ -646,12 +646,15 @@ Each topic stores names in:
 ## 18. Cross-Module Linkages
 
 ### 18.1 Study Material Linkage (Module 16)
-- Each topic shows count of notes/PDFs/slides available
-- One-click navigate to all material for that topic
+- Each topic shows count of notes/slides available
+- One-click navigate to all material for that topic — view-only in-app; no download option
 - "Add material" shortcut from syllabus topic row
 
 ### 18.2 Video Lecture Linkage (Module 44)
-- Each topic linked to video lectures (platform-hosted or YouTube embed)
+- Each topic linked to video lectures (platform-hosted or YouTube link)
+- YouTube links open inside the app (in-app browser / WebView) — YouTube app is never launched; user stays within EduForge
+- A "Watch Video" button is displayed per video; tapping it opens the YouTube URL in-app
+- No download option for any video — streaming / in-app view only
 - Video count and total watch duration visible per topic
 - Teacher can assign a specific video as the primary lecture for a topic
 
