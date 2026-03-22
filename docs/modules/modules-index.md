@@ -16,7 +16,7 @@
 | 11 | Attendance — School & College | ✅ Done |
 | 12 | Attendance — Coaching & Batch | ✅ Done |
 | 13 | Attendance — Hostel | ✅ Done |
-| 14 | Homework & Assignments | ⬜ |
+| 14 | Homework & Assignments | ✅ Done |
 | 15 | Syllabus & Curriculum Builder | ⬜ |
 | 16 | Notes & Study Material | ⬜ |
 | 17 | Question Bank & MCQ | ⬜ |
