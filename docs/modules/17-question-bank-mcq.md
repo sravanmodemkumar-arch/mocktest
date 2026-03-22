@@ -1151,7 +1151,36 @@ Platform recommends minimum per chapter per type:
 
 ## 17. Data Architecture
 
-### 17.1 Tenancy
+### 17.1 CDN-First Content Storage
+
+All question media assets (platform images, diagram renders, chart renders, audio clips)
+are stored in CDN — **not in the database**. The database stores only the JSON reference
+(image_id / cdn_path). The CDN is organised by subject and topic hierarchy:
+
+```
+CDN Path Structure:
+/questions/
+  /{board_code}/              e.g. CBSE/
+    /{subject_code}/          e.g. PHYSICS/
+      /{grade}/               e.g. 12/
+        /{unit_code}/         e.g. UNIT_01/
+          /{chapter_code}/    e.g. CH_01/
+            /{topic_code}/    e.g. ELECTRIC_FIELD/
+              /images/        platform image library assets
+              /diagrams/      rendered diagram PNGs (cached from canvas JSON)
+              /charts/        rendered chart PNGs (cached from chart JSON)
+              /audio/         TTS audio clips (pre-rendered for FLN/language questions)
+```
+
+CDN rules:
+- Platform assets: served from EduForge global CDN (CloudFront); immutable URLs per version
+- Diagram and chart JSON → rendered server-side → PNG cached on CDN on first request
+- Audio TTS → pre-rendered per language → stored at topic level on CDN
+- Institution/teacher media: same CDN structure under `/tenant/{tenant_id}/questions/...`
+- No media stored in PostgreSQL — DB holds only `cdn_path` and `image_id` references
+- CDN cache TTL: platform assets = 1 year (immutable per version); tenant assets = 30 days
+
+### 17.2 Tenancy
 - Platform questions: `tenant_id = NULL` (global read; no tenant can edit)
 - Institution questions: `tenant_id = institution_id` (RLS scoped)
 - Teacher questions: `tenant_id` + `author_id` scoped
