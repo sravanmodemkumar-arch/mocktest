@@ -10,7 +10,7 @@
 | 05 | Academic Year & Calendar — Sessions, Holidays, Terms | ✅ Done |
 | 06 | Branch & Campus Management | ✅ Done |
 | 07 | Student Enrolment & Profile | ✅ Done |
-| 08 | Staff Management & BGV | ⬜ |
+| 08 | Staff Management & BGV | ✅ Done |
 | 09 | Parent & Guardian Management | ⬜ |
 | 10 | Timetable & Scheduling | ⬜ |
 | 11 | Attendance — School & College | ⬜ |
