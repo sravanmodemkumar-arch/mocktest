@@ -15,7 +15,7 @@
 | 10 | Timetable & Scheduling | ✅ Done |
 | 11 | Attendance — School & College | ✅ Done |
 | 12 | Attendance — Coaching & Batch | ✅ Done |
-| 13 | Attendance — Hostel | ⬜ |
+| 13 | Attendance — Hostel | ✅ Done |
 | 14 | Homework & Assignments | ⬜ |
 | 15 | Syllabus & Curriculum Builder | ⬜ |
 | 16 | Notes & Study Material | ⬜ |
