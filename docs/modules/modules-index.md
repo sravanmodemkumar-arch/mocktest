@@ -12,7 +12,7 @@
 | 07 | Student Enrolment & Profile | ✅ Done |
 | 08 | Staff Management & BGV | ✅ Done |
 | 09 | Parent & Guardian Management | ✅ Done |
-| 10 | Timetable & Scheduling | ⬜ |
+| 10 | Timetable & Scheduling | ✅ Done |
 | 11 | Attendance — School & College | ⬜ |
 | 12 | Attendance — Coaching & Batch | ⬜ |
 | 13 | Attendance — Hostel | ⬜ |
