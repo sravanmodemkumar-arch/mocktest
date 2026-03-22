@@ -24,9 +24,9 @@
 | 19 | Exam Session & Proctoring | ✅ Done |
 | 20 | Exam Submission & Auto-Grading | ✅ Done |
 | 21 | Results & Report Cards | ✅ Done |
-| 22 | Test Series & Mock Tests | ⬜ |
-| 23 | Leaderboard & Rankings | ⬜ |
-| 24 | Fee Structure & Management | ⬜ |
+| 22 | Test Series & Mock Tests | ✅ Done |
+| 23 | Leaderboard & Rankings | ✅ Done |
+| 24 | Fee Structure & Management | ✅ Done |
 | 25 | Fee Collection & Receipts | ⬜ |
 | 26 | Fee Defaulters & Recovery | ⬜ |
 | 27 | Staff Payroll & Salary | ⬜ |
