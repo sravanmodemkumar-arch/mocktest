@@ -8,22 +8,22 @@
 | 03 | Roles & Permissions — RBAC, All 11 Groups | ✅ Done |
 | 04 | Institution Onboarding — Setup Wizard, Branding, Config | ✅ Done |
 | 05 | Academic Year & Calendar — Sessions, Holidays, Terms | ✅ Done |
-| 06 | Branch & Campus Management | ⬜ |
-| 07 | Student Enrolment & Profile | ⬜ |
-| 08 | Staff Management & BGV | ⬜ |
-| 09 | Parent & Guardian Management | ⬜ |
-| 10 | Timetable & Scheduling | ⬜ |
-| 11 | Attendance — School & College | ⬜ |
-| 12 | Attendance — Coaching & Batch | ⬜ |
-| 13 | Attendance — Hostel | ⬜ |
-| 14 | Homework & Assignments | ⬜ |
-| 15 | Syllabus & Curriculum Builder | ⬜ |
-| 16 | Notes & Study Material | ⬜ |
-| 17 | Question Bank & MCQ | ⬜ |
-| 18 | Exam Paper Builder | ⬜ |
-| 19 | Exam Session & Proctoring | ⬜ |
-| 20 | Exam Submission & Auto-Grading | ⬜ |
-| 21 | Results & Report Cards | ⬜ |
+| 06 | Branch & Campus Management | ✅ Done |
+| 07 | Student Enrolment & Profile | ✅ Done |
+| 08 | Staff Management & BGV | ✅ Done |
+| 09 | Parent & Guardian Management | ✅ Done |
+| 10 | Timetable & Scheduling | ✅ Done |
+| 11 | Attendance — School & College | ✅ Done |
+| 12 | Attendance — Coaching & Batch | ✅ Done |
+| 13 | Attendance — Hostel | ✅ Done |
+| 14 | Homework & Assignments | ✅ Done |
+| 15 | Syllabus & Curriculum Builder | ✅ Done |
+| 16 | Notes & Study Material | ✅ Done |
+| 17 | Question Bank & MCQ | ✅ Done |
+| 18 | Exam Paper Builder | ✅ Done |
+| 19 | Exam Session & Proctoring | ✅ Done |
+| 20 | Exam Submission & Auto-Grading | ✅ Done |
+| 21 | Results & Report Cards | ✅ Done |
 | 22 | Test Series & Mock Tests | ⬜ |
 | 23 | Leaderboard & Rankings | ⬜ |
 | 24 | Fee Structure & Management | ⬜ |
