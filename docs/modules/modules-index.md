@@ -11,7 +11,7 @@
 | 06 | Branch & Campus Management | ✅ Done |
 | 07 | Student Enrolment & Profile | ✅ Done |
 | 08 | Staff Management & BGV | ✅ Done |
-| 09 | Parent & Guardian Management | ⬜ |
+| 09 | Parent & Guardian Management | ✅ Done |
 | 10 | Timetable & Scheduling | ⬜ |
 | 11 | Attendance — School & College | ⬜ |
 | 12 | Attendance — Coaching & Batch | ⬜ |
