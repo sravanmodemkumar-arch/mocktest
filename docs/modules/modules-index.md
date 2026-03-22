@@ -19,7 +19,7 @@
 | 14 | Homework & Assignments | ✅ Done |
 | 15 | Syllabus & Curriculum Builder | ✅ Done |
 | 16 | Notes & Study Material | ✅ Done |
-| 17 | Question Bank & MCQ | ⬜ |
+| 17 | Question Bank & MCQ | ✅ Done |
 | 18 | Exam Paper Builder | ⬜ |
 | 19 | Exam Session & Proctoring | ⬜ |
 | 20 | Exam Submission & Auto-Grading | ⬜ |
