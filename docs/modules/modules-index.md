@@ -13,7 +13,7 @@
 | 08 | Staff Management & BGV | ✅ Done |
 | 09 | Parent & Guardian Management | ✅ Done |
 | 10 | Timetable & Scheduling | ✅ Done |
-| 11 | Attendance — School & College | ⬜ |
+| 11 | Attendance — School & College | ✅ Done |
 | 12 | Attendance — Coaching & Batch | ⬜ |
 | 13 | Attendance — Hostel | ⬜ |
 | 14 | Homework & Assignments | ⬜ |
