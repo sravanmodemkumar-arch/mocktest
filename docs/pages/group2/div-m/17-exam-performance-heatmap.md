@@ -404,8 +404,11 @@ Mobile state managed by `examHeatmapProvider` (Riverpod). Refresh on pull-to-ref
 ## 18. Accessibility & Responsiveness
 
 - Heatmap grid scrolls horizontally on screens < 1024px; row labels are sticky on the left.
-- Colour bands are **not** the only encoding — each cell also displays the numeric value. Screen readers receive `aria-label="{row} {col}: {value} — {tier label}"`.
-- Colour legend rendered as a horizontal key with text labels below each swatch.
-- All interactive controls (Rows/Cols/Metric dropdowns, Apply button) are keyboard-navigable with visible focus rings.
-- Drilldown drawer closes on `Escape` key; focus returns to the triggering cell.
+- Colour bands are **not** the only encoding — each cell also displays the numeric value. Screen readers receive `aria-label="{row label} × {col label}: {value} — {tier label}"` (e.g. `"Hyderabad Main × Physics: 58 — Average"`).
+- Heatmap container has `role="grid"` and `aria-label="Exam Performance Heatmap — {metric} by {rows} and {cols}"`. Each row has `role="row"`; each cell has `role="gridcell"` and `tabindex="0"`.
+- **Keyboard navigation within grid:** `Tab` enters the grid and focuses the first cell. `Arrow keys` (↑ ↓ ← →) move focus between cells. `Enter` or `Space` opens the drilldown drawer for the focused cell. `Escape` while in the grid returns focus to the first control in the Dimension Control Bar.
+- Colour legend rendered as a horizontal key with text labels below each swatch; each swatch also has a `title` attribute with the tier name and score range.
+- All interactive controls (Rows/Cols/Metric dropdowns, Apply button) are keyboard-navigable with visible focus rings (`outline: 2px solid #4F46E5`).
+- Drilldown drawer: focus is trapped inside the drawer while open; `Escape` closes the drawer and returns focus to the originating grid cell.
 - Escalation and note forms: all required fields have `aria-required="true"` and inline error messages tied via `aria-describedby`.
+- Below-threshold `⚠` icon overlays have `aria-hidden="true"` (decorative — the cell `aria-label` already conveys the severity).
