@@ -93,7 +93,7 @@ All filing obligations for the group and all branches, with current status.
 
 **Filters:**
 - Status: `All` · `Submitted` · `Pending` · `Overdue` · `Not Applicable`
-- Filing Type: dropdown — AISHE / UDISE+ / NITI Aayog / State Dept Return / CBSE Annual Return / PF ECR / ESI / Income Tax / Other
+- Filing Type: dropdown — AISHE / UDISE+ / NITI Aayog / State Dept Return / CBSE Annual Return / PF ECR / ESI / Income Tax / GST Returns / Other
 - Branch: dropdown of all branches + "Group Level"
 - Due Period: `This Month` · `Next 30 Days` · `This Quarter` · `This FY`
 - Frequency: `Monthly` · `Quarterly` · `Annual` · `One-Time`
@@ -135,6 +135,7 @@ Compact pivot-style view: rows = branches, columns = major filing types. Each ce
 | State Dept Return | Status badge | ✅ / ⚠️ / ❌ |
 | PF ECR (this month) | Status badge | ✅ / ⚠️ / ❌ |
 | ESI (this month) | Status badge | ✅ / ⚠️ / ❌ |
+| GST Returns (quarterly) | Status badge | ✅ / ⚠️ / ❌ / N/A |
 | Overall Status | Score badge | All ✅ = green; any ❌ = red |
 
 Legend: ✅ Submitted · ⚠️ Pending · ❌ Overdue · N/A Not Applicable
@@ -286,7 +287,7 @@ Used by Compliance Manager to record that a filing has been submitted by the Reg
 |---|---|---|
 | `q` | string | Search: filing name, authority, branch |
 | `status` | string | submitted / pending / overdue / not_applicable |
-| `filing_type` | string | aishe / udise / cbse_return / state_return / pf_ecr / esi / income_tax / niti_aayog / other |
+| `filing_type` | string | aishe / udise / cbse_return / state_return / pf_ecr / esi / income_tax / gst / niti_aayog / other |
 | `branch_id` | integer | Filter to specific branch |
 | `frequency` | string | monthly / quarterly / annual / one_time |
 | `due_period` | string | this_month / next_30d / this_quarter / this_fy |
@@ -317,4 +318,4 @@ Used by Compliance Manager to record that a filing has been submitted by the Reg
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-22*
+*Page spec version: 1.1 · Last updated: 2026-03-22*

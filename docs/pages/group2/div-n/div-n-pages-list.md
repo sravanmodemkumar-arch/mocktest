@@ -155,30 +155,30 @@ Group HQ
 
 | # | File | Status | Lines (approx) |
 |---|---|---|---|
-| Index | `div-n-pages-list.md` | ✅ Complete | 150 |
-| 01 | `n-01-legal-compliance-dashboard.md` | ✅ Complete | 330 |
-| 02 | `n-02-affiliation-compliance-tracker.md` | ✅ Complete | 300 |
-| 03 | `n-03-rti-request-manager.md` | ✅ Complete | 300 |
-| 04 | `n-04-regulatory-filings-tracker.md` | ✅ Complete | 290 |
+| Index | `div-n-pages-list.md` | ✅ Complete | 155 |
+| 01 | `n-01-legal-compliance-dashboard.md` | ✅ Complete | 335 |
+| 02 | `n-02-affiliation-compliance-tracker.md` | ✅ Complete | 325 |
+| 03 | `n-03-rti-request-manager.md` | ✅ Complete | 305 |
+| 04 | `n-04-regulatory-filings-tracker.md` | ✅ Complete | 295 |
 | 05 | `n-05-pocso-incident-registry.md` | ✅ Complete | 340 |
-| 06 | `n-06-data-privacy-dpdp.md` | ✅ Complete | 330 |
+| 06 | `n-06-data-privacy-dpdp.md` | ✅ Complete | 340 |
 | 07 | `n-07-staff-contracts-registry.md` | ✅ Complete | 310 |
 | 08 | `n-08-trust-legal-document-repository.md` | ✅ Complete | 290 |
 | 09 | `n-09-legal-notices-litigation-register.md` | ✅ Complete | 290 |
 | 10 | `n-10-vendor-legal-agreements.md` | ✅ Complete | 270 |
 | 11 | `n-11-inspection-visit-tracker.md` | ✅ Complete | 260 |
-| 12 | `n-12-student-parent-consent.md` | ✅ Complete | 270 |
+| 12 | `n-12-student-parent-consent.md` | ✅ Complete | 280 |
 | 13 | `n-13-insurance-registry.md` | ✅ Complete | 250 |
 | 14 | `n-14-annual-returns-statutory-filings.md` | ✅ Complete | 270 |
 | 15 | `n-15-compliance-policy-repository.md` | ✅ Complete | 240 |
 | 16 | `n-16-compliance-audit-report.md` | ✅ Complete | 280 |
 | 17 | `n-17-grievance-legal-escalations.md` | ✅ Complete | 270 |
-| 18 | `n-18-affiliation-renewal-calendar.md` | ✅ Complete | 250 |
+| 18 | `n-18-affiliation-renewal-calendar.md` | ✅ Complete | 260 |
 | 19 | `n-19-cross-branch-compliance-status.md` | ✅ Complete | 290 |
 | 20 | `n-20-compliance-calendar.md` | ✅ Complete | 360 |
 
-**Total: 21 files · ~5,900 lines · 20 fully-specified pages**
+**Total: 21 files · ~6,100 lines · 20 fully-specified pages · 8 audit fixes applied (v1.1)**
 
 ---
 
-*Division N index version: 1.1 · Last updated: 2026-03-22*
+*Division N index version: 1.2 · Last updated: 2026-03-22*

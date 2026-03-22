@@ -60,6 +60,7 @@ Sunrise Education Group · 28 branches · Last refreshed: 2 min ago
 | Any data breach not notified within 72 hours | "CRITICAL: Data breach at [Branch] reported [X] hours ago — CERT-In notification overdue — DPDP Act 2023" | Critical (red) |
 | Any RTI request overdue beyond 30 days | "[N] RTI request(s) are overdue. Mandatory response deadline passed — RTI Act 2005" | High (amber) |
 | Any affiliation expiring within 30 days | "[N] branch affiliation(s) expire within 30 days. Immediate renewal action required." | High (amber) |
+| Any insurance policy expiring within 30 days | "[N] insurance policy(ies) expire within 30 days — potential coverage gap for students and property." | Medium (yellow) |
 | Overall compliance score drops below 70% | "Group compliance score is [X]% — below threshold. Review Cross-Branch Status." | Medium (yellow) |
 
 ---
@@ -77,7 +78,7 @@ Sunrise Education Group · 28 branches · Last refreshed: 2 min ago
 | 7 | Contracts Expiring (60d) | Count | COUNT staff_contracts where expiry_date within 60 days | Amber if > 5, Green ≤ 5 | `#kpi-contracts-expiring` |
 | 8 | Group Compliance Score | Percentage | Weighted average of all compliance dimensions across all branches | Green ≥ 80%, Amber 60–79%, Red < 60% | `#kpi-group-score` |
 
-**HTMX:** All 8 cards use `hx-get="/api/v1/group/{id}/legal/dashboard/kpis/"` with `hx-trigger="load, every 300s"` → `hx-swap="innerHTML"`. Individual targets allow partial refresh without full page reload.
+**HTMX:** All 8 cards use `hx-get="/api/v1/group/{id}/legal/dashboard/kpis/"` with `hx-trigger="load, every 60s"` → `hx-swap="innerHTML"`. 60-second refresh ensures critical alerts (POCSO, breach, RTI overdue) surface without delay. Individual targets allow partial refresh without full page reload.
 
 ---
 
@@ -318,7 +319,7 @@ Opens when clicking any row in the Overdue Items table.
 
 | Pattern | Trigger Element | hx-get / hx-post | hx-target | hx-swap | Notes |
 |---|---|---|---|---|---|
-| Auto-refresh KPIs | `<div id="kpi-bar">` | `hx-get="/api/v1/group/{id}/legal/dashboard/kpis/"` | `#kpi-bar` | `innerHTML` | `hx-trigger="load, every 300s"` |
+| Auto-refresh KPIs | `<div id="kpi-bar">` | `hx-get="/api/v1/group/{id}/legal/dashboard/kpis/"` | `#kpi-bar` | `innerHTML` | `hx-trigger="load, every 60s"` |
 | Overdue table filter | Filter chip buttons | `hx-get="/api/v1/group/{id}/legal/dashboard/overdue-items/?category={cat}"` | `#overdue-table-body` | `innerHTML` | `hx-trigger="click"` |
 | Upcoming deadlines load | `<div id="upcoming-deadlines">` | `hx-get="/api/v1/group/{id}/legal/dashboard/upcoming-deadlines/"` | `#upcoming-deadlines` | `innerHTML` | `hx-trigger="load"` |
 | Branch snapshot load | `<div id="branch-snapshot">` | `hx-get="/api/v1/group/{id}/legal/dashboard/branch-snapshot/"` | `#branch-snapshot` | `innerHTML` | `hx-trigger="load"` |
@@ -329,4 +330,4 @@ Opens when clicking any row in the Overdue Items table.
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-22*

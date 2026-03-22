@@ -170,6 +170,9 @@ History of all consent campaigns run by the group.
 | Start Date | Date | Yes |
 | Deadline | Date | Yes |
 | Message Template | Textarea | No |
+| Trigger: Re-consent (2-year rule) | Toggle | No — when ON, pre-filters recipients to data subjects whose consent was last given ≥ 2 years ago; system auto-runs `flag_reconsent_due` Celery task to populate this list |
+
+**Celery task:** `flag_reconsent_due` — runs daily at 09:00 IST; sets `reconsent_required = True` on all consent records where `consent_date < TODAY − 730 days`; used to populate the re-consent trigger filter and the info-level alert banner.
 
 **Footer:** Cancel · Save Draft · Launch Campaign
 
@@ -275,6 +278,7 @@ History of all consent campaigns run by the group.
 | PATCH | `/api/v1/group/{id}/legal/consent/withdrawals/{wid}/process/` | Role 113, G4+ | Process withdrawal |
 | GET | `/api/v1/group/{id}/legal/consent/campaigns/` | Role 113, G4+ | Campaigns list |
 | POST | `/api/v1/group/{id}/legal/consent/campaigns/` | Role 113, G4+ | Launch campaign |
+| GET | `/api/v1/group/{id}/legal/consent/re-consent-due/` | Role 113, G4+ | Returns list of data subjects with consent records older than 2 years (recommended re-consent trigger) |
 | GET | `/api/v1/group/{id}/legal/consent/kpis/` | G1+ | KPIs |
 | GET | `/api/v1/group/{id}/legal/consent/coverage-by-branch/` | Role 113, G4+ | Chart data |
 | GET | `/api/v1/group/{id}/legal/consent/coverage-by-type/` | Role 113, G4+ | Chart data |
@@ -296,4 +300,4 @@ History of all consent campaigns run by the group.
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-22*
+*Page spec version: 1.1 · Last updated: 2026-03-22*

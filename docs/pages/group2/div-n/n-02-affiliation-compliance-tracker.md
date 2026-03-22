@@ -156,7 +156,32 @@ Opens when clicking any row in the affiliation table or clicking "Details →".
 - **Fields:** Branch name, board, affiliation number, expiry date, days remaining, Document checklist (each item: required/uploaded), Next step recommendation
 - **Buttons:** Close · "View Full Details →"
 
-### 6.3 Modal: `export-affiliation-report`
+### 6.3 Modal: `pre-renewal-checklist` (620px)
+Board-specific document checklist to prepare a renewal submission. Triggered from the affiliation-detail drawer footer or the Renewal Calendar (N-18).
+
+| Field | Type | Notes |
+|---|---|---|
+| Branch Name | Display | Pre-filled |
+| Board | Display | Pre-filled |
+| Affiliation Number | Display | Pre-filled |
+| Expiry Date / Days Remaining | Display | Countdown |
+| Document Checklist | Checkbox list | Board-specific (see below) |
+| Completion Summary | Progress bar | X / N documents ready |
+
+**Board-specific document requirements:**
+
+| Board | Required Documents |
+|---|---|
+| CBSE | Affiliation application form (Online SIS), NOC from State Govt, Land certificate/ownership proof, Building safety certificate, Fire safety NOC, Essentiality certificate, Fee structure, Staff statement, Inspection request |
+| ICSE | Application letter, State Govt recognition certificate, Building plan approved by Municipality, Infrastructure compliance, Qualified staff list, Fee affidavit |
+| State Board | State-specific form (varies); typically: Principal appointment order, Recognition letter, Infrastructure report, Fee certificate |
+| University | University affiliation form, NAAC/inspection compliance, Governing body composition, Financial audit, Infrastructure report |
+
+Each checklist item shows: Document name · Status (Uploaded ✅ / Not Uploaded ❌) · Upload button · Last uploaded date.
+
+**Footer:** Close · Go to Documents Tab →
+
+### 6.4 Modal: `export-affiliation-report`
 - **Width:** 480px
 - **Fields:** Board filter, Status filter, Date range, Format (PDF/Excel)
 - **Buttons:** Cancel · Export
@@ -295,7 +320,8 @@ Opens when clicking any row in the affiliation table or clicking "Details →".
 | Load donut chart | Chart container | `hx-get="/api/v1/group/{id}/legal/affiliation/status-distribution/"` | `#chart-affiliation-status` | `innerHTML` | `hx-trigger="load"` |
 | Pagination | Page nav buttons | `hx-get` with `?page={n}` | `#affiliation-table-body` | `innerHTML` | Replaces body only |
 | Export report | Export button | `hx-post="/api/v1/group/{id}/legal/affiliation/export/"` | `#export-toast` | `innerHTML` | Shows toast on success |
+| Pre-renewal checklist | Drawer footer / Calendar link | GET `/htmx/legal/affiliation/{aff_id}/pre-renewal-checklist/` | `#modal-container` | `innerHTML` | Opens board-specific checklist modal |
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-21*
+*Page spec version: 1.1 · Last updated: 2026-03-22*

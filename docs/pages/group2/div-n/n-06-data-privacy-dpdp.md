@@ -134,8 +134,8 @@ Tracks all actual or suspected personal data breaches.
 | Records Affected | Integer | Yes | Approximate count of affected data subjects |
 | Data Categories | Tags | No | Names / Contact / Financial / Health / Biometric / Academic |
 | Hours Since Detection | Integer | Yes | Red if > 72 and CERT-In not notified |
-| CERT-In Notified | Badge | Yes | Submitted ✅ / Pending ⚠️ |
-| DPB Notified | Badge | No | Submitted / Not Required |
+| CERT-In Notified | Badge | Yes | Submitted ✅ / Pending ⚠️ — **72h window** from detection (IT Act 2000 + CERT-In Directions 2022) |
+| DPB Notified | Badge | No | Submitted / Pending / Not Required — **72h window** from detection for reportable breaches (DPDP Act s.8(6)); applicability determined by DPB rules |
 | Status | Badge | Yes | Open / Under Investigation / Closed |
 | Actions | Buttons | No | [View] · [Record Notification] (Role 113) |
 
@@ -182,8 +182,8 @@ Third parties (vendors, SaaS tools) that process personal data on behalf of the 
 - **Overview tab:** Breach ID, Detected Date, Branch, Type, Records Affected, Data Categories affected, Description, Detected By, Root Cause (if known)
 - **Impact Assessment tab:** Risk level (Low/Medium/High/Critical), Sensitive data categories involved, Vulnerable groups (children/staff/parents), Likely harm (financial/physical/reputational/other)
 - **Notifications tab (Role 113 primary):**
-  - CERT-In Notification: Reference number, Submitted Date/Time, Document upload, [Record Notification] button
-  - Data Protection Board: If required (high-risk breach), Reference, Date
+  - **CERT-In Notification** (72h window — IT Act 2000 + CERT-In Directions 2022): Reference number, Submitted Date/Time, Document upload, [Record Notification] button; system shows elapsed hours since detection with red countdown if > 60h
+  - **Data Protection Board (DPB) Notification** (72h window — DPDP Act s.8(6)): Required for breaches affecting sensitive personal data or a large volume of data subjects; Reference, Date, [Record DPB Notification] button; pending rules may update thresholds — use "Not Applicable" for low-risk breaches until DPB clarifies
   - Affected data subjects notified: Yes/No, Date, Mode
 - **Remediation tab:** Containment steps taken, Technical measures applied, Policy changes, Staff training triggered
 - **Timeline tab:** Immutable audit log
@@ -355,4 +355,4 @@ Third parties (vendors, SaaS tools) that process personal data on behalf of the 
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-22*
+*Page spec version: 1.1 · Last updated: 2026-03-22*

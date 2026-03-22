@@ -134,7 +134,8 @@ Sorted list of all upcoming renewals by date — same as a filtered version of N
 Same drawer as in N-02 — opens full affiliation record with Overview, Documents, Renewal History, Deficiencies, and Timeline tabs.
 
 ### 6.2 Modal: `export-calendar-pdf` (480px)
-- **Fields:** Year selector, Board filter, Include expired toggle, View (Monthly Calendar / Timeline / Upcoming List), Format (PDF only for calendar, Excel for list)
+- **Fields:** Year selector, Board filter, Include expired toggle, View (Monthly Calendar / Timeline / Upcoming List), Format (PDF / Excel / ICS — iCalendar)
+- **ICS export:** Generates a `.ics` file with one VEVENT per affiliation renewal deadline; each event includes SUMMARY (branch + board), DTSTART (90 days before expiry — start renewal), DTEND (expiry date), DESCRIPTION (affiliation number + status), VALARM with 7-day and 30-day reminders; compatible with Google Calendar, Outlook, Apple Calendar
 - **Buttons:** Cancel · Export
 
 ---
@@ -216,7 +217,7 @@ Same drawer as in N-02 — opens full affiliation record with Overview, Document
 | GET | `/api/v1/group/{id}/legal/affiliation-calendar/upcoming/` | G1+ | Upcoming renewals sorted list |
 | GET | `/api/v1/group/{id}/legal/affiliation-calendar/kpis/` | G1+ | KPI values |
 | GET | `/api/v1/group/{id}/legal/affiliation-calendar/monthly-distribution/` | G1+ | Bar chart data |
-| POST | `/api/v1/group/{id}/legal/affiliation-calendar/export/` | G1+ | Export PDF/Excel |
+| POST | `/api/v1/group/{id}/legal/affiliation-calendar/export/` | G1+ | Export PDF/Excel/ICS |
 
 ### Query Parameters
 
@@ -244,4 +245,4 @@ Same drawer as in N-02 — opens full affiliation record with Overview, Document
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-22*
+*Page spec version: 1.1 · Last updated: 2026-03-22*

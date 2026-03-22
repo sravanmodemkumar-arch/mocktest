@@ -91,7 +91,7 @@ All RTI requests received by the group. Primary working view for the RTI Officer
 **Search:** Free-text search on request ID, requester name, subject, branch concerned. Debounced 350ms.
 
 **Filters:**
-- Status: `All` · `Received` · `In Progress` · `Responded` · `Overdue` · `Denied` · `Transferred`
+- Status: `All` · `Received` · `In Progress` · `Responded` · `Overdue` · `Denied` · `Transferred` · `Deemed Refusal`
 - Branch Concerned: dropdown of all branches + "Group Level"
 - Period: FY selector (current and last 3 FYs)
 - Response Type: `All` · `Full Disclosure` · `Partial Disclosure` · `Denial` · `Transfer` · `No Information Held`
@@ -107,7 +107,7 @@ All RTI requests received by the group. Primary working view for the RTI Officer
 | Branch Concerned | Text | Yes | Which branch the request relates to, or "Group Level" |
 | Due Date | Date | Yes | Received + 30 days; amber < 5d, red if passed |
 | Days Left | Badge | Yes | Integer; red if negative (overdue) |
-| Status | Badge | Yes | Received (grey) / In Progress (blue) / Responded (green) / Overdue (red) / Denied (orange) |
+| Status | Badge | Yes | Received (grey) / In Progress (blue) / Responded (green) / Overdue (red) / Denied (orange) / **Deemed Refusal** (dark red — auto-set after 30-day deadline passes without response, per RTI Act s.7(2)) |
 | Response Type | Badge | No | Full / Partial / Denial / Transfer / NIL — shown only when status = Responded/Denied |
 | First Appeal | Badge | No | Shows if appeal filed: Pending / Decided |
 | Actions | Buttons | No | [View] · [Upload Response] (Role 110 only) |
@@ -339,4 +339,4 @@ Used by RTI Officer to record the response sent.
 
 ---
 
-*Page spec version: 1.0 · Last updated: 2026-03-22*
+*Page spec version: 1.1 · Last updated: 2026-03-22*
