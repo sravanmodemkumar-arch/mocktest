@@ -7,7 +7,7 @@
 | 02 | Multi-Tenancy — Sharding, Subdomains, Tenant Config | ✅ Done |
 | 03 | Roles & Permissions — RBAC, All 11 Groups | ✅ Done |
 | 04 | Institution Onboarding — Setup Wizard, Branding, Config | ✅ Done |
-| 05 | Academic Year & Calendar — Sessions, Holidays, Terms | ⬜ |
+| 05 | Academic Year & Calendar — Sessions, Holidays, Terms | ✅ Done |
 | 06 | Branch & Campus Management | ⬜ |
 | 07 | Student Enrolment & Profile | ⬜ |
 | 08 | Staff Management & BGV | ⬜ |
