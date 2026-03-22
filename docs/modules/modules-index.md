@@ -9,7 +9,7 @@
 | 04 | Institution Onboarding — Setup Wizard, Branding, Config | ✅ Done |
 | 05 | Academic Year & Calendar — Sessions, Holidays, Terms | ✅ Done |
 | 06 | Branch & Campus Management | ✅ Done |
-| 07 | Student Enrolment & Profile | ⬜ |
+| 07 | Student Enrolment & Profile | ✅ Done |
 | 08 | Staff Management & BGV | ⬜ |
 | 09 | Parent & Guardian Management | ⬜ |
 | 10 | Timetable & Scheduling | ⬜ |
