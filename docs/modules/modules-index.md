@@ -29,7 +29,7 @@
 | 24 | Fee Structure & Management | ✅ Done |
 | 25 | Fee Collection & Receipts | ✅ Done |
 | 26 | Fee Defaulters & Recovery | ✅ Done |
-| 27 | Staff Payroll & Salary | ⬜ |
+| 27 | Staff Payroll & Salary | ✅ Done |
 | 28 | Hostel Management | ⬜ |
 | 29 | Transport & GPS Tracking | ⬜ |
 | 30 | Library Management | ⬜ |
