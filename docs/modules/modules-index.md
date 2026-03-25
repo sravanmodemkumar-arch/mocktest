@@ -44,7 +44,7 @@
 | 39 | Certificates & TC | ✅ Done |
 | 40 | Document Management | ✅ Done |
 | 41 | POCSO Compliance | ✅ Done |
-| 42 | DPDPA & Audit Log | ⬜ |
+| 42 | DPDPA & Audit Log | ✅ Done |
 | 43 | Legal & Data Compliance | ⬜ |
 | 44 | Video Learning & Streaming | ⬜ |
 | 45 | Live Classes | ⬜ |
