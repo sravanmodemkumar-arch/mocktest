@@ -38,7 +38,7 @@
 | 33 | PTM — Parent-Teacher Meeting | ✅ Done |
 | 34 | Announcements & Circulars | ✅ Done |
 | 35 | Notifications — In-app & FCM | ✅ Done |
-| 36 | WhatsApp Add-on | ⬜ |
+| 36 | WhatsApp Add-on | ✅ Done |
 | 37 | Email — AWS SES | ⬜ |
 | 38 | SMS & OTP | ⬜ |
 | 39 | Certificates & TC | ⬜ |
