@@ -27,7 +27,7 @@
 | 22 | Test Series & Mock Tests | ✅ Done |
 | 23 | Leaderboard & Rankings | ✅ Done |
 | 24 | Fee Structure & Management | ✅ Done |
-| 25 | Fee Collection & Receipts | ⬜ |
+| 25 | Fee Collection & Receipts | ✅ Done |
 | 26 | Fee Defaulters & Recovery | ⬜ |
 | 27 | Staff Payroll & Salary | ⬜ |
 | 28 | Hostel Management | ⬜ |
