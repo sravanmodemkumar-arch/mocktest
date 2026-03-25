@@ -37,7 +37,7 @@
 | 32 | Counselling & Student Welfare | ✅ Done |
 | 33 | PTM — Parent-Teacher Meeting | ✅ Done |
 | 34 | Announcements & Circulars | ✅ Done |
-| 35 | Notifications — In-app & FCM | ⬜ |
+| 35 | Notifications — In-app & FCM | ✅ Done |
 | 36 | WhatsApp Add-on | ⬜ |
 | 37 | Email — AWS SES | ⬜ |
 | 38 | SMS & OTP | ⬜ |
