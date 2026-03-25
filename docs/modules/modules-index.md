@@ -33,7 +33,7 @@
 | 28 | Hostel Management | ✅ Done |
 | 29 | Transport & GPS Tracking | ✅ Done |
 | 30 | Library Management | ✅ Done |
-| 31 | Admission & Enquiry CRM | ⬜ |
+| 31 | Admission & Enquiry CRM | ✅ Done |
 | 32 | Counselling & Student Welfare | ⬜ |
 | 33 | PTM — Parent-Teacher Meeting | ⬜ |
 | 34 | Announcements & Circulars | ⬜ |
