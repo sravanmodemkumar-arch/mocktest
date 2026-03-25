@@ -36,7 +36,7 @@
 | 31 | Admission & Enquiry CRM | ✅ Done |
 | 32 | Counselling & Student Welfare | ✅ Done |
 | 33 | PTM — Parent-Teacher Meeting | ✅ Done |
-| 34 | Announcements & Circulars | ⬜ |
+| 34 | Announcements & Circulars | ✅ Done |
 | 35 | Notifications — In-app & FCM | ⬜ |
 | 36 | WhatsApp Add-on | ⬜ |
 | 37 | Email — AWS SES | ⬜ |
