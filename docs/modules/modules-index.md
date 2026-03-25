@@ -57,6 +57,6 @@
 | 52 | White-label TSP Portal | ✅ Done |
 | 53 | Platform Analytics & Reports | ✅ Done |
 | 54 | Platform Settings & Feature Flags | ✅ Done |
-| 55 | Incident Management & SLA | ⬜ |
+| 55 | Incident Management & SLA | ✅ Done |
 | 56 | Platform Billing & GST Invoicing | ⬜ |
 | 57 | Payment Gateway — BYOG (Razorpay, PhonePe, PayU, etc.) | ⬜ |
