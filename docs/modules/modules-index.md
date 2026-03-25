@@ -47,7 +47,7 @@
 | 42 | DPDPA & Audit Log | ✅ Done |
 | 43 | Legal & Data Compliance | ✅ Done |
 | 44 | Video Learning & Streaming | ✅ Done |
-| 45 | Live Classes | ⬜ |
+| 45 | Live Classes | ✅ Done |
 | 46 | AI Doubt Solver | ⬜ |
 | 47 | AI Performance Analytics | ⬜ |
 | 48 | AI Content Generation | ⬜ |
