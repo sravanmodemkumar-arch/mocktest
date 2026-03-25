@@ -52,7 +52,7 @@
 | 47 | AI Performance Analytics | ✅ Done |
 | 48 | AI Content Generation | ✅ Done |
 | 49 | National Exam Catalog — Group 6 | ✅ Done |
-| 50 | Subscription & Access Control | ⬜ |
+| 50 | Subscription & Access Control | ✅ Done |
 | 51 | B2B API & Partner Portal | ⬜ |
 | 52 | White-label TSP Portal | ⬜ |
 | 53 | Platform Analytics & Reports | ⬜ |
