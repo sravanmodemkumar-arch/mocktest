@@ -42,7 +42,7 @@
 | 37 | Email — AWS SES | ✅ Done |
 | 38 | SMS & OTP | ✅ Done |
 | 39 | Certificates & TC | ✅ Done |
-| 40 | Document Management | ⬜ |
+| 40 | Document Management | ✅ Done |
 | 41 | POCSO Compliance | ⬜ |
 | 42 | DPDPA & Audit Log | ⬜ |
 | 43 | Legal & Data Compliance | ⬜ |
