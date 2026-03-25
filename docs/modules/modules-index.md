@@ -45,7 +45,7 @@
 | 40 | Document Management | ✅ Done |
 | 41 | POCSO Compliance | ✅ Done |
 | 42 | DPDPA & Audit Log | ✅ Done |
-| 43 | Legal & Data Compliance | ⬜ |
+| 43 | Legal & Data Compliance | ✅ Done |
 | 44 | Video Learning & Streaming | ⬜ |
 | 45 | Live Classes | ⬜ |
 | 46 | AI Doubt Solver | ⬜ |
