@@ -51,7 +51,7 @@
 | 46 | AI Doubt Solver | ✅ Done |
 | 47 | AI Performance Analytics | ✅ Done |
 | 48 | AI Content Generation | ✅ Done |
-| 49 | National Exam Catalog — Group 6 | ⬜ |
+| 49 | National Exam Catalog — Group 6 | ✅ Done |
 | 50 | Subscription & Access Control | ⬜ |
 | 51 | B2B API & Partner Portal | ⬜ |
 | 52 | White-label TSP Portal | ⬜ |
