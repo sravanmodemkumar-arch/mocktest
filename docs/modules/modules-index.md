@@ -43,7 +43,7 @@
 | 38 | SMS & OTP | ✅ Done |
 | 39 | Certificates & TC | ✅ Done |
 | 40 | Document Management | ✅ Done |
-| 41 | POCSO Compliance | ⬜ |
+| 41 | POCSO Compliance | ✅ Done |
 | 42 | DPDPA & Audit Log | ⬜ |
 | 43 | Legal & Data Compliance | ⬜ |
 | 44 | Video Learning & Streaming | ⬜ |
