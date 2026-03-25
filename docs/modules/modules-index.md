@@ -40,7 +40,7 @@
 | 35 | Notifications — In-app & FCM | ✅ Done |
 | 36 | WhatsApp Add-on | ✅ Done |
 | 37 | Email — AWS SES | ✅ Done |
-| 38 | SMS & OTP | ⬜ |
+| 38 | SMS & OTP | ✅ Done |
 | 39 | Certificates & TC | ⬜ |
 | 40 | Document Management | ⬜ |
 | 41 | POCSO Compliance | ⬜ |
