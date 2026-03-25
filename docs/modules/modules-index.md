@@ -41,7 +41,7 @@
 | 36 | WhatsApp Add-on | ✅ Done |
 | 37 | Email — AWS SES | ✅ Done |
 | 38 | SMS & OTP | ✅ Done |
-| 39 | Certificates & TC | ⬜ |
+| 39 | Certificates & TC | ✅ Done |
 | 40 | Document Management | ⬜ |
 | 41 | POCSO Compliance | ⬜ |
 | 42 | DPDPA & Audit Log | ⬜ |
