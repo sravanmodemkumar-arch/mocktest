@@ -31,7 +31,7 @@
 | 26 | Fee Defaulters & Recovery | ✅ Done |
 | 27 | Staff Payroll & Salary | ✅ Done |
 | 28 | Hostel Management | ✅ Done |
-| 29 | Transport & GPS Tracking | ⬜ |
+| 29 | Transport & GPS Tracking | ✅ Done |
 | 30 | Library Management | ⬜ |
 | 31 | Admission & Enquiry CRM | ⬜ |
 | 32 | Counselling & Student Welfare | ⬜ |
