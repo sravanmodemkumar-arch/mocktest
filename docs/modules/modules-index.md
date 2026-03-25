@@ -54,7 +54,7 @@
 | 49 | National Exam Catalog — Group 6 | ✅ Done |
 | 50 | Subscription & Access Control | ✅ Done |
 | 51 | B2B API & Partner Portal | ✅ Done |
-| 52 | White-label TSP Portal | ⬜ |
+| 52 | White-label TSP Portal | ✅ Done |
 | 53 | Platform Analytics & Reports | ⬜ |
 | 54 | Platform Settings & Feature Flags | ⬜ |
 | 55 | Incident Management & SLA | ⬜ |
