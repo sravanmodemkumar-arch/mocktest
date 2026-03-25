@@ -39,7 +39,7 @@
 | 34 | Announcements & Circulars | ✅ Done |
 | 35 | Notifications — In-app & FCM | ✅ Done |
 | 36 | WhatsApp Add-on | ✅ Done |
-| 37 | Email — AWS SES | ⬜ |
+| 37 | Email — AWS SES | ✅ Done |
 | 38 | SMS & OTP | ⬜ |
 | 39 | Certificates & TC | ⬜ |
 | 40 | Document Management | ⬜ |
