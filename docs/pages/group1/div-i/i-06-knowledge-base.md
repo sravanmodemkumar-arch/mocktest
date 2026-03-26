@@ -3,7 +3,7 @@
 **Route:** `GET /support/knowledge-base/`
 **Method:** Django CBV (`ListView`) + HTMX part-loads
 **Primary roles:** Training Coordinator (#52) — author; Support Manager (#47) — approve/manage
-**Also sees:** L1 (#48), L2 (#49), L3 (#50) — read only; Support Quality Lead (#90) — read + flag gap; Onboarding Specialist (#51) — read only
+**Also sees:** L1 (#48), L2 (#49), L3 (#50) — read only; Support Quality Lead (#108) — read + flag gap; Onboarding Specialist (#51) — read only
 
 ---
 

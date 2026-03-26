@@ -62,7 +62,7 @@
 
 ---
 
-## PM Exam Domains — Pages (Role 6) · 7 pages
+## PM Exam Domains — Pages (Role 6) · 9 pages
 
 | # | Page Name | URL | File | Priority | Status | Description |
 |---|---|---|---|---|---|---|
@@ -73,6 +73,8 @@
 | 13 | Domain Analytics | `/product/domain-analytics/` | `13-domain-analytics.md` | P2 | ✅ | Per-domain: enrollment trends · question coverage · test series usage · institution adoption · dropout points · competitive benchmarks |
 | 27 | Question Bank Manager | `/product/question-bank/` | `27-question-bank-manager.md` | P1 | ✅ | 2M+ questions: browse by domain tree · review queue · coverage gaps · duplicate detection · quality analytics · bulk import (CSV/PDF OCR/Partner API) · copyright management |
 | 30 | Result Processing & Rank Config | `/product/result-config/` | `30-result-processing-config.md` | P1 | ✅ | RRB multi-shift normalization parameters · JEE/NEET percentile calc formulas · rank band definitions · cutoff config per exam type · result release schedule · tie-breaking rules |
+| 34 | Board & Curriculum Manager | `/product/boards/` | `34-board-curriculum-manager.md` | P1 | ⬜ | CBSE · ICSE · 28 State Boards · IB · IGCSE · NIOS · NEET/JEE board config — grade structure · textbook chapter alignment · medium (English/Hindi/Regional) · board exam calendar · curriculum version history · affiliation type mapping |
+| 35 | National Exam Catalog Manager | `/product/exam-catalog/` | `35-national-exam-catalog-manager.md` | P1 | ⬜ | 300+ exam catalog CRUD (Module 49 data management) — exam families · stages · eligibility · pattern summary · cutoff history (7 years × category) · salary/pay-level data · preparation roadmap config · application link management · exam date lifecycle · state PSC entries for 30 states |
 
 ---
 
@@ -240,9 +242,12 @@ P3 — Backlog
 | 36 | Review and action user-reported question content flags | PM Exam Domains | 27 (G9) |
 | 37 | Manage structured test data fixtures and prod snapshots | QA Engineer | 22 (G10) |
 | 38 | Benchmark question bank vs official syllabus and past papers | PM Exam Domains | 13 (G11) |
+| 39 | Manage all school/college board configurations (CBSE/ICSE/state/IB) | PM Exam Domains | 34 (new) |
+| 40 | Manage 300+ national exam catalog entries with cutoff/salary data | PM Exam Domains | 35 (new) |
 
 ---
 
-*Last updated: 2026-03-20*
-*Total pages: 33 (26 original + 7 new: pages 27, 28, 29, 30, 31, 32, 33)*
+*Last updated: 2026-03-26*
+*Total pages: 35 (26 original + 9 new: pages 27–35)*
+*Indian education additions: Board & Curriculum Manager (34) · National Exam Catalog Manager (35)*
 *Functional gaps identified: 11 · All 11 resolved: G6 fixed in index · G1–G5 assigned as amendments to existing pages · G7–G11 fully implemented as amendments to pages 14, 14, 27, 22, 13*

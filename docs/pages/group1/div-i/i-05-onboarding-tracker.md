@@ -4,7 +4,7 @@
 **Method:** Django CBV (`ListView`) + HTMX part-loads
 **Primary roles:** Onboarding Specialist (#51), Support Manager (#47)
 **Also sees (read):** Training Coordinator (#52)
-**No access:** L1 (#48), L2 (#49), L3 (#50), Support Quality Lead (#90)
+**No access:** L1 (#48), L2 (#49), L3 (#50), Support Quality Lead (#108)
 
 ---
 

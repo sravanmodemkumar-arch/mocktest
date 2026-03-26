@@ -3,7 +3,7 @@
 **Route:** `GET /support/tickets/{id}/`
 **Method:** Django CBV (`DetailView`) + HTMX part-loads
 **Primary roles:** L1 (#48), L2 (#49), L3 (#50), Support Manager (#47)
-**Also sees:** Support Quality Lead (#90) — read + quality annotation only; Onboarding Specialist (#51) — read only for `ONBOARDING_HELP` category tickets only; BGV Manager (#39) — read + reply for `BGV_QUERY` category tickets only (accessed via F-06 direct link; no other Division I pages accessible to BGV Manager)
+**Also sees:** Support Quality Lead (#108) — read + quality annotation only; Onboarding Specialist (#51) — read only for `ONBOARDING_HELP` category tickets only; BGV Manager (#39) — read + reply for `BGV_QUERY` category tickets only (accessed via F-06 direct link; no other Division I pages accessible to BGV Manager)
 
 ---
 
@@ -396,7 +396,7 @@ Files served via R2 signed URL (24h validity). [Download] generates fresh signed
 6. **L3 ticket with code change required**: L3 agent can add internal note with GitHub PR link; no formal code review flow inside this page — L3 links externally.
 7. **Thread auto-refresh conflicts with typing**: Auto-refresh (`?part=thread`) is suspended while reply textarea has focus; resumes on blur.
 8. **Merge creates orphan attachments**: Both tickets' attachments are moved to the primary ticket on merge; orphan records cleaned up by background job.
-9. **Quality annotation on own ticket (Quality Lead is also the assigned agent)**: Not possible — Quality Lead (#90) cannot be assigned to tickets; this is enforced at **application level**: the ticket assignment API rejects `assigned_to_id` values where the target user has role=90; the dropdown in I-02/I-03 excludes role-90 users.
+9. **Quality annotation on own ticket (Quality Lead is also the assigned agent)**: Not possible — Quality Lead (#108) cannot be assigned to tickets; this is enforced at **application level**: the ticket assignment API rejects `assigned_to_id` values where the target user has role=108; the dropdown in I-02/I-03 excludes role-90 users.
 10. **CSAT already submitted**: CSAT section on right panel shows the submitted score and comment (read-only). [Resend CSAT] button: shown to Support Manager when ticket is RESOLVED or CLOSED. Resending clears `csat_submitted_at`, `csat_score`, `csat_comment`; sets `csat_sent_at=now()`, `csat_link_expires_at=now()+30d`; sends new survey. The old CSAT score is lost (no history table). Consequence: if old score was already factored into I-07 weekly report, the report is NOT retroactively corrected — this is a known trade-off.
 11. **Thread pagination**: If a ticket has >100 messages, thread shows the last 50 by default with a "Load earlier messages (N more)" link at the top (HTMX: `?part=thread&before={message_id}`). Auto-scroll always to bottom on initial load.
 12. **[Flag KB gap] access**: All roles with I-03 access (L1, L2, L3, Support Manager, Quality Lead, Onboarding Specialist) can click [Flag KB gap →] in the KB suggestions section. Creates `kb_article_gap_flag` record with ticket's category pre-filled as `ticket_category`, `gap_type=MISSING_ARTICLE`.

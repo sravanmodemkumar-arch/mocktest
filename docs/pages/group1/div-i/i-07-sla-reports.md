@@ -3,7 +3,7 @@
 **Route:** `GET /support/reports/`
 **Method:** Django CBV (`TemplateView`) + HTMX part-loads
 **Primary role:** Support Manager (#47)
-**Also sees (restricted):** L1 (#48) — own stats only; L2 (#49) — own stats only; L3 (#50) — own stats only; Support Quality Lead (#90) — quality metrics section only
+**Also sees (restricted):** L1 (#48) — own stats only; L2 (#49) — own stats only; L3 (#50) — own stats only; Support Quality Lead (#108) — quality metrics section only
 **No access:** Onboarding Specialist (#51), Training Coordinator (#52)
 
 ---
@@ -322,7 +322,7 @@ Recipients: [support.manager@platform.in    ] [+ Add recipient]
 
 ## Role-Based View Differences
 
-| Section | Support Manager (#47) | L1/L2/L3 agents | Quality Lead (#90) |
+| Section | Support Manager (#47) | L1/L2/L3 agents | Quality Lead (#108) |
 |---|---|---|---|
 | Period selector + filters | Full | Own stats only; period selector works but data scoped | Full |
 | Summary KPI row | All 4 tiles | All 4 tiles (own scope) | All 4 tiles |

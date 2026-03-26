@@ -45,7 +45,7 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | 50 | L3 Support Engineer | 4 | Code-level fixes, DB writes under Support Manager approval, hotfixes, rollbacks | Approve content; configure AI pipeline |
 | 51 | Onboarding Specialist | 3 | New institution onboarding pipeline, portal setup guidance, admin training coordination | Access student ticket data; L2/L3 queues |
 | 52 | Training Coordinator | 2 | Create training docs, schedule and conduct training sessions for institution admins | Access ticket queue; no ticket actions |
-| 90 | Support Quality Lead | 3 | Random-sample ticket quality audits, CSAT trend monitoring, L1 agent coaching, KB gap identification, weekly quality report to Support Manager | Cannot reassign or escalate tickets; no direct ticket resolution |
+| 108 | Support Quality Lead | 3 | Random-sample ticket quality audits, CSAT trend monitoring, L1 agent coaching, KB gap identification, weekly quality report to Support Manager | Cannot reassign or escalate tickets; no direct ticket resolution |
 
 ---
 
@@ -94,14 +94,14 @@ Peak load driver: 74,000 simultaneous exam submissions → login failures, OTP t
 | csat_score | smallint | 1–5; null until customer submits CSAT |
 | csat_comment | text | Optional customer text on CSAT submission |
 | csat_submitted_at | timestamptz | — |
-| quality_audit_score | smallint | 1–5; set by Support Quality Lead (#90) during audit; null = not yet audited |
+| quality_audit_score | smallint | 1–5; set by Support Quality Lead (#108) during audit; null = not yet audited |
 | quality_audit_note | text | Auditor note on ticket quality |
 | quality_audited_at | timestamptz | — |
 | first_response_sla_at | timestamptz NOT NULL | Computed at creation: `created_at + first_response_minutes` from `support_sla_config`; used for first-response SLA tracking in I-03 SLA tracker |
 | sla_warning_sent | boolean DEFAULT false | Set to true when Task 2 sends the at-risk warning; prevents duplicate notifications within same breach window; reset to false when ticket is re-escalated (tier change recomputes SLA) |
 | csat_sent_at | timestamptz | Set when CSAT survey is sent on RESOLVED; used by Task 3 to distinguish initial send from reminder |
 | csat_link_expires_at | timestamptz | Set to `csat_sent_at + interval '30 days'`; CSAT submission portal rejects submissions after this timestamp; reset when CSAT is resent via [Resend CSAT] |
-| tags | varchar[] DEFAULT '{}' | Free-form tags; editable by assigned agent and Support Manager; not editable by Quality Lead (#90) |
+| tags | varchar[] DEFAULT '{}' | Free-form tags; editable by assigned agent and Support Manager; not editable by Quality Lead (#108) |
 | created_at | timestamptz DEFAULT now() | — |
 | updated_at | timestamptz DEFAULT now() | — |
 
@@ -285,7 +285,7 @@ Parallel: any stage → `STALLED` (Celery auto-sets after 7 days inactivity); Su
 | updated_at | timestamptz DEFAULT now() | — |
 
 **KB article state machine:** `DRAFT → PENDING_REVIEW → PUBLISHED or DRAFT` (if rejected) → `ARCHIVED`
-Training Coordinator (#52) authors; Support Manager (#47) approves. Support Quality Lead (#90) can flag articles for review.
+Training Coordinator (#52) authors; Support Manager (#47) approves. Support Quality Lead (#108) can flag articles for review.
 
 ---
 
@@ -294,7 +294,7 @@ Training Coordinator (#52) authors; Support Manager (#47) approves. Support Qual
 | Column | Type | Notes |
 |---|---|---|
 | id | serial PK | — |
-| flagged_by_id | int FK → user | Support Quality Lead (#90) or any agent |
+| flagged_by_id | int FK → user | Support Quality Lead (#108) or any agent |
 | ticket_category | varchar(30) | Category where the KB gap was identified |
 | gap_type | varchar(30) NOT NULL DEFAULT 'MISSING_ARTICLE' | `MISSING_ARTICLE` (no article for this category), `INACCURATE` (existing article has wrong info), `OUTDATED` (article correct but stale), `INCOMPLETE` (article exists but missing steps) |
 | description | text NOT NULL | Description of the missing or incorrect content |
@@ -310,7 +310,7 @@ Training Coordinator (#52) authors; Support Manager (#47) approves. Support Qual
 | Column | Type | Notes |
 |---|---|---|
 | id | serial PK | — |
-| audited_by_id | int FK → user | Support Quality Lead (#90) |
+| audited_by_id | int FK → user | Support Quality Lead (#108) |
 | ticket_id | bigint FK → support_ticket | The ticket being audited |
 | quality_score | smallint NOT NULL CHECK (1–5) | 1=Poor, 5=Excellent |
 | criteria_scores | jsonb | `{tone, accuracy, speed, resolution_quality}` each 1–5 |
@@ -543,7 +543,7 @@ This means a ticket that waited 4h for a customer reply effectively gets 4h adde
 
 ### Workflow 4 — CSAT-Driven Quality Loop
 1. Ticket resolved → auto CSAT sent to requester
-2. Score < 3 → Support Quality Lead (#90) sees ticket in quality audit queue in I-07
+2. Score < 3 → Support Quality Lead (#108) sees ticket in quality audit queue in I-07
 3. Quality Lead audits ticket in I-03 (via quality annotation message type); logs `support_quality_audit` record
 4. If agent performance issue: quality audit report shared with Support Manager via I-07
 5. Recurring patterns → KB gap flagged via I-06 → Training Coordinator creates/updates article
@@ -668,7 +668,7 @@ All system-level audit events (PII access, bulk actions, CSAT resends, ticket cl
 - **Bulk PII export rules**:
   - Institution admin tickets: exportable by Support Manager with audit log entry (institutional data, DPDPA purpose = legitimate interest)
   - Student tickets (requester_role=STUDENT): `requester_email` masked as `s***@domain.com` in all exports regardless of role; requires DPO (#76) approval for unmasked export
-  - Quality Lead (#90): can export ticket metadata (ticket_number, category, score, resolution_time) but NOT requester PII fields
+  - Quality Lead (#108): can export ticket metadata (ticket_number, category, score, resolution_time) but NOT requester PII fields
 - `institution_contact` table contains operational contact PII — access limited to support roles; not exportable in bulk
 - **Retention** enforced by annual archival Celery job (runs 1 Jan each year): archives `support_ticket` records older than 7 years to S3 cold storage; cascades to messages and escalations
 

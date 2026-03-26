@@ -3,7 +3,7 @@
 **Route:** `GET /support/`
 **Method:** Django CBV (`TemplateView`) + HTMX part-loads
 **Primary role:** Support Manager (#47)
-**Also sees (restricted view):** L1 (#48), L2 (#49), L3 (#50), Support Quality Lead (#90), Onboarding Specialist (#51)
+**Also sees (restricted view):** L1 (#48), L2 (#49), L3 (#50), Support Quality Lead (#108), Onboarding Specialist (#51)
 
 ---
 
@@ -199,7 +199,7 @@ Agents who have been unresponsive for >2h during business hours: amber highlight
 
 Role-limited views:
 - L1/L2/L3 agents see only their own row (not full team)
-- Support Quality Lead (#90) sees full table (read-only, no assign action)
+- Support Quality Lead (#108) sees full table (read-only, no assign action)
 
 ---
 
@@ -235,7 +235,7 @@ Random sample size shown: "12 tickets sampled for audit this week (25% of resolv
 
 Role visibility:
 - Support Manager: sees both sections
-- Support Quality Lead (#90): sees both sections
+- Support Quality Lead (#108): sees both sections
 - L1/L2/L3: see only their own CSAT row (not full panel)
 
 ---
@@ -258,7 +258,7 @@ Visible to: Support Manager, Onboarding Specialist. Hidden for L1/L2/L3/Training
 
 ## Role-Based View Differences
 
-| Component | Support Manager (#47) | L1 (#48) / L2 (#49) / L3 (#50) | Quality Lead (#90) | Onboarding Spec (#51) |
+| Component | Support Manager (#47) | L1 (#48) / L2 (#49) / L3 (#50) | Quality Lead (#108) | Onboarding Spec (#51) |
 |---|---|---|---|---|
 | Exam Day Banner | Full | Full | Full | Hidden |
 | KPI Strip | All 5 tiles | Own-queue tiles only (Open in my tier, My SLA at risk) | All 5 (read-only) | **Hidden** — Onboarding Specialist has no ticket KPIs; they see the Onboarding Pipeline Strip below instead |

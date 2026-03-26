@@ -1,9 +1,9 @@
 # Division F — Exam Day Operations: Pages List
 
 > **Division:** F — Exam Day Operations
-> **Roles:** Exam Operations Manager (34) · Exam Support Executive (35) · Results Coordinator (36) · Notification Manager (37) · Incident Manager — Exam Day (38) · Exam Configuration Specialist (90) · Exam Integrity Officer (91)
+> **Roles:** Exam Operations Manager (34) · Exam Support Executive (35) · Results Coordinator (36) · Notification Manager (37) · Incident Manager — Exam Day (38) · Exam Configuration Specialist (90) · Exam Integrity Officer (91) · OMR Processing Specialist (109)
 > **Cross-access:** Content Director (18) read on F-08 Analytics · Analytics Manager (42) read on F-08 · Platform Admin (10) full access all pages · Exam Operations Manager (34) full access all F pages · DevOps/SRE (14) read-only on F-02
-> **Total pages:** 9
+> **Total pages:** 11
 > **Scale:** 2,050 institutions · 2.4M–7.6M students · 74,000 peak concurrent submissions
 > **Peak exam load:** Up to 300 simultaneous exam schedules active across all institutions on a single national exam day
 
@@ -42,6 +42,9 @@ One misconfigured exam at 74,000 concurrent — negative marking factor wrong, w
 | 38 | Incident Manager — Exam Day | 4 | Infrastructure escalation, war room coordination, emergency scaling |
 | 90 | Exam Configuration Specialist | 3 | Pre-exam setup: timing, question papers, scoring rules, institution configs |
 | 91 | Exam Integrity Officer | 3 | Malpractice detection, proctor flag review, case management, legal escalation |
+| 109 | OMR Processing Specialist | 3 | Design OMR templates · configure scan pipelines · QA ambiguous marks · integrate OMR results with F-04 · train institutions on OMR workflow |
+
+**Note:** Role 109 (OMR Processing Specialist) was added 2026-03-26 to cover the large cohort of Indian schools and coaching centres that conduct OMR-based assessments alongside or instead of digital exams.
 
 ---
 
@@ -58,24 +61,27 @@ One misconfigured exam at 74,000 concurrent — negative marking factor wrong, w
 | F-07 | Exam Integrity Dashboard | `/ops/exam/integrity/` | `f-07-exam-integrity.md` | P1 |
 | F-08 | Exam Analytics | `/ops/exam/analytics/` | `f-08-exam-analytics.md` | P2 |
 | F-09 | Division Config | `/ops/exam/config/` | `f-09-division-config.md` | P2 |
+| F-10 | OMR Sheet Processing | `/ops/exam/omr/` | `f-10-omr-sheet-processing.md` | P1 |
+| F-11 | Offline Exam Manager | `/ops/exam/offline/` | `f-11-offline-exam-manager.md` | P1 |
 
 ---
 
 ## Role-to-Page Access Matrix
 
-| Role | F-01 Schedule | F-02 Monitor | F-03 Support | F-04 Results | F-05 Answer Key | F-06 Notifications | F-07 Integrity | F-08 Analytics | F-09 Config |
-|---|---|---|---|---|---|---|---|---|---|
-| Exam Ops Manager (34) | Read + approve lock/unlock | **Full** + pause/extend | Read + escalate | Read + approve | Read + approve | Read | Read | Read | **Full** |
-| Exam Support Exec (35) | Read | Read + incident create | **Full** | — | — | — | Read | — | — |
-| Results Coordinator (36) | Read | Read | Read | **Full** | **Full** | Read + send result broadcasts | Read (integrity summary) | Read | — |
-| Notification Manager (37) | Read | Read | — | Read | — | **Full** | — | Read | — |
-| Incident Manager (38) | Read | Read + infra escalation | Read | — | — | — | — | — | — |
-| Exam Config Specialist (90) | **Full** | Read | — | — | Read | — | — | Read | — |
-| Exam Integrity Officer (91) | Read | Read | Read | Read | Read (for integrity holds) | — | **Full** | Read | — |
-| Platform Admin (10) | Full | Full | Full | Full | Full | Full | Full | Full | Full |
-| DevOps/SRE (14) | — | Read-only | — | — | — | — | — | — | — |
-| Content Director (18) | — | — | — | — | — | — | — | Read | — |
-| Analytics Manager (42) | — | — | — | — | — | — | — | Read | — |
+| Role | F-01 Schedule | F-02 Monitor | F-03 Support | F-04 Results | F-05 Answer Key | F-06 Notifications | F-07 Integrity | F-08 Analytics | F-09 Config | F-10 OMR | F-11 Offline |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Exam Ops Manager (34) | Read + approve lock/unlock | **Full** + pause/extend | Read + escalate | Read + approve | Read + approve | Read | Read | Read | **Full** | Read + approve | Read + approve |
+| Exam Support Exec (35) | Read | Read + incident create | **Full** | — | — | — | Read | — | — | — | Read |
+| Results Coordinator (36) | Read | Read | Read | **Full** | **Full** | Read + send result broadcasts | Read (integrity summary) | Read | — | Read (results integration) | Read (offline results) |
+| Notification Manager (37) | Read | Read | — | Read | — | **Full** | — | Read | — | — | — |
+| Incident Manager (38) | Read | Read + infra escalation | Read | — | — | — | — | — | — | — | — |
+| Exam Config Specialist (90) | **Full** | Read | — | — | Read | — | — | Read | — | Read + configure | **Full** |
+| Exam Integrity Officer (91) | Read | Read | Read | Read | Read (for integrity holds) | — | **Full** | Read | — | Read | Read |
+| OMR Specialist (109) | Read | — | — | — | — | — | — | Read | — | **Full** | — |
+| Platform Admin (10) | Full | Full | Full | Full | Full | Full | Full | Full | Full | Full | Full |
+| DevOps/SRE (14) | — | Read-only | — | — | — | — | — | — | — | — | — |
+| Content Director (18) | — | — | — | — | — | — | — | Read | — | — | — |
+| Analytics Manager (42) | — | — | — | — | — | — | — | Read | — | Read | Read |
 
 ---
 

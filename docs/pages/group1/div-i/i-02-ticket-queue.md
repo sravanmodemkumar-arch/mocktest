@@ -3,7 +3,7 @@
 **Route:** `GET /support/tickets/`
 **Method:** Django CBV (`ListView`) + HTMX part-loads
 **Primary roles:** L1 (#48), L2 (#49), L3 (#50), Support Manager (#47)
-**Also sees (read-only):** Support Quality Lead (#90) — no ticket actions
+**Also sees (read-only):** Support Quality Lead (#108) — no ticket actions
 
 ---
 
@@ -29,7 +29,7 @@ At scale, this page must handle 5,700+ tickets/month (normal) and 25,000+ during
 |---|---|---|
 | `?status` | `OPEN`, `IN_PROGRESS`, `PENDING_CUSTOMER`, `ESCALATED`, `RESOLVED`, `CLOSED` (comma-sep) | Filter by status |
 | `?priority` | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` (comma-sep) | Filter by priority |
-| `?tier` | `L1`, `L2`, `L3` | Filter by tier; Support Manager and Support Quality Lead (#90) only (both see all tiers read-only) |
+| `?tier` | `L1`, `L2`, `L3` | Filter by tier; Support Manager and Support Quality Lead (#108) only (both see all tiers read-only) |
 | `?category` | Any `support_ticket.category` value | Filter by category |
 | `?assigned` | `me`, `unassigned`, or user_id | Filter by assignee |
 | `?institution_id` | integer | Filter by institution |
@@ -197,7 +197,7 @@ Bulk action bar appears at the bottom of the screen as a fixed bar when ≥1 tic
 
 ### [+ New Ticket] Button
 
-**Access**: L1, L2, L3, Support Manager. Onboarding Specialist can create `ONBOARDING_HELP` category only. Training Coordinator and Support Quality Lead (#90) have no [+ New Ticket] button.
+**Access**: L1, L2, L3, Support Manager. Onboarding Specialist can create `ONBOARDING_HELP` category only. Training Coordinator and Support Quality Lead (#108) have no [+ New Ticket] button.
 
 Opens a Create Ticket drawer (not modal — wider form needed):
 
@@ -259,7 +259,7 @@ Page size selector: 25 / 50 / 100. Default 25.
 4. **Exam day: >500 CRITICAL tickets open**: Table auto-applies `priority=CRITICAL&exam_day=true` filter with a banner "Exam day mode active. Showing critical tickets only. [Show all]". If surge threshold exceeded (>200 EXAM_DAY_INCIDENT open), Support Manager sees [Activate Triage Mode] button — see Workflow 1 in pages-list.
 5. **Agent has 0 assigned tickets and no unassigned in their queue**: "No open tickets in your queue. [Check unassigned tickets →]" button links to `?assigned=unassigned&tier={agent_tier}`.
 5a. **Sort order fallback for CLOSED/RESOLVED tickets**: when filtering by `?status=RESOLVED,CLOSED`, default sort switches from `sla_asc` to `created_desc` (CLOSED tickets have no SLA countdown). Applied automatically by server when all items in result set have `status IN ('RESOLVED','CLOSED')`. Sort header shows "Created (newest first)" as active sort indicator.
-6. **Support Quality Lead (#90) row actions**: All row action buttons hidden; no create button shown. Only [View →] available.
+6. **Support Quality Lead (#108) row actions**: All row action buttons hidden; no create button shown. Only [View →] available.
 7. **Ticket number search**: `?q=SUP-20241105` matches all tickets with that date prefix — useful for bulk exam-day lookup.
 8. **Export while filters active**: Export applies current filter state; downloaded file name includes filter summary: `tickets_export_L1_CRITICAL_20241105.csv`.
 

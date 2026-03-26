@@ -3,7 +3,7 @@
 **Route:** `GET /support/institutions/{institution_id}/`
 **Method:** Django CBV (`DetailView`) + HTMX part-loads
 **Primary roles:** Support Manager (#47), Onboarding Specialist (#51)
-**Also sees (read):** L1 (#48), L2 (#49), L3 (#50), Support Quality Lead (#90)
+**Also sees (read):** L1 (#48), L2 (#49), L3 (#50), Support Quality Lead (#108)
 **No access:** Training Coordinator (#52)
 
 ---
