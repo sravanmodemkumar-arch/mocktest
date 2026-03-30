@@ -398,7 +398,14 @@ P2 — Sprint 3
 ---
 
 *Last updated: 2026-03-20*
-*Total pages: 21 (C-01 to C-18 original · C-19 AWS Costs · C-20 DNS & Certs · C-21 Feature Flags)*
+*Total pages: 23 (C-01 to C-18 original · C-19 AWS Costs · C-20 DNS & Certs · C-21 Feature Flags · C-22 Disaster Recovery & BCP · C-23 Rate Limiting & Abuse Prevention)*
+
+### New Pages Added (March 2027 Review)
+
+| # | Page | Priority | Purpose |
+|---|---|---|---|
+| C-22 | Disaster Recovery & Business Continuity | P0 | RTO/RPO monitoring, backup verification, DR drill records, runbook library, BCP status — CERT-In and ISO 27001 evidence |
+| C-23 | API Rate Limiting & Abuse Prevention | P0 | Per-tenant/endpoint/IP rate limiting, abuse detection, exam-day burst scheduling, throttle event logging — prevents noisy-neighbour DoS in multi-tenant platform |
 *Total tabs/sections/actions/new-pages added via amendments: 30 (G1–G30)*
 *Roles covered: 8 (Roles 10–17)*
 *Functional coverage: 51 jobs mapped across all 8 roles*
