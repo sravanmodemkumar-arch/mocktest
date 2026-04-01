@@ -2,7 +2,7 @@
 
 > **Goal:** Build EduForge from spec to production — 5 crore students, ₹0.60/student/year.
 > **Documentation:** 1,633 files, 482,950 lines of specs COMPLETE. Zero guesswork.
-> **Philosophy:** Ship the smallest useful thing first. Scale second. Every phase has a deployable product.
+> **Approach:** Modules first (backend), Groups second (UI). Clean layered architecture.
 
 ---
 
@@ -46,400 +46,429 @@
 
 ---
 
-## 6 Development Phases
+## Development Strategy: Modules First, Groups Second
 
 ```
-PHASE 1 ──── PHASE 2 ──── PHASE 3 ──── PHASE 4 ──── PHASE 5 ──── PHASE 6
-Foundation   Institution  Exam         Student      Scale &       Mobile &
-& Auth       Portal       Engine       Portal       Optimize      Marketplace
-(4 weeks)    (6 weeks)    (5 weeks)    (5 weeks)    (4 weeks)     (6 weeks)
-                                                                   
-Deploy:      Deploy:      Deploy:      Deploy:      Deploy:       Deploy:
-Login works  Schools      Students     5cr students AWS prod      Flutter app
-OTP → JWT    can use it   take exams   use portal   Cloudflare    iOS/Android
+WHY THIS ORDER:
+  Module = backend (models, APIs, business logic, services)
+  Group  = frontend (Django templates, HTMX, portal UI)
+
+  Module 17 (Question Bank) is used by:
+    Group 1 (Admin reviews MCQs)
+    Group 5 (Coaching creates tests)
+    Group 6 (Exam domain serves tests)
+    Group 7 (TSP licenses content)
+    Group 9 (Partners author questions)
+    Group 10 (Students take tests)
+
+  Build the module ONCE → 6 groups consume it via API.
+  If you build UI-first, you'd rebuild the question model 6 times.
+
+LAYER DIAGRAM:
+  ┌──────────────────────────────────────────────────┐
+  │  LAYER 2: GROUPS (Portal UI)                      │
+  │  Group 1 → Group 2 → ... → Group 10              │
+  │  Django templates + HTMX + partials               │
+  │  Each group = one portal with its own views       │
+  ├──────────────────────────────────────────────────  │
+  │  LAYER 1: MODULES (Backend)                       │
+  │  Module 00 → Module 01 → ... → Module 57          │
+  │  Models + APIs + Services + Celery tasks          │
+  │  Each module = one domain with its own endpoints  │
+  ├──────────────────────────────────────────────────  │
+  │  LAYER 0: FOUNDATION                              │
+  │  PostgreSQL schemas + Docker + CI/CD + Auth       │
+  │  The floor everything stands on                   │
+  └──────────────────────────────────────────────────┘
 ```
 
 ---
 
-## PHASE 1 — Foundation & Auth (Weeks 1–4)
+## LAYER 0 — Foundation (Week 1–2)
 
-**Outcome:** A person can visit EduForge, log in with OTP, and land on the correct home page based on their role.
+> Before any module, the foundation must exist: database, auth, multi-tenancy, Docker.
 
 ### Week 1: Project Bootstrap
 
-| Task | Module Spec | Details |
-|---|---|---|
-| PostgreSQL schema setup | `00-project-setup` | 7 schemas: identity, portal, exam, notification, billing, ai, analytics |
-| Django project restructure | `00-project-setup` | Apps: core, auth, dashboard — shared base templates, dark theme |
-| FastAPI identity service | `01-auth` | `/auth/otp/send`, `/auth/otp/verify`, `/auth/token/refresh`, `/health` |
-| Docker Compose full stack | `deployment.md` | PostgreSQL 16 + Django (8002) + FastAPI (8001) + Mailpit + pgAdmin |
-| Environment config | `deployment.md` | `.env` with all vars, secrets management, dev/prod split |
+| # | Task | Spec | Service |
+|---|---|---|---|
+| 1 | PostgreSQL 16 — create 7 schemas | `database.md` | — |
+| 2 | Docker Compose (PG + Django + FastAPI + pgAdmin) | `deployment.md` | — |
+| 3 | Django project restructure (apps: core, auth) | `00-project-setup` | portal |
+| 4 | FastAPI identity service scaffold | `01-auth` | identity |
+| 5 | Environment config (.env, secrets) | `deployment.md` | — |
+| 6 | CI/CD pipeline (GitHub Actions — lint, test) | `deployment.md` | — |
 
-```python
-# Target project structure after Week 1:
-mocktest/
-├── identity/                    # FastAPI auth service
-│   ├── app/
-│   │   ├── main.py              # FastAPI app, CORS, lifespan
-│   │   ├── routes/auth.py       # OTP send/verify, token refresh
-│   │   ├── models/user.py       # SQLAlchemy: users, otps, sessions
-│   │   ├── services/otp.py      # OTP generation, hashing, validation
-│   │   ├── services/jwt.py      # JWT create, verify, refresh
-│   │   └── config.py            # Settings from env
-│   ├── alembic/                 # DB migrations
-│   └── requirements.txt
-├── portal/                      # Django portal
-│   ├── portal/settings.py       # Django config
-│   ├── apps/
-│   │   ├── core/                # Middleware, context processors, base
-│   │   ├── auth_views/          # Login, OTP verify, role select, profile setup
-│   │   └── home/                # Dynamic home page per group
-│   └── templates/
-│       ├── base.html            # Dark theme base
-│       └── auth/                # All auth templates
-├── docker-compose.yml
-└── .env.example
-```
+### Week 2: Auth & Multi-Tenancy
 
-### Week 2: Multi-Tenancy & RBAC
+| # | Task | Spec | Service |
+|---|---|---|---|
+| 7 | OTP send/verify endpoints | `01-auth` | identity |
+| 8 | JWT create/verify/refresh | `01-auth` | identity |
+| 9 | Multi-tenant middleware (domain → tenant_id) | `02-multi-tenancy` | portal |
+| 10 | Institution model + RBAC | `03-roles-permissions` | identity |
+| 11 | User-institution-role linking (N:N:N) | `03-roles-permissions` | identity |
+| 12 | Role-based home routing | `homes/home-routing.md` | portal |
 
-| Task | Module Spec | Details |
-|---|---|---|
-| Multi-tenant middleware | `02-multi-tenancy` | Resolve `{slug}.schools.eduforge.in` → tenant_id in request |
-| Institution model | `04-institution-onboarding` | name, domain, type, branding, config JSONB |
-| User-Institution linking | `03-roles-permissions` | User can belong to N institutions with different roles |
-| RBAC system | `03-roles-permissions` | 87 roles, 6 groups, permission matrix, Django permissions |
-| Role-based home routing | `homes/home-routing.md` | After login → detect role → redirect to correct group home |
-
-```sql
--- Core identity tables
-CREATE TABLE identity.institutions (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    institution_type VARCHAR(50) NOT NULL,  -- school|college|coaching|exam_domain
-    domain VARCHAR(255),
-    config JSONB DEFAULT '{}',
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE identity.user_roles (
-    id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES identity.users(id),
-    institution_id INT REFERENCES identity.institutions(id),
-    role VARCHAR(100) NOT NULL,
-    access_level INT DEFAULT 1,  -- 0-5
-    is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, institution_id, role)
-);
-```
-
-### Week 3: Institution Onboarding & Staff Setup
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Onboarding wizard | `04-institution-onboarding` | 5-step: basic info → branding → academic year → staff import → go live |
-| Academic year/calendar | `05-academic-year-calendar` | Sessions, terms, holidays, exam schedules |
-| Branch/campus management | `06-branch-campus-management` | Multi-branch institutions (Sri Chaitanya: 200+ branches) |
-| Staff management | `08-staff-management-bgv` | Staff profiles, designations, subjects, timetable assignment |
-| Bulk import | `07-student-enrolment` | CSV upload for students and staff with validation |
-
-### Week 4: Student Enrolment & Parent Linking
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Student profile model | `07-student-enrolment` | Unified student ID, multi-institution linking, access levels S0-S6 |
-| Student registration flows | Group 10 div-a specs | Self-reg (exam domain) + institution-created (bulk upload) |
-| Parent/guardian management | `09-parent-guardian-management` | Parent registration, child linking via 6-digit code |
-| Age-based access levels | Group 10 roles | DOB → auto-assign S0/S1/S2/S3/S4, birthday transitions |
-| Student self-registration | `a-01-student-registration.md` | OTP → profile → exam select → plan choice |
-
-**Phase 1 Deliverable:** Login → role-based home → institution setup → students/staff enrolled.
+**Deliverable:** OTP login → JWT → role detection → correct home page.
 
 ---
 
-## PHASE 2 — Institution Portal (Weeks 5–10)
+## LAYER 1 — Modules (Weeks 3–20)
 
-**Outcome:** Schools, colleges, and coaching centres can run their daily operations on EduForge.
+> Build ALL 58 backend modules. Each module = models + API endpoints + services + Celery tasks.
+> No UI. Pure backend. Every module gets tested independently via API docs (FastAPI /docs).
 
-### Week 5: Attendance System
+### Module Build Order — Grouped by Dependency
 
-| Task | Module Spec | Details |
-|---|---|---|
-| School/college attendance | `11-attendance-school-college` | Period-wise, subject-wise, biometric/manual |
-| Coaching batch attendance | `12-attendance-coaching-batch` | Batch-wise, session-wise attendance |
-| Hostel attendance | `13-attendance-hostel` | Morning/night roll call, leave management |
-| Attendance reports | All 3 attendance modules | Daily/weekly/monthly reports, defaulter lists |
-| Parent notification | `35-notifications` | Auto SMS/WhatsApp to parents when child is absent |
-
-### Week 6: Academic Core
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Timetable & scheduling | `10-timetable-scheduling` | Class-wise, teacher-wise, room allocation |
-| Syllabus & curriculum | `15-syllabus-curriculum-builder` | Topic mapping, completion tracking, coverage % |
-| Homework & assignments | `14-homework-assignments` | Assign, submit, grade, deadline tracking |
-| Notes & study material | `16-notes-study-material` | Upload, categorize, share per class/subject |
-| Library management | `30-library-management` | Books, issue/return, fine calculation |
-
-### Week 7: Fees & Finance
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Fee structure management | `24-fee-structure-management` | Fee heads, amounts, due dates, per-class config |
-| Fee collection & receipts | `25-fee-collection-receipts` | Online payment (Razorpay), receipt generation, 80C |
-| Fee defaulters & recovery | `26-fee-defaulters-recovery` | Overdue tracking, reminders, late fee calculation |
-| Billing service (FastAPI) | `56-platform-billing-gst` | Subscription plans, GST invoicing, Razorpay webhooks |
-| Payment gateway integration | `57-payment-gateway-byog` | Razorpay Route API (split payment), UPI, cards, netbanking |
-
-### Week 8: Communication & Notifications
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Notification service (FastAPI) | `35-notifications` | In-app notifications, FCM push, notification preferences |
-| WhatsApp integration | `36-whatsapp-addon` | Meta Business API, template messages, OTP fallback |
-| SMS service | `38-sms-otp` | MSG91/Twilio, OTP, transactional SMS |
-| Email service | `37-email-aws-ses` | AWS SES, templates, bulk email, receipts |
-| Announcements & circulars | `34-announcements-circulars` | Institution-wide, class-wise, PDF attachment |
-
-### Week 9: Staff & Admin Features
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Staff payroll & salary | `27-staff-payroll-salary` | Salary structure, deductions, payslips |
-| Hostel management | `28-hostel-management` | Room allocation, mess, complaints |
-| Transport & GPS | `29-transport-gps-tracking` | Routes, vehicles, GPS tracking, parent alerts |
-| Admission & CRM | `31-admission-enquiry-crm` | Enquiry tracking, follow-up, conversion |
-| PTM (Parent-Teacher Meeting) | `33-ptm-parent-teacher-meeting` | Slot booking, video call, feedback |
-
-### Week 10: Compliance & Documents
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Certificates & TC | `39-certificates-tc` | Generate, verify QR, bonafide, TC, mark sheets |
-| Document management | `40-document-management` | Upload, categorize, student document vault |
-| POCSO compliance | `41-pocso-compliance` | BGV tracking, mandatory reporting, audit trail |
-| DPDP Act compliance | `42-dpdpa-audit-log` | Consent management, data deletion, audit log |
-| Counselling & welfare | `32-counselling-student-welfare` | Student welfare events, counsellor notes |
-
-**Phase 2 Deliverable:** Full institution management — attendance, fees, reports, communication.
-
----
-
-## PHASE 3 — Exam Engine (Weeks 11–15)
-
-**Outcome:** Students can take mock tests with 18L+ concurrent users. This is EduForge's core differentiator.
-
-### Week 11: Question Bank & MCQ System
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Question bank model | `17-question-bank-mcq` | 18,42,000+ questions, multi-language, LaTeX, images |
-| Question authoring UI | Group 9 div-b specs | Rich editor, LaTeX preview, difficulty tagging |
-| Bulk upload (Excel/CSV) | `b-02-bulk-upload.md` | Template download, validation, duplicate detection |
-| Review & approval pipeline | Group 9 div-c specs | Draft → Review → Approve → Published |
-| Content partner portal | Group 9 all specs | Partner registration, content agreement, dashboard |
-
-### Week 12: Exam Paper Builder & Session
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Exam paper builder | `18-exam-paper-builder` | Auto/manual question selection, blueprint-based |
-| Exam session service (FastAPI) | `19-exam-session-proctoring` | Session start, CDN URL, salt, timer |
-| IndexedDB architecture | `architecture.md` | Client-side question storage, AES-256 encryption |
-| Offline resilience | `c-02-test-attempt.md` | Service Worker, auto-save every 30s, crash recovery |
-| Test catalogue | `c-01-test-catalogue.md` | Upcoming, on-demand, calendar view, conflict detection |
+The 58 modules are organized into **8 dependency tiers**. Modules in the same tier can be built in parallel.
 
 ```
-EXAM ENGINE — 2 Lambda calls per exam (not 200)
-
-Step 1: POST /exam/session/start → returns {session_id, r2_url, salt}
-Step 2: Browser fetches encrypted questions from Cloudflare R2 (₹0)
-Step 3: Key = HKDF(JWT + salt + test_id) → decrypt in browser
-Step 4: All answers stored in IndexedDB (0 server calls during exam)
-Step 5: POST /exam/session/{id}/submit → 1 Lambda call
-Step 6: Results computed async (SQS) → stored in R2 → served from CDN
-
-Cost per exam: ~₹0.0003 (vs ₹0.15 with traditional REST APIs)
+TIER 1: Core Identity & Setup (Modules 00–06)
+  └→ TIER 2: People (Modules 07–09)
+       └→ TIER 3: Daily Operations (Modules 10–16)
+            └→ TIER 4: Exam Engine (Modules 17–23)
+            └→ TIER 5: Finance (Modules 24–27)
+            └→ TIER 6: Communication (Modules 34–40)
+       └→ TIER 7: AI & Advanced (Modules 44–52)
+  └→ TIER 8: Platform & Compliance (Modules 41–43, 53–57)
 ```
 
-### Week 13: Test-Taking Interface
+---
 
-| Task | Module Spec | Details |
-|---|---|---|
-| NTA-style JEE interface | `c-02-test-attempt.md` | Question palette, section switching, mark for review |
-| TCS iON-style SSC interface | `c-02-test-attempt.md` | SSC CGL/CHSL pattern, section tabs |
-| Question types | `17-question-bank-mcq` | MCQ single/multi, numerical, match-column, assertion-reasoning |
-| Timer & auto-submit | `c-02-test-attempt.md` | Server-side authoritative timer, auto-submit on expiry |
-| Language switching | `c-02-test-attempt.md` | Mid-test toggle English ↔ Telugu/Hindi per question |
+### TIER 1 — Core Identity & Setup (Weeks 3–4)
 
-### Week 14: Results, Ranking & Analytics
+> Foundation models that every other module depends on.
 
-| Task | Module Spec | Details |
-|---|---|---|
-| Submission & auto-grading | `20-exam-submission-auto-grading` | Score computation, negative marking, SQS async |
-| Results & rank computation | `21-results-report-cards` | All India Rank across 18L+ students, percentile |
-| Leaderboard system | `23-leaderboard-rankings` | AIR, state, city, batch, category-wise ranks |
-| Test results & review | `c-03-test-results.md` | Question-by-question, solutions, time analysis |
-| Report cards | `21-results-report-cards` | Institution template, PDF generation, QR verification |
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 3 | 00 — Project Setup | `00-project-setup.md` | all | Base config, AWS, CDN |
+| 3 | 01 — Auth & Identity | `01-auth.md` | identity | users, otps, sessions |
+| 3 | 02 — Multi-Tenancy | `02-multi-tenancy.md` | identity | tenant config, schemas |
+| 3 | 03 — Roles & Permissions | `03-roles-permissions.md` | identity | user_roles, permissions |
+| 4 | 04 — Institution Onboarding | `04-institution-onboarding.md` | portal | institutions, branding |
+| 4 | 05 — Academic Year & Calendar | `05-academic-year-calendar.md` | portal | academic_years, terms, holidays |
+| 4 | 06 — Branch & Campus | `06-branch-campus-management.md` | portal | branches, campuses |
 
-### Week 15: Test Series & Mock Test Platform
-
-| Task | Module Spec | Details |
-|---|---|---|
-| Test series management | `22-test-series-mock-tests` | Scheduled mocks, on-demand, sectional, topic tests |
-| Practice questions | `c-04-practice-questions.md` | Untimed, instant feedback, custom filters |
-| Previous year papers | `c-05-previous-year-papers.md` | 2,400+ papers, online attempt, cutoff comparison |
-| Subscription & access control | `50-subscription-access-control` | Free (5/month) vs Premium (unlimited), institution-gifted |
-| Domain configuration | `49-national-exam-catalog` | SSC, Banking, Railways, UPSC, State PSC domain setup |
-
-**Phase 3 Deliverable:** Full exam engine — 18L concurrent, 2 Lambda calls per exam, real-time ranking.
+**API count: ~35 endpoints | Models: ~15 tables**
 
 ---
 
-## PHASE 4 — Student & Parent Portal (Weeks 16–20)
+### TIER 2 — People (Weeks 5–6)
 
-**Outcome:** 5 crore students have a unified dashboard across all institutions.
+> Students, staff, parents — the humans in the system.
 
-### Week 16: Student Dashboard & Performance
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 5 | 07 — Student Enrolment & Profile | `07-student-enrolment-profile.md` | portal | students, enrollments, access_levels |
+| 5 | 08 — Staff Management & BGV | `08-staff-management-bgv.md` | portal | staff, designations, bgv_records |
+| 6 | 09 — Parent & Guardian | `09-parent-guardian-management.md` | portal | parents, child_links, consent |
 
-| Task | Page Spec | Details |
-|---|---|---|
-| Unified student dashboard | Group 10 home spec | Institution cards, exam domains, alerts, AI plan |
-| Performance dashboard | `b-01-performance-dashboard.md` | Cross-institution score trends, streak tracking |
-| Subject analytics | `b-02-subject-analytics.md` | Topic-level drill-down, peer comparison |
-| Weak topics & AI | `b-03-weak-topics.md` | Impact-ranked weak areas, recovery plans |
-| Leaderboard (student view) | `b-04-leaderboard-rankings.md` | AIR, topper badges, score distribution |
-
-### Week 17: Study Material & Learning
-
-| Task | Page Spec | Details |
-|---|---|---|
-| Notes library | `d-01-notes-library.md` | Browse, read, bookmark, PDF download (Premium) |
-| Video library | `d-02-video-library.md` | 4,200+ hrs, HLS streaming, chapters, resume |
-| Video streaming service | `44-video-learning-streaming` | CloudFront HLS, adaptive bitrate, DRM |
-| Live classes | `45-live-classes` | WebRTC, chat, recording, attendance |
-| Current affairs | `d-05-current-affairs.md` | Daily digest, MCQ quiz, audio summary, monthly PDF |
-
-### Week 18: AI Services
-
-| Task | Module Spec | Details |
-|---|---|---|
-| AI study plan | `d-03-ai-study-plan.md` | Personalized daily/weekly, goal-based, time-constrained |
-| AI doubt solver | `46-ai-doubt-solver` | Image OCR, semantic search, expert routing |
-| AI performance analytics | `47-ai-performance-analytics` | Weak topic identification, projected rank |
-| AI content generation | `48-ai-content-generation` | MCQ generation from topics, quality scoring |
-| Doubt forum | `d-04-doubt-forum.md` | AI auto-answer, community, expert (Premium) |
-
-### Week 19: Fees, Payments & Documents (Student)
-
-| Task | Page Spec | Details |
-|---|---|---|
-| Fee statement (cross-institution) | `e-01-fee-statement.md` | Unified view across all institutions |
-| Online payment | `e-02-online-payment.md` | Razorpay, UPI, cards, split payments |
-| Documents & certificates | `e-03-documents-certificates.md` | ID cards, bonafide, rank cards, QR verification |
-| Scholarship & aid | `e-04-scholarship-financial-aid.md` | Merit, SC/ST/EWS subsidy, govt schemes |
-| Subscription management | `a-03-subscription-plans.md` | Free → Premium, institution-gifted, renewal |
-
-### Week 20: Parent Portal & Privacy
-
-| Task | Page Spec | Details |
-|---|---|---|
-| Parent portal (all divisions) | Group 8 all specs | Onboarding, academic monitoring, fees, communication |
-| Student privacy & consent | `a-05-data-privacy-consent.md` | Parent access levels, cross-platform sharing, DPDP |
-| Progress reports | `b-05-progress-reports.md` | Auto-generated monthly, institution template, PDF |
-| Settings & preferences | `a-04-settings-preferences.md` | Notifications, theme, accessibility, sessions |
-| Student profile | `a-02-student-profile.md` | Unified identity, institution linking, age transitions |
-
-**Phase 4 Deliverable:** Student + Parent portals live. 5cr students can register, test, learn, pay.
+**API count: ~40 endpoints | Models: ~12 tables**
 
 ---
 
-## PHASE 5 — Scale & Optimize (Weeks 21–24)
+### TIER 3 — Daily Operations (Weeks 7–9)
 
-**Outcome:** Production-ready for 74,000 concurrent exam submissions.
+> What institutions do every day — attendance, timetable, homework, notes.
 
-### Week 21: Cloudflare Edge Layer
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 7 | 10 — Timetable & Scheduling | `10-timetable-scheduling.md` | portal | timetables, slots, room_alloc |
+| 7 | 11 — Attendance (School/College) | `11-attendance-school-college.md` | portal | attendance, periods |
+| 7 | 12 — Attendance (Coaching/Batch) | `12-attendance-coaching-batch.md` | portal | batch_attendance |
+| 8 | 13 — Attendance (Hostel) | `13-attendance-hostel.md` | portal | hostel_attendance, roll_calls |
+| 8 | 14 — Homework & Assignments | `14-homework-assignments.md` | portal | assignments, submissions |
+| 8 | 15 — Syllabus & Curriculum | `15-syllabus-curriculum-builder.md` | portal | syllabi, topics, coverage |
+| 9 | 16 — Notes & Study Material | `16-notes-study-material.md` | portal | notes, categories, downloads |
+
+**API count: ~55 endpoints | Models: ~20 tables**
+
+---
+
+### TIER 4 — Exam Engine (Weeks 10–13)
+
+> The core product — mock tests, question bank, results, rankings. Most complex tier.
+
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 10 | 17 — Question Bank & MCQ | `17-question-bank-mcq.md` | exam | questions, tags, quality_scores |
+| 10 | 18 — Exam Paper Builder | `18-exam-paper-builder.md` | exam | papers, blueprints, sections |
+| 11 | 19 — Exam Session & Proctoring | `19-exam-session-proctoring.md` | exam | sessions, proctoring_events |
+| 11 | 20 — Submission & Auto-Grading | `20-exam-submission-auto-grading.md` | exam | attempts, answers, scoring |
+| 12 | 21 — Results & Report Cards | `21-results-report-cards.md` | exam | results, rank_cards, reports |
+| 12 | 22 — Test Series & Mock Tests | `22-test-series-mock-tests.md` | exam | test_series, schedules |
+| 13 | 23 — Leaderboard & Rankings | `23-leaderboard-rankings.md` | exam | leaderboards, ranks, badges |
+
+**API count: ~70 endpoints | Models: ~25 tables**
+
+```
+EXAM ENGINE ARCHITECTURE (IndexedDB — 2 Lambda calls per exam):
+
+  START: POST /exam/session/start  ←  1 Lambda call
+    ↓
+  DOWNLOAD: Browser fetches from Cloudflare R2  ←  ₹0
+    ↓
+  DECRYPT: AES-256-GCM via Web Crypto API  ←  client-side
+    ↓
+  EXAM: All answers in IndexedDB  ←  0 server calls
+    ↓
+  SUBMIT: POST /exam/session/{id}/submit  ←  1 Lambda call
+    ↓
+  SCORE: SQS → async worker  ←  background
+    ↓
+  RESULTS: Served from CDN  ←  ₹0
+```
+
+---
+
+### TIER 5 — Finance (Weeks 14–15)
+
+> Fees, payments, payroll — money flows.
+
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 14 | 24 — Fee Structure Management | `24-fee-structure-management.md` | billing | fee_structures, fee_heads |
+| 14 | 25 — Fee Collection & Receipts | `25-fee-collection-receipts.md` | billing | payments, receipts |
+| 14 | 26 — Fee Defaulters & Recovery | `26-fee-defaulters-recovery.md` | billing | defaulters, reminders |
+| 15 | 27 — Staff Payroll & Salary | `27-staff-payroll-salary.md` | billing | payroll, salary_slips |
+| 15 | 56 — Platform Billing & GST | `56-platform-billing-gst-invoicing.md` | billing | invoices, gst_filings |
+| 15 | 57 — Payment Gateway (BYOG) | `57-payment-gateway-byog.md` | billing | razorpay_orders, refunds |
+
+**API count: ~50 endpoints | Models: ~18 tables**
+
+---
+
+### TIER 6 — Communication (Weeks 16–17)
+
+> Notifications across 4 channels + announcements + documents.
+
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 16 | 34 — Announcements & Circulars | `34-announcements-circulars.md` | notification | announcements |
+| 16 | 35 — Notifications (In-app + FCM) | `35-notifications-inapp-fcm.md` | notification | notifications, preferences |
+| 16 | 36 — WhatsApp Add-on | `36-whatsapp-addon.md` | notification | wa_messages, wa_templates |
+| 17 | 37 — Email (AWS SES) | `37-email-aws-ses.md` | notification | email_logs, templates |
+| 17 | 38 — SMS & OTP | `38-sms-otp.md` | notification | sms_logs |
+| 17 | 39 — Certificates & TC | `39-certificates-tc.md` | portal | certificates, verification |
+| 17 | 40 — Document Management | `40-document-management.md` | portal | documents, categories |
+
+**API count: ~45 endpoints | Models: ~15 tables**
+
+---
+
+### TIER 7 — AI & Advanced (Weeks 18–19)
+
+> AI services, video learning, live classes, subscriptions, B2B marketplace.
+
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 18 | 44 — Video Learning & Streaming | `44-video-learning-streaming.md` | portal | videos, playlists, progress |
+| 18 | 45 — Live Classes | `45-live-classes.md` | portal | live_sessions, recordings |
+| 18 | 46 — AI Doubt Solver | `46-ai-doubt-solver.md` | ai | doubts, answers, expert_routing |
+| 18 | 47 — AI Performance Analytics | `47-ai-performance-analytics.md` | ai | weak_topics, projections |
+| 19 | 48 — AI Content Generation | `48-ai-content-generation.md` | ai | generated_mcqs, review_queue |
+| 19 | 49 — National Exam Catalog | `49-national-exam-catalog.md` | exam | exam_domains, exam_configs |
+| 19 | 50 — Subscription & Access Control | `50-subscription-access-control.md` | billing | subscriptions, plans, trials |
+| 19 | 51 — B2B API & Partner Portal | `51-b2b-api-partner-portal.md` | portal | partners, content_agreements |
+| 19 | 52 — White-label TSP | `52-white-label-tsp-portal.md` | portal | tsp_configs, branding |
+
+**API count: ~65 endpoints | Models: ~22 tables**
+
+---
+
+### TIER 8 — Platform & Compliance (Week 20)
+
+> Remaining institution modules + platform management + compliance.
+
+| Week | Module | Spec File | Service | Models |
+|---|---|---|---|---|
+| 20 | 28 — Hostel Management | `28-hostel-management.md` | portal | hostels, rooms, mess |
+| 20 | 29 — Transport & GPS | `29-transport-gps-tracking.md` | portal | routes, vehicles, gps_logs |
+| 20 | 30 — Library Management | `30-library-management.md` | portal | books, issues, fines |
+| 20 | 31 — Admission & Enquiry CRM | `31-admission-enquiry-crm.md` | portal | enquiries, follow_ups |
+| 20 | 32 — Counselling & Welfare | `32-counselling-student-welfare.md` | portal | welfare_events |
+| 20 | 33 — PTM | `33-ptm-parent-teacher-meeting.md` | portal | ptm_slots, feedback |
+| 20 | 41 — POCSO Compliance | `41-pocso-compliance.md` | portal | bgv_records, incidents |
+| 20 | 42 — DPDPA & Audit Log | `42-dpdpa-audit-log.md` | portal | consent_log, audit_trail |
+| 20 | 43 — Legal & Data Compliance | `43-legal-data-compliance.md` | portal | compliance_records |
+| 20 | 53 — Platform Analytics | `53-platform-analytics-reports.md` | analytics | reports, dashboards |
+| 20 | 54 — Feature Flags | `54-platform-settings-feature-flags.md` | portal | feature_flags, settings |
+| 20 | 55 — Incident Management | `55-incident-management-sla.md` | portal | incidents, sla_tracking |
+
+**API count: ~80 endpoints | Models: ~30 tables**
+
+---
+
+### LAYER 1 Summary
+
+| Tier | Weeks | Modules | Endpoints | Tables |
+|---|---|---|---|---|
+| 0 (Foundation) | 1–2 | Setup + Auth | ~20 | ~8 |
+| 1 (Core Identity) | 3–4 | 00–06 | ~35 | ~15 |
+| 2 (People) | 5–6 | 07–09 | ~40 | ~12 |
+| 3 (Daily Ops) | 7–9 | 10–16 | ~55 | ~20 |
+| 4 (Exam Engine) | 10–13 | 17–23 | ~70 | ~25 |
+| 5 (Finance) | 14–15 | 24–27, 56–57 | ~50 | ~18 |
+| 6 (Communication) | 16–17 | 34–40 | ~45 | ~15 |
+| 7 (AI & Advanced) | 18–19 | 44–52 | ~65 | ~22 |
+| 8 (Platform) | 20 | 28–33, 41–43, 53–55 | ~80 | ~30 |
+| **TOTAL** | **20 weeks** | **58 modules** | **~460 endpoints** | **~165 tables** |
+
+After Week 20: **Every API endpoint works. Zero UI. Full test coverage. FastAPI /docs for every service.**
+
+---
+
+## LAYER 2 — Groups / Portal UI (Weeks 21–32)
+
+> Now build the UI on top of the module APIs. Each group = Django views + HTMX templates.
+> The backend is DONE. This layer is pure Django CBV + templates + HTMX partials.
+
+### Group Build Order — By Importance
+
+```
+GROUP 1 (Platform Admin)  — Build first: you need admin tools to manage everything
+  ↓
+GROUP 3 (School)          — Highest institution count, validates daily ops modules
+GROUP 4 (College)         — Similar to school, extends with placements/NAAC
+GROUP 5 (Coaching)        — Batch model, test series focus
+  ↓
+GROUP 2 (Institution Group) — Chain management across Groups 3/4/5
+  ↓
+GROUP 6 (Exam Domain)     — SSC/Banking/Railways — consumer-facing
+GROUP 10 (Student)        — 5cr students, unified portal — biggest scale
+GROUP 8 (Parent)          — Read-only view of student data
+  ↓
+GROUP 9 (B2B Partner)     — Content marketplace
+GROUP 7 (TSP White-label) — Advanced, depends on all other groups
+```
+
+---
+
+### Weeks 21–23: Group 1 — Platform Admin Portal
+
+| Week | Division | Pages | What It Covers |
+|---|---|---|---|
+| 21 | div-a Executive | 5 pages | CEO/CTO/COO/CFO dashboards |
+| 21 | div-b Product & Design | 4 pages | Feature flags, release management |
+| 21 | div-c Engineering | 18 pages | Tenant manager, deployments, DB admin |
+| 22 | div-d Content & Academics | 13 pages | MCQ bank, notes, video curation |
+| 22 | div-e Video & Learning | 3 pages | Video curator, playlist manager |
+| 22 | div-f Exam Operations | 5 pages | Live exam monitoring, war room |
+| 22 | div-g BGV | 3 pages | Background verification |
+| 23 | div-h Data & Analytics | 5 pages | Platform MIS, data pipelines |
+| 23 | div-i Customer Support | 6 pages | L1/L2/L3 support, tickets |
+| 23 | div-j Customer Success | 4 pages | CSM, account health |
+| 23 | div-k Sales & BD | 7 pages | Lead pipeline, institution onboarding |
+| 23 | div-l Marketing | 5 pages | SEO, social, campaigns |
+| 23 | div-m Finance & Billing | 6 pages | Revenue, GST, Razorpay settlements |
+| 23 | div-n Legal & Compliance | 7 pages | DPDP, POCSO, regulatory |
+| 23 | div-o HR & Admin | 5 pages | Internal staff management |
+
+**Total: 245 page specs → ~100 Django views → ~300 HTMX partials**
+
+---
+
+### Weeks 24–26: Groups 3, 4, 5 — Institution Portals
+
+| Week | Group | Pages | Focus |
+|---|---|---|---|
+| 24 | Group 3 — School | 260 pages | Attendance, marks, timetable, fees, parents |
+| 25 | Group 4 — College | 95 pages | Semester, NAAC, placements, affiliations |
+| 26 | Group 5 — Coaching | 131 pages | Batches, test series, performance, schedule |
+
+---
+
+### Week 27: Group 2 — Institution Group (Chain Admin)
+
+| Week | Group | Pages | Focus |
+|---|---|---|---|
+| 27 | Group 2 — Institution Group | 625 pages | Multi-branch oversight, consolidated reports, group-level config |
+
+---
+
+### Weeks 28–30: Groups 6, 10, 8 — Consumer-Facing
+
+| Week | Group | Pages | Focus |
+|---|---|---|---|
+| 28 | Group 6 — Exam Domain | 49 pages | SSC/Banking/Railways portal, test catalogue, domain config |
+| 29 | Group 10 — Student | 30 pages | Unified dashboard, performance, tests, learning, fees |
+| 30 | Group 8 — Parent | 28 pages | Child monitoring, fee payment, communication |
+
+---
+
+### Weeks 31–32: Groups 9, 7 — Marketplace
+
+| Week | Group | Pages | Focus |
+|---|---|---|---|
+| 31 | Group 9 — B2B Content Partner | 27 pages | Question authoring, revenue, quality scoring |
+| 32 | Group 7 — TSP White-label | 29 pages | Branded test platforms, content licensing |
+
+---
+
+### LAYER 2 Summary
+
+| Weeks | Groups | Total Pages | Django Views | Templates |
+|---|---|---|---|---|
+| 21–23 | Group 1 (Admin) | 245 | ~100 | ~300 |
+| 24–26 | Groups 3, 4, 5 (Institutions) | 486 | ~200 | ~500 |
+| 27 | Group 2 (Chain Admin) | 625 | ~250 | ~600 |
+| 28–30 | Groups 6, 10, 8 (Consumer) | 107 | ~50 | ~120 |
+| 31–32 | Groups 9, 7 (Marketplace) | 56 | ~25 | ~60 |
+| **TOTAL** | **10 groups** | **~1,519 pages** | **~625 views** | **~1,580 partials** |
+
+---
+
+## LAYER 3 — Scale, Mobile & Launch (Weeks 33–38)
+
+### Weeks 33–34: Production Infrastructure
 
 | Task | Details |
 |---|---|
-| Cloudflare R2 setup | Questions, results, certificates, notes, videos stored in R2 |
-| CDN caching strategy | Cache-Control headers, edge caching rules, cache purge API |
-| Cloudflare Workers | Edge compute for question decryption validation, rate limiting |
-| WAF rules | DDoS protection, bot detection, geo-blocking (India-only for exams) |
-| DNS & SSL | All subdomains: *.schools.eduforge.in, ssc.eduforge.in, etc. |
+| Cloudflare R2 + CDN | Questions, results, certificates, notes → R2. Edge caching rules. |
+| AWS production setup | RDS Multi-AZ, Lambda SAM deploy, ECS Fargate (2× tasks), SQS queues |
+| Load testing | Locust — 74,000 concurrent exam submissions |
+| Database optimization | Index tuning, PgBouncer, read replicas |
+| Monitoring | Sentry + CloudWatch + Cloudflare Analytics + custom dashboards |
 
-### Week 22: AWS Production Infrastructure
-
-| Task | Details |
-|---|---|
-| RDS PostgreSQL 16 Multi-AZ | db.t4g.medium → db.r6g.large scaling path, read replicas |
-| Lambda deployment | SAM/CDK, cold start optimization, provisioned concurrency for exam |
-| ECS Fargate | Django portal, 2× tasks minimum, auto-scaling to 8× |
-| SQS queues | Exam scoring, notification dispatch, rank computation, report generation |
-| EventBridge | Nightly cleanup (expired OTPs), rank recalculation, report scheduling |
-
-### Week 23: Performance & Load Testing
+### Weeks 35–36: Flutter Mobile App
 
 | Task | Details |
 |---|---|
-| Locust load testing | 74,000 concurrent exam submissions simulation |
-| Database query optimization | `EXPLAIN ANALYZE` on every critical query, index tuning |
-| Connection pooling | PgBouncer for Lambda → RDS connection management |
-| CDN cache hit ratio | Target 99%+ cache hit ratio for static content |
-| Monitoring | CloudWatch dashboards, Sentry error tracking, custom metrics |
+| Flutter project | iOS + Android, dark theme matching web |
+| Auth + home | OTP login, biometric, JWT in Hive AES-256 |
+| Student features | Dashboard, tests (offline-capable), notes, videos |
+| Push notifications | FCM, notification preferences |
+| App Store / Play Store | Submission, review, launch |
 
-### Week 24: Security & Compliance
+### Weeks 37–38: Security, Compliance & Launch
 
-| Task | Module Spec | Details |
-|---|---|---|
-| Security hardening | `43-legal-data-compliance` | JWT rotation, KMS encryption, WAF tuning |
-| DPDP Act compliance | `42-dpdpa-audit-log` | Consent log, data deletion pipeline, DPO dashboard |
-| POCSO compliance | `41-pocso-compliance` | BGV tracking, mandatory reporting |
-| CERT-In readiness | `43-legal-data-compliance` | 6-hour breach reporting, incident response plan |
-| Penetration testing | — | OWASP top 10, IDOR prevention, rate limiting verification |
-
-**Phase 5 Deliverable:** Production-ready. 74K concurrent. Compliant. Monitored.
+| Task | Details |
+|---|---|
+| Security audit | OWASP Top 10, IDOR prevention, penetration testing |
+| DPDP Act compliance | Consent flows, data deletion pipeline, DPO setup |
+| POCSO compliance | BGV audit, mandatory reporting verification |
+| CERT-In readiness | 6-hour breach reporting, incident response plan |
+| Soft launch | 10 pilot institutions → feedback → iterate → full launch |
 
 ---
 
-## PHASE 6 — Mobile & Marketplace (Weeks 25–30)
+## Complete Timeline
 
-**Outcome:** Flutter app live + B2B content marketplace + TSP white-label.
+```
+WEEK  1–2:  LAYER 0  Foundation (Auth, Multi-tenancy, Docker)
+WEEK  3–20: LAYER 1  All 58 Modules (Backend — models, APIs, services)
+WEEK 21–32: LAYER 2  All 10 Groups (UI — Django views, HTMX templates)
+WEEK 33–38: LAYER 3  Scale + Mobile + Launch
 
-### Weeks 25–26: Flutter Mobile App
-
-| Task | Details |
-|---|---|
-| Flutter project setup | iOS + Android, dark theme matching web |
-| Auth flow | OTP login, biometric (fingerprint/face), JWT storage in Hive AES-256 |
-| Student dashboard | Home, performance, test catalogue, notes, videos |
-| Exam interface | Offline-capable, IndexedDB equivalent (Hive), auto-sync |
-| Push notifications | FCM integration, notification preferences |
-
-### Weeks 27–28: B2B & TSP Portals
-
-| Task | Page Specs | Details |
-|---|---|---|
-| Content partner portal | Group 9 all specs | Partner registration, content authoring, revenue dashboard |
-| Content marketplace | `51-b2b-api-partner-portal` | Question licensing, revenue sharing (₹0.02/student/question) |
-| TSP white-label portal | Group 7 all specs | Coaching centres create branded test-series platforms |
-| White-label customization | `52-white-label-tsp-portal` | Custom domain, branding, student portal |
-| API partner portal | `51-b2b-api-partner-portal` | REST API access for institutional integrations |
-
-### Weeks 29–30: Platform Admin & Analytics
-
-| Task | Page Specs | Details |
-|---|---|---|
-| Platform admin portal | Group 1 all specs | All 15 divisions, exec dashboard, tenant management |
-| Analytics service (FastAPI) | `53-platform-analytics-reports` | Platform MIS, revenue reports, usage analytics |
-| Feature flags | `54-platform-settings-feature-flags` | Gradual rollout, A/B testing, kill switches |
-| Incident management | `55-incident-management-sla` | P0-P3 incidents, war room, SLA tracking |
-| Platform billing | `56-platform-billing-gst` | Institution invoicing, GST, Razorpay settlements |
-
-**Phase 6 Deliverable:** Complete platform. Mobile app. Marketplace. Full admin.
+              LAYER 0    LAYER 1 (Modules)        LAYER 2 (Groups)    LAYER 3
+              ├──┤├──────────────────────┤├────────────────────────┤├────────┤
+Week:         1  2  3  4  5 ... 15 ... 20  21 22 23 ... 28 ... 32  33 ... 38
+              ▲                          ▲                        ▲          ▲
+              │                          │                        │          │
+           Login works           All APIs done            All UI done    LAUNCH
+           OTP → JWT             460 endpoints            1,519 pages   5cr ready
+```
 
 ---
 
@@ -447,57 +476,13 @@ Cost per exam: ~₹0.0003 (vs ₹0.15 with traditional REST APIs)
 
 | Phase | Students | Database | Compute | Cloudflare | Total/Month |
 |---|---|---|---|---|---|
-| Phase 1–2 (Dev) | 0–1K | db.t4g.micro (₹2,500) | 1× Fargate (₹3,000) | Free plan | ~₹8,000 |
-| Phase 3 (Beta) | 1K–50K | db.t4g.medium (₹4,500) | 2× Fargate + Lambda | Pro (₹1,500) | ~₹25,000 |
-| Phase 4 (Launch) | 50K–2L | db.t4g.large + replica | 4× Fargate + Lambda | Pro | ~₹55,000 |
-| Phase 5 (Scale) | 2L–10L | db.r6g.large + 2 replicas | 8× Fargate + Lambda | Business | ~₹1,50,000 |
-| Phase 6 (5cr) | 10L–5cr | Aurora Serverless v2 | Auto-scale | Enterprise | ~₹3,00,000+ |
+| Dev (Weeks 1–20) | 0–1K | db.t4g.micro (₹2,500) | 1× Fargate (₹3,000) | Free | ~₹8,000 |
+| Beta (Weeks 21–32) | 1K–50K | db.t4g.medium (₹4,500) | 2× Fargate + Lambda | Pro (₹1,500) | ~₹25,000 |
+| Launch (Weeks 33–38) | 50K–2L | db.t4g.large + replica | 4× Fargate + Lambda | Pro | ~₹55,000 |
+| Scale | 2L–10L | db.r6g.large + 2 replicas | 8× Fargate | Business | ~₹1,50,000 |
+| 5 Crore | 10L–5cr | Aurora Serverless v2 | Auto-scale | Enterprise | ~₹3,00,000+ |
 
-**At 5 crore students: ₹3,00,000/month ÷ 5,00,00,000 students = ₹0.72/student/year** ✅
-
----
-
-## Tech Stack Decision Matrix
-
-| Layer | Choice | Why Not Alternatives |
-|---|---|---|
-| Portal rendering | Django + HTMX | Next.js = over-engineered for SSR. HTMX = zero JS bundle, fast on ₹8K phones |
-| API services | FastAPI (Python) | Express/Go = team knows Python. FastAPI = async, auto-docs, type hints |
-| Database | PostgreSQL 16 | MongoDB = no JOINs for analytics. MySQL = weaker JSON support |
-| Cache | Cloudflare CDN + Memcached | Redis = ₹16,800/year wasted. CDN handles 99% of reads |
-| Queue | AWS SQS | RabbitMQ = self-managed. SQS = zero ops, pay-per-message |
-| File storage | Cloudflare R2 | S3 = ₹56L/year egress at scale. R2 = ₹0 egress |
-| CDN | Cloudflare | CloudFront = 8 India PoPs. Cloudflare = 22 India PoPs, free tier |
-| Payments | Razorpay | Stripe = not strong in India UPI. Razorpay = 62% UPI market |
-| Mobile | Flutter | React Native = slower animations. Flutter = single codebase, Hive encryption |
-| Notifications | WhatsApp + SMS + FCM | Email-only = 12% open rate in India. WhatsApp = 82% open rate |
-
----
-
-## Development Priorities — What to Build First
-
-```
-PRIORITY 0 (Week 1): Can a human log in?
-  identity service → OTP → JWT → Django login → home page
-
-PRIORITY 1 (Weeks 2–4): Can an institution exist?
-  multi-tenancy → institution model → RBAC → onboarding wizard → students enrolled
-
-PRIORITY 2 (Weeks 5–10): Can an institution operate daily?
-  attendance → fees → timetable → notifications → compliance
-
-PRIORITY 3 (Weeks 11–15): Can students take exams?
-  question bank → exam engine → IndexedDB → results → leaderboard
-
-PRIORITY 4 (Weeks 16–20): Can students learn and grow?
-  student dashboard → analytics → AI study plan → video library → payments
-
-PRIORITY 5 (Weeks 21–24): Can it handle 5 crore students?
-  Cloudflare edge → AWS prod → load testing → security → monitoring
-
-PRIORITY 6 (Weeks 25–30): Can it make money?
-  content marketplace → TSP white-label → platform billing → mobile app
-```
+**At 5cr: ₹3,00,000/month ÷ 5,00,00,000 = ₹0.72/student/year** ✅
 
 ---
 
@@ -505,58 +490,47 @@ PRIORITY 6 (Weeks 25–30): Can it make money?
 
 | # | Decision | Reason |
 |---|---|---|
-| 1 | **No Redis** | PostgreSQL + Cloudflare CDN handles everything. Saves ₹16,800/year and one more service to manage. |
-| 2 | **IndexedDB exam engine** | 2 Lambda calls per exam vs 200. At 74K concurrent, this is the difference between ₹300/day and ₹30,000/day. |
-| 3 | **Cloudflare R2 over S3** | Zero egress cost. At 5cr students reading questions/results/notes, S3 egress alone = ₹56L/year. |
-| 4 | **Django HTMX over React** | Zero JS bundle size. HTMX partial renders are faster on ₹8K Android phones than React hydration. |
-| 5 | **Schema-per-service** | One PostgreSQL cluster, 7 schemas. Cross-schema JOINs for analytics. Row-level security for isolation. |
-| 6 | **Stateless JWT** | No network call to validate. Every Lambda invocation saves 1 round-trip to a session store. |
-| 7 | **SQS for async** | Exam scoring, notifications, rank computation — all async via SQS. Zero ops. Pay per message. |
-| 8 | **Cloudflare Workers** | Edge compute for rate limiting, bot detection, and serving cached results. Zero cold start. |
+| 1 | **Modules first, Groups second** | Backend is stable, UI changes often. Build once, consume everywhere. |
+| 2 | **No Redis** | PostgreSQL + Cloudflare handles everything. Saves ₹16,800/year + ops. |
+| 3 | **IndexedDB exam engine** | 2 Lambda calls/exam vs 200. At 74K concurrent = ₹300/day vs ₹30,000/day. |
+| 4 | **Cloudflare R2 over S3** | Zero egress. S3 at 5cr students = ₹56L/year egress alone. |
+| 5 | **Django HTMX over React** | Zero JS bundle. Faster on ₹8K phones than React hydration. |
+| 6 | **Schema-per-service** | 1 PostgreSQL cluster, 7 schemas. Cross-schema JOINs for analytics. |
+| 7 | **Stateless JWT** | No network call to validate. Saves 1 round-trip per Lambda invocation. |
+| 8 | **SQS for async** | Scoring, notifications, ranks — zero ops, pay per message. |
+
+---
+
+## Testing Strategy
+
+| Level | Tool | Target | When |
+|---|---|---|---|
+| Unit | pytest | 80%+ coverage per module | Every commit |
+| Integration | pytest + httpx | API contract testing | Every PR |
+| E2E | Playwright | Critical user journeys (10 groups) | Nightly |
+| Load | Locust | 74,000 concurrent exam sessions | Week 33 |
+| Security | OWASP ZAP | Top 10 vulnerabilities | Week 37 |
 
 ---
 
 ## Git Strategy
 
 ```
-main                    ← production (always deployable)
-├── develop             ← integration branch
-│   ├── feature/phase-1-auth          ← Phase 1 work
-│   ├── feature/phase-2-institution   ← Phase 2 work
-│   ├── feature/phase-3-exam-engine   ← Phase 3 work
+main                         ← production (always deployable)
+├── develop                  ← integration
+│   ├── feature/module-01-auth
+│   ├── feature/module-17-question-bank
+│   ├── feature/module-22-test-series
+│   ├── feature/group-1-admin-portal
+│   ├── feature/group-10-student-portal
 │   └── ...
-├── staging             ← pre-production testing
-└── hotfix/*            ← emergency production fixes
+├── staging                  ← pre-prod testing
+└── hotfix/*                 ← emergency fixes
 ```
 
-Every feature branch → PR → review → merge to develop → staging → main.
+Module branches: `feature/module-{nn}-{name}`
+Group branches: `feature/group-{n}-{name}`
 
 ---
 
-## Testing Strategy
-
-| Level | Tool | Coverage Target | When |
-|---|---|---|---|
-| Unit | pytest | 80%+ | Every commit |
-| Integration | pytest + TestClient | API contracts | Every PR |
-| E2E | Playwright | Critical user journeys | Nightly |
-| Load | Locust | 74K concurrent | Before Phase 5 deploy |
-| Security | OWASP ZAP + manual | OWASP Top 10 | Before launch |
-| Accessibility | axe-core | WCAG 2.1 AA | Before launch |
-
----
-
-## Monitoring & Observability
-
-| Layer | Tool | What It Watches |
-|---|---|---|
-| Application errors | Sentry | Python exceptions, JS errors, breadcrumbs |
-| Infrastructure | CloudWatch | Lambda duration/errors, RDS CPU/connections, SQS depth |
-| Uptime | Cloudflare Health Checks | All 7 service endpoints, every 60s |
-| Performance | Cloudflare Analytics | CDN hit ratio, TTFB, bandwidth |
-| Business metrics | Custom dashboard | DAU, exams/day, revenue, churn |
-| Alerting | PagerDuty / Slack | P0: 5 min, P1: 30 min, P2: 4 hrs |
-
----
-
-*Last updated: 2026-04-01 · EduForge Development Plan v1.0*
+*Last updated: 2026-04-01 · EduForge Development Plan v2.0 — Modules First, Groups Second*
